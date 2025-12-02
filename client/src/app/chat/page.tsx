@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { useChat } from '@/components/chat-provider';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
  * 채팅 페이지 컴포넌트입니다.
@@ -61,28 +64,36 @@ export default function ChatPage() {
     }
 
     return (
-        <div className="p-4">
-            <h1 className="text-2xl font-bold mb-4">채팅방</h1>
-            <div className="border p-4 h-64 overflow-y-auto mb-4 bg-gray-100 rounded">
-                {messages.map((msg, idx) => (
-                    <div key={idx} className="mb-2">
-                        <strong>{msg.sender}:</strong> {msg.message}
+        <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
+            <Card className="w-full max-w-2xl h-[80vh] flex flex-col">
+                <CardHeader>
+                    <CardTitle>채팅방</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col overflow-hidden">
+                    <div className="flex-1 overflow-y-auto mb-4 space-y-2 p-2 border rounded-md bg-white">
+                        {messages.map((msg, idx) => (
+                            <div key={idx} className={`flex flex-col ${msg.sender === session.user?.name ? 'items-end' : 'items-start'}`}>
+                                <span className="text-xs text-gray-500">{msg.sender}</span>
+                                <div className={`p-2 rounded-lg max-w-[80%] ${msg.sender === session.user?.name ? 'bg-blue-500 text-white' : 'bg-gray-200 text-black'}`}>
+                                    {msg.message}
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
-            <div className="flex gap-2">
-                <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    className="border p-2 flex-1 rounded"
-                    placeholder="메시지를 입력하세요..."
-                    onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                />
-                <button onClick={sendMessage} className="bg-blue-500 text-white p-2 rounded">
-                    전송
-                </button>
-            </div>
+                    <div className="flex gap-2">
+                        <Input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="메시지를 입력하세요..."
+                            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                        />
+                        <Button onClick={sendMessage}>
+                            전송
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }

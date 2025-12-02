@@ -10,11 +10,28 @@ const handler = NextAuth({
                 password: { label: "Password", type: "password" }
             },
             async authorize(credentials, req) {
-                // Mock user for now
-                if (credentials?.username === "user" && credentials?.password === "password") {
-                    return { id: "1", name: "Test User", email: "test@example.com" };
+                if (!credentials?.username || !credentials?.password) return null;
+
+                try {
+                    const res = await fetch("http://localhost:4000/auth/login", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            username: credentials.username,
+                            password: credentials.password,
+                        }),
+                    });
+
+                    const user = await res.json();
+
+                    if (res.ok && user) {
+                        return user.user; // Return user object (id, username)
+                    }
+                    return null;
+                } catch (e) {
+                    console.error("Login error:", e);
+                    return null;
                 }
-                return null;
             }
         })
     ],
@@ -26,6 +43,7 @@ const handler = NextAuth({
         async jwt({ token, user }) {
             if (user) {
                 token.id = user.id;
+                token.name = (user as any).username; // Map username to name
             }
             return token;
         },
