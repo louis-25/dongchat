@@ -49,7 +49,8 @@ const handler = NextAuth({
         },
         async session({ session, token }) {
             if (session.user) {
-                // session.user.id = token.id as string; // Typescript might complain here
+                session.user.name = token.name as string; // Set username from token
+                (session.user as any).id = token.id; // Set user ID
             }
             return session;
         }
