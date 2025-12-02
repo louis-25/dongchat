@@ -11,24 +11,35 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 
 /**
  * 사용자 로그인을 위한 페이지 컴포넌트입니다.
+ * NextAuth의 signIn 함수를 사용하여 인증을 처리합니다.
  */
 export default function SignInPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const result = await signIn("credentials", {
-            username,
-            password,
-            redirect: false,
-        });
+        setIsLoading(true);
 
-        if (result?.ok) {
-            router.push("/chat");
-        } else {
-            alert("로그인 실패: 아이디와 비밀번호를 확인해주세요.");
+        try {
+            const result = await signIn("credentials", {
+                username,
+                password,
+                redirect: false,
+            });
+
+            if (result?.ok) {
+                router.push("/chat");
+            } else {
+                alert("로그인 실패: 아이디와 비밀번호를 확인해주세요.");
+            }
+        } catch (error) {
+            console.error("Login error:", error);
+            alert("로그인 중 오류가 발생했습니다.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -52,6 +63,7 @@ export default function SignInPage() {
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 required
+                                disabled={isLoading}
                             />
                         </div>
                         <div className="space-y-2">
@@ -63,10 +75,11 @@ export default function SignInPage() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
+                                disabled={isLoading}
                             />
                         </div>
-                        <Button type="submit" className="w-full">
-                            로그인
+                        <Button type="submit" className="w-full" disabled={isLoading}>
+                            {isLoading ? "로그인 중..." : "로그인"}
                         </Button>
                     </form>
                 </CardContent>

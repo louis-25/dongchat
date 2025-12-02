@@ -1,3 +1,4 @@
+import { BASE_URL } from "@/config";
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
@@ -14,7 +15,7 @@ const handler = NextAuth({
 
                 try {
                     console.log('[NextAuth] Attempting login for:', credentials.username);
-                    const res = await fetch("http://localhost:4000/auth/login", {
+                    const res = await fetch(`${BASE_URL}/auth/login`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
