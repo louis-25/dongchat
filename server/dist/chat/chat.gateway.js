@@ -15,16 +15,36 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChatGateway = void 0;
 const websockets_1 = require("@nestjs/websockets");
 const socket_io_1 = require("socket.io");
+const typeorm_1 = require("@nestjs/typeorm");
+const typeorm_2 = require("typeorm");
+const message_entity_1 = require("./message.entity");
 let ChatGateway = class ChatGateway {
+    messageRepository;
     server;
-    handleConnection(client) {
+    constructor(messageRepository) {
+        this.messageRepository = messageRepository;
+    }
+    async handleConnection(client) {
         console.log(`Client connected: ${client.id}`);
+        const messages = await this.messageRepository.find({
+            order: { createdAt: 'ASC' },
+            take: 50,
+        });
+        client.emit('initial_messages', messages);
     }
     handleDisconnect(client) {
         console.log(`Client disconnected: ${client.id}`);
     }
-    handleMessage(payload) {
-        this.server.emit('message', payload);
+    async handleMessage(payload) {
+        const newMessage = this.messageRepository.create({
+            sender: payload.sender,
+            content: payload.message,
+        });
+        await this.messageRepository.save(newMessage);
+        this.server.emit('message', {
+            sender: newMessage.sender,
+            message: newMessage.content,
+        });
     }
 };
 exports.ChatGateway = ChatGateway;
@@ -37,7 +57,7 @@ __decorate([
     __param(0, (0, websockets_1.MessageBody)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], ChatGateway.prototype, "handleMessage", null);
 exports.ChatGateway = ChatGateway = __decorate([
     (0, websockets_1.WebSocketGateway)({
@@ -45,6 +65,8 @@ exports.ChatGateway = ChatGateway = __decorate([
             origin: 'http://localhost:3000',
             credentials: true,
         },
-    })
+    }),
+    __param(0, (0, typeorm_1.InjectRepository)(message_entity_1.Message)),
+    __metadata("design:paramtypes", [typeorm_2.Repository])
 ], ChatGateway);
 //# sourceMappingURL=chat.gateway.js.map

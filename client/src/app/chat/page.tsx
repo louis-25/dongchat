@@ -15,8 +15,17 @@ export default function ChatPage() {
             setMessages((prev) => [...prev, payload]);
         });
 
+        socket.on('initial_messages', (history: { sender: string; message: string }[]) => {
+            const formattedHistory = history.map(msg => ({
+                sender: msg.sender,
+                message: (msg as any).content || msg.message
+            }));
+            setMessages(formattedHistory);
+        });
+
         return () => {
             socket.off('message');
+            socket.off('initial_messages');
         };
     }, [socket]);
 
