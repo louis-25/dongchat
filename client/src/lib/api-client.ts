@@ -173,3 +173,12 @@ class ApiClient {
 // 싱글톤 인스턴스 생성 및 export
 export const apiClient = new ApiClient();
 export default apiClient;
+
+/**
+ * Orval용 커스텀 인스턴스
+ * Orval의 mutator로 사용됩니다.
+ */
+export const customInstance = <T>(config: AxiosRequestConfig): Promise<T> => {
+    return apiClient.getAxiosInstance().request<T>(config).then(({ data }) => data);
+};
+

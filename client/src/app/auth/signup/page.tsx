@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useRegister } from "@/services";
+import { useAuthControllerRegister } from "@/services";
 
 /**
  * 회원가입 페이지 컴포넌트입니다.
@@ -16,20 +16,20 @@ export default function SignupPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const router = useRouter();
-    const registerMutation = useRegister();
+    const registerMutation = useAuthControllerRegister();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         registerMutation.mutate(
-            { username, password },
+            { data: { username, password } },
             {
                 onSuccess: () => {
                     alert("회원가입 성공! 로그인해주세요.");
                     router.push("/auth/signin");
                 },
                 onError: (error) => {
-                    alert(`회원가입 실패: ${error.message}`);
+                    alert(`회원가입 실패: ${error || "오류가 발생했습니다."}`);
                 },
             }
         );

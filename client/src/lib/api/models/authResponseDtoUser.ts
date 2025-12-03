@@ -6,9 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 
-export interface RegisterDto {
-  /** 사용자 아이디 */
-  username: string;
-  /** 비밀번호 */
-  password: string;
-}
+/**
+ * 사용자 정보
+ */
+export type AuthResponseDtoUser = { [key: string]: unknown };

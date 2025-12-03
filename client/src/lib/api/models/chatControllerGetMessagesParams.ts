@@ -6,9 +6,13 @@
  * OpenAPI spec version: 1.0
  */
 
-export interface RegisterDto {
-  /** 사용자 아이디 */
-  username: string;
-  /** 비밀번호 */
-  password: string;
-}
+export type ChatControllerGetMessagesParams = {
+/**
+ * 페이지 번호
+ */
+page?: number;
+/**
+ * 페이지당 항목 수
+ */
+limit?: number;
+};
