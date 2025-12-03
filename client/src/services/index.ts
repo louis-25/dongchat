@@ -7,4 +7,20 @@
 export {
     useAuthControllerRegister,
     useAuthControllerLogin,
+    type AuthControllerRegisterMutationBody,
+    type AuthControllerLoginMutationBody,
+} from '@/lib/api/generated/인증/인증';
+
+// 채팅 관련 훅
+export {
+    useChatControllerGetMessages,
+} from '@/lib/api/generated/채팅/채팅';
+
+// 모델 타입export
+export type {
+    ChatControllerGetMessagesParams,
+    RegisterDto,
+    LoginDto,
+    AuthResponseDto,
+    Message,
 } from '@/lib/api/models';
