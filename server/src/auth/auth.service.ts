@@ -31,12 +31,39 @@ export class AuthService {
     async login(user: any) {
         const payload = { username: user.username, sub: user.id };
         return {
-            access_token: this.jwtService.sign(payload),
+            access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
+            refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
             user: {
                 id: user.id,
                 username: user.username,
             }
         };
+    }
+
+    /**
+     * Refresh 토큰으로 새로운 Access 토큰을 발급합니다.
+     */
+    async refreshTokens(refreshToken: string) {
+        try {
+            const payload = this.jwtService.verify(refreshToken);
+            const user = await this.usersService.findOne(payload.username);
+
+            if (!user) {
+                throw new UnauthorizedException('유효하지 않은 토큰입니다.');
+            }
+
+            const newPayload = { username: user.username, sub: user.id };
+            return {
+                access_token: this.jwtService.sign(newPayload, { expiresIn: '15m' }),
+                refresh_token: this.jwtService.sign(newPayload, { expiresIn: '7d' }),
+                user: {
+                    id: user.id,
+                    username: user.username,
+                }
+            };
+        } catch (error) {
+            throw new UnauthorizedException('토큰이 만료되었거나 유효하지 않습니다.');
+        }
     }
 
     /**

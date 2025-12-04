@@ -1,5 +1,14 @@
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 import { BASE_URL } from '@/config';
+
+// 토큰 관리를 위한 유틸리티
+let currentAccessToken: string | null = null;
+
+export const setAccessToken = (token: string | null) => {
+    currentAccessToken = token;
+};
+
+export const getAccessToken = () => currentAccessToken;
 
 /**
  * API 응답 타입
@@ -34,10 +43,17 @@ const axiosInstance: AxiosInstance = axios.create({
  * 요청 인터셉터
  */
 axiosInstance.interceptors.request.use(
-    (config) => {
+    (config: InternalAxiosRequestConfig) => {
+        // 액세스 토큰이 있으면 Authorization 헤더에 추가
+        const token = getAccessToken();
+        if (token && config.headers) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+
         console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
             params: config.params,
             data: config.data,
+            hasAuth: !!token,
         });
         return config;
     },
@@ -48,9 +64,86 @@ axiosInstance.interceptors.request.use(
 );
 
 /**
+ * 토큰 갱신 여부를 추적하는 플래그
+ */
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (value?: any) => void; reject: (reason?: any) => void }> = [];
+
+const processQueue = (error: Error | null, token: string | null = null) => {
+    failedQueue.forEach((prom) => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
+};
+
+/**
  * 에러 핸들링 함수
  */
-const handleError = (error: AxiosError): Promise<never> => {
+const handleError = async (error: AxiosError): Promise<any> => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // 401 에러이고 재시도하지 않은 요청인 경우 토큰 갱신 시도
+    if (error.response?.status === 401 && !originalRequest._retry) {
+        if (isRefreshing) {
+            // 이미 토큰 갱신 중이면 대기
+            return new Promise((resolve, reject) => {
+                failedQueue.push({ resolve, reject });
+            }).then(() => {
+                return axiosInstance(originalRequest);
+            });
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        const refreshToken = localStorage.getItem('refreshToken');
+
+        if (!refreshToken) {
+            // Refresh token이 없으면 로그인 페이지로 이동
+            processQueue(new Error('No refresh token'), null);
+            isRefreshing = false;
+            localStorage.clear();
+            if (typeof window !== 'undefined') {
+                window.location.href = '/auth/signin';
+            }
+            return Promise.reject(createApiError(error));
+        }
+
+        try {
+            // Refresh token으로 새 토큰 발급
+            const response = await axios.post(`${BASE_URL}/auth/refresh`, { refresh_token: refreshToken });
+            const { access_token, refresh_token: newRefreshToken } = response.data;
+
+            // 새 토큰 저장
+            setAccessToken(access_token);
+            localStorage.setItem('refreshToken', newRefreshToken);
+
+            // 대기 중인 요청들 재시도
+            processQueue(null, access_token);
+            isRefreshing = false;
+
+            // 원래 요청 재시도
+            return axiosInstance(originalRequest);
+        } catch (refreshError) {
+            // Refresh token도 만료된 경우
+            processQueue(refreshError as Error, null);
+            isRefreshing = false;
+            localStorage.clear();
+            if (typeof window !== 'undefined') {
+                window.location.href = '/auth/signin';
+            }
+            return Promise.reject(refreshError);
+        }
+    }
+
+    return Promise.reject(createApiError(error));
+};
+
+const createApiError = (error: AxiosError): ApiError => {
     const apiError: ApiError = {
         message: '요청 처리 중 오류가 발생했습니다.',
         status: error.response?.status,
@@ -58,10 +151,10 @@ const handleError = (error: AxiosError): Promise<never> => {
     };
 
     if (error.response) {
-        // 서버 응답이 있는 경우
         const { status, data } = error.response;
         apiError.status = status;
         apiError.message = (data as any)?.message || `서버 오류 (${status})`;
+        apiError.code = (data as any)?.code || error.code;
 
         console.error(`[API Error] ${status}:`, {
             url: error.config?.url,
@@ -70,16 +163,14 @@ const handleError = (error: AxiosError): Promise<never> => {
             data: data,
         });
     } else if (error.request) {
-        // 요청은 보냈으나 응답이 없는 경우
         apiError.message = '서버로부터 응답이 없습니다.';
         console.error('[API Error] No response:', error.request);
     } else {
-        // 요청 설정 중 오류가 발생한 경우
         apiError.message = error.message;
         console.error('[API Error] Request setup:', error.message);
     }
 
-    return Promise.reject(apiError);
+    return apiError;
 };
 
 /**
@@ -162,9 +253,22 @@ export const getAxiosInstance = (): AxiosInstance => {
  * Orval용 커스텀 인스턴스
  * Orval의 mutator로 사용됩니다.
  */
-export const customInstance = <T>(config: AxiosRequestConfig): Promise<T> => {
-    return axiosInstance.request<T>(config).then(({ data }) => data);
+export const customInstance = async <T>(
+    config: AxiosRequestConfig,
+    options?: AxiosRequestConfig
+): Promise<T> => {
+    const response = await axiosInstance.request<T>({
+        ...config,
+        ...(options ?? {}),
+    });
+
+    return response.data;
 };
+
+// Orval이 생성하는 React Query 훅에서 에러 타입 제네릭이 자동으로 ApiError로 맞춰진다.
+// ex1) UseQueryResult<응답타입, ApiError>
+// ex2) UseMutationResult<응답타입, ApiError, 변수타입>
+export type ErrorType<Error> = ApiError;
 
 /**
  * 기본 export (객체 형태로 모든 메서드 제공)

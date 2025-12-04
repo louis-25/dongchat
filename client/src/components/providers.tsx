@@ -3,6 +3,8 @@
 import { SessionProvider } from "next-auth/react";
 import { ChatProvider } from "@/components/chat-provider";
 import { ReactQueryProvider } from "@/components/react-query-provider";
+import { Toaster } from "./ui/sonner";
+
 
 /**
  * 애플리케이션 전역에 필요한 Provider들을 관리하는 컴포넌트입니다.
@@ -15,6 +17,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <ReactQueryProvider>
             <SessionProvider>
                 <ChatProvider>
+                    <Toaster />
                     {children}
                 </ChatProvider>
             </SessionProvider>

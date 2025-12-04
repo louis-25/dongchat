@@ -7,10 +7,9 @@ export default defineConfig({
         },
         output: {
             mode: 'tags-split',
-            target: './src/lib/api/generated',
+            target: './src/services',
             schemas: './src/lib/api/models',
             client: 'react-query',
-            httpClient: 'axios',
             mock: false,
             clean: true,
             prettier: true,

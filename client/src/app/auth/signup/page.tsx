@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuthControllerRegister } from "@/services";
+import { useAuthControllerRegister } from "@/services/auth/auth";
 
 /**
  * 회원가입 페이지 컴포넌트입니다.

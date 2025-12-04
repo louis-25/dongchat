@@ -11,6 +11,12 @@ export class AuthResponseDto {
     access_token: string;
 
     @ApiProperty({
+        description: 'JWT 리프레시 토큰',
+        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    })
+    refresh_token: string;
+
+    @ApiProperty({
         description: '사용자 정보',
         example: { id: 1, username: 'testuser' },
     })

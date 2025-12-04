@@ -18,7 +18,8 @@ const swagger_1 = require("@nestjs/swagger");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const message_entity_1 = require("./message.entity");
-const message_query_dto_1 = require("./dto/message-query.dto");
+const chat_query_dto_1 = require("./dto/chat-query.dto");
+const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 let ChatController = class ChatController {
     messageRepository;
     constructor(messageRepository) {
@@ -44,12 +45,14 @@ __decorate([
     (0, swagger_1.ApiResponse)({ status: 200, description: '메시지 목록', type: [message_entity_1.Message] }),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [message_query_dto_1.MessageQueryDto]),
+    __metadata("design:paramtypes", [chat_query_dto_1.ChatQueryDto]),
     __metadata("design:returntype", Promise)
 ], ChatController.prototype, "getMessages", null);
 exports.ChatController = ChatController = __decorate([
-    (0, swagger_1.ApiTags)('채팅'),
-    (0, common_1.Controller)('api/messages'),
+    (0, swagger_1.ApiTags)('Chat'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Controller)('chat'),
     __param(0, (0, typeorm_1.InjectRepository)(message_entity_1.Message)),
     __metadata("design:paramtypes", [typeorm_2.Repository])
 ], ChatController);

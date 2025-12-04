@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useChat } from '@/components/chat-provider';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import useAuth from '@/hooks/useAuth';
 
 /**
  * 채팅 페이지 컴포넌트입니다.
@@ -14,17 +14,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  */
 export default function ChatPage() {
     const { socket } = useChat();
-    const { data: session, status } = useSession();
     const router = useRouter();
     const [messages, setMessages] = useState<{ sender: string; message: string }[]>([]);
     const [input, setInput] = useState('');
+    const { user } = useAuth();
 
-    // 인증 상태 확인 및 리다이렉트 처리
-    useEffect(() => {
-        if (status === 'unauthenticated') {
-            router.push('/auth/signin');
-        }
-    }, [status, router]);
+
 
     useEffect(() => {
         if (!socket) return;
@@ -48,19 +43,15 @@ export default function ChatPage() {
     }, [socket]);
 
     const sendMessage = () => {
-        if (socket && input.trim() && session?.user?.name) {
+        if (socket && input.trim() && user?.username) {
             // 실제 로그인된 사용자 이름으로 메시지 전송
-            socket.emit('message', { sender: session.user.name, message: input });
+            socket.emit('message', { sender: user.username, message: input });
             setInput('');
         }
     };
 
-    if (status === 'loading') {
-        return <div className="flex h-screen items-center justify-center">로딩 중...</div>;
-    }
-
-    if (!session) {
-        return null;
+    if (!user) {
+        return null; // 또는 로딩 스피너
     }
 
     return (
@@ -72,9 +63,9 @@ export default function ChatPage() {
                 <CardContent className="flex-1 flex flex-col overflow-hidden">
                     <div className="flex-1 overflow-y-auto mb-4 space-y-2 p-2 border rounded-md bg-white">
                         {messages.map((msg, idx) => (
-                            <div key={idx} className={`flex flex-col ${msg.sender === session.user?.name ? 'items-end' : 'items-start'}`}>
+                            <div key={idx} className={`flex flex-col ${msg.sender === user.username ? 'items-end' : 'items-start'}`}>
                                 <span className="text-xs text-gray-500">{msg.sender}</span>
-                                <div className={`p-2 rounded-lg max-w-[80%] ${msg.sender === session.user?.name ? 'bg-blue-500 text-white' : 'bg-gray-200 text-black'}`}>
+                                <div className={`p-2 rounded-lg max-w-[80%] ${msg.sender === user.username ? 'bg-blue-500 text-white' : 'bg-gray-200 text-black'}`}>
                                     {msg.message}
                                 </div>
                             </div>

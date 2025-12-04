@@ -7,9 +7,18 @@ export declare class AuthService {
     validateUser(username: string, pass: string): Promise<any>;
     login(user: any): Promise<{
         access_token: string;
+        refresh_token: string;
         user: {
             id: any;
             username: any;
+        };
+    }>;
+    refreshTokens(refreshToken: string): Promise<{
+        access_token: string;
+        refresh_token: string;
+        user: {
+            id: number;
+            username: string;
         };
     }>;
     register(username: string, pass: string): Promise<import("../users/user.entity").User>;

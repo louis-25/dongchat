@@ -13,6 +13,7 @@ exports.AuthResponseDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 class AuthResponseDto {
     access_token;
+    refresh_token;
     user;
 }
 exports.AuthResponseDto = AuthResponseDto;
@@ -23,6 +24,13 @@ __decorate([
     }),
     __metadata("design:type", String)
 ], AuthResponseDto.prototype, "access_token", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'JWT 리프레시 토큰',
+        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    }),
+    __metadata("design:type", String)
+], AuthResponseDto.prototype, "refresh_token", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
         description: '사용자 정보',
