@@ -1,11 +1,12 @@
-import { useRouter } from "next/navigation";
+
 import { useEffect } from "react";
 import { useAtom } from "jotai";
 import { userAtom } from "@/store/auth";
-import { setAccessToken } from "@/lib/api-client";
+import useRouter from "./useRouter";
+
 
 const useAuth = () => {
-    const router = useRouter();
+    const { router, goLogin, goJoin, goChat } = useRouter();
     const [user, setUser] = useAtom(userAtom);
 
     // 인증 상태 확인 및 리다이렉트 처리
@@ -14,7 +15,7 @@ const useAuth = () => {
         const storedUser = localStorage.getItem("user");
 
         if (!refreshToken || !storedUser) {
-            router.push('/auth/signin');
+            goLogin();
             return;
         }
 
@@ -24,7 +25,7 @@ const useAuth = () => {
             // refreshToken이 있으면 API 호출 시 자동으로 갱신됨
         } catch (e) {
             console.error("Failed to parse user from localStorage", e);
-            router.push('/auth/signin');
+            goLogin();
         }
     }, [router, setUser]);
 
