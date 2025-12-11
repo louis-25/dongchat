@@ -22,18 +22,23 @@ export class UsersService {
         return this.usersRepository.findOne({ where: { username } });
     }
 
+    async findById(id: number): Promise<User | null> {
+        return this.usersRepository.findOne({ where: { id } });
+    }
+
     /**
      * 새로운 사용자를 생성합니다.
      * @param username 사용자명
      * @param pass 비밀번호 (평문)
      */
-    async create(username: string, pass: string): Promise<User> {
+    async create(username: string, pass: string, role: UserRole = UserRole.USER): Promise<User> {
         const salt = await bcrypt.genSalt();
         const hashedPassword = await bcrypt.hash(pass, salt);
 
         const user = this.usersRepository.create({
             username,
             password: hashedPassword,
+            role,
         });
 
         return this.usersRepository.save(user);

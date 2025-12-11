@@ -1,15 +1,9 @@
 "use client";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import LoginForm from "./login/LoginForm";
 import JoinForm from "./join/JoinForm";
 import useRouter from "@/hooks/useRouter";
@@ -17,18 +11,12 @@ import useRouter from "@/hooks/useRouter";
 export default function AuthTabs() {
   const { goLogin, goJoin, pathname } = useRouter();
 
-  const [activeTab, setActiveTab] = useState("login");
-
-  useEffect(() => {
-    if (pathname === "/login") {
-      setActiveTab("login");
-    } else if (pathname === "/join") {
-      setActiveTab("join");
-    }
-  }, [pathname]);
+  const activeTab = useMemo(
+    () => (pathname === "/join" ? "join" : "login"),
+    [pathname]
+  );
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value);
     if (value === "login") {
       goLogin();
     } else {

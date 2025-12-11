@@ -23,5 +23,6 @@ export class AuthResponseDto {
     user: {
         id: number;
         username: string;
+        role: string;
     };
 }

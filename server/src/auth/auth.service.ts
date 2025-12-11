@@ -3,6 +3,7 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { DuplicateUserException, InvalidPasswordException, UserNotFoundException } from './exceptions/auth.exception';
+import { UserRole } from '../users/user.entity';
 
 /**
  * 인증 관련 로직을 처리하는 서비스입니다.
@@ -36,13 +37,14 @@ export class AuthService {
      * 로그인을 처리하고 JWT 토큰을 발급합니다.
      */
     async login(user: any) {
-        const payload = { username: user.username, sub: user.id };
+        const payload = { username: user.username, sub: user.id, role: user.role ?? UserRole.USER };
         return {
             access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
             refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
             user: {
                 id: user.id,
                 username: user.username,
+                role: user.role ?? UserRole.USER,
             }
         };
     }
@@ -82,6 +84,6 @@ export class AuthService {
         if (existingUser) {
             throw new DuplicateUserException();
         }
-        return this.usersService.create(username, pass);
+        return this.usersService.create(username, pass, UserRole.USER);
     }
 }

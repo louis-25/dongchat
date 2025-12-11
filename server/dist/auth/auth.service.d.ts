@@ -11,6 +11,7 @@ export declare class AuthService {
         user: {
             id: any;
             username: any;
+            role: any;
         };
     }>;
     refreshTokens(refreshToken: string): Promise<{

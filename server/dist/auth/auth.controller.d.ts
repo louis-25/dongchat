@@ -12,6 +12,7 @@ export declare class AuthController {
         user: {
             id: any;
             username: any;
+            role: any;
         };
     }>;
     refresh(refreshTokenDto: RefreshTokenDto): Promise<{

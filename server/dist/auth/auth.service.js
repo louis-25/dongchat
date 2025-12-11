@@ -48,6 +48,7 @@ const users_service_1 = require("../users/users.service");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
 const auth_exception_1 = require("./exceptions/auth.exception");
+const user_entity_1 = require("../users/user.entity");
 let AuthService = class AuthService {
     usersService;
     jwtService;
@@ -68,13 +69,14 @@ let AuthService = class AuthService {
         return result;
     }
     async login(user) {
-        const payload = { username: user.username, sub: user.id };
+        const payload = { username: user.username, sub: user.id, role: user.role ?? user_entity_1.UserRole.USER };
         return {
             access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
             refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
             user: {
                 id: user.id,
                 username: user.username,
+                role: user.role ?? user_entity_1.UserRole.USER,
             }
         };
     }
@@ -104,7 +106,7 @@ let AuthService = class AuthService {
         if (existingUser) {
             throw new auth_exception_1.DuplicateUserException();
         }
-        return this.usersService.create(username, pass);
+        return this.usersService.create(username, pass, user_entity_1.UserRole.USER);
     }
 };
 exports.AuthService = AuthService;

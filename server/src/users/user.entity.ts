@@ -1,5 +1,11 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
+export enum UserRole {
+    ADMIN = 'ADMIN',
+    USER = 'USER',
+    OBSERVER = 'OBSERVER',
+}
+
 /**
  * 사용자 정보를 저장하는 엔티티입니다.
  */
@@ -13,6 +19,13 @@ export class User {
 
     @Column()
     password: string;
+
+    @Column({
+        type: 'enum',
+        enum: UserRole,
+        default: UserRole.USER,
+    })
+    role: UserRole;
 
     @CreateDateColumn()
     createdAt: Date;

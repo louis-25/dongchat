@@ -59,12 +59,16 @@ let UsersService = class UsersService {
     async findOne(username) {
         return this.usersRepository.findOne({ where: { username } });
     }
-    async create(username, pass) {
+    async findById(id) {
+        return this.usersRepository.findOne({ where: { id } });
+    }
+    async create(username, pass, role = UserRole.USER) {
         const salt = await bcrypt.genSalt();
         const hashedPassword = await bcrypt.hash(pass, salt);
         const user = this.usersRepository.create({
             username,
             password: hashedPassword,
+            role,
         });
         return this.usersRepository.save(user);
     }
