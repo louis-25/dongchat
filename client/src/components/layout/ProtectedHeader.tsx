@@ -63,7 +63,7 @@ const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <div className="text-lg font-semibold text-gray-900 flex items-center gap-3">
           <button
-            onClick={() => router.push("/chat")}
+            onClick={() => router.push("/chat/friends")}
             className="hover:text-blue-600"
           >
             DongChat
