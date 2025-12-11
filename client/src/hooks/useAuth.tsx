@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { setAccessToken } from "@/lib/api-client";
 
 const useAuth = () => {
-  const { goLogin } = useRouter();
+  const { router } = useRouter();
   const [user, setUser] = useAtom(userAtom);
   const [, setAccessTokenAtom] = useAtom(accessTokenAtom);
   const { data: session } = useSession();
@@ -30,7 +30,7 @@ const useAuth = () => {
     const storedUser = localStorage.getItem("user");
 
     if (!refreshToken || !storedUser) {
-      goLogin();
+      router.push("/login");
       return;
     }
 
@@ -40,9 +40,9 @@ const useAuth = () => {
       // refreshToken이 있으면 API 호출 시 자동으로 갱신됨
     } catch (e) {
       console.error("Failed to parse user from localStorage", e);
-      goLogin();
+      router.push("/login");
     }
-  }, [session, setUser, setAccessTokenAtom, goLogin]);
+  }, [session, setUser, setAccessTokenAtom, router]);
 
   return { user };
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ const FriendsTab = () => {
   const [pending, setPending] = useState<FriendRequest[]>([]);
   const [friendInput, setFriendInput] = useState("");
 
-  const loadFriends = async () => {
+  const loadFriends = useCallback(async () => {
     try {
       const res = await fetch(`${BASE_URL}/friends`, { headers: authHeader });
       if (res.ok) {
@@ -47,11 +47,13 @@ const FriendsTab = () => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [authHeader]);
 
   useEffect(() => {
-    loadFriends();
-  }, []);
+    (async () => {
+      await loadFriends();
+    })();
+  }, [loadFriends]);
 
   const handleAddFriend = async () => {
     if (!friendInput.trim()) return;
