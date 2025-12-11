@@ -18,7 +18,7 @@ const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [, setAccessTokenAtom] = useAtom(accessTokenAtom);
     const [, setUser] = useAtom(userAtom);
-    const { goLogin } = useRouter();
+    const { goLogin, router } = useRouter();
 
     const initials = typeof user === "object" && user && "username" in user
         ? String((user as any).username || "").charAt(0).toUpperCase() || "?"
@@ -56,7 +56,19 @@ const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
     return (
         <header className="border-b bg-white shadow-sm">
             <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-                <div className="text-lg font-semibold text-gray-900">DongChat</div>
+                <div className="text-lg font-semibold text-gray-900 flex items-center gap-3">
+                    <button onClick={() => router.push("/chat")} className="hover:text-blue-600">
+                        DongChat
+                    </button>
+                    {(user as any)?.role === "ADMIN" && (
+                        <button
+                            onClick={() => router.push("/admin/users")}
+                            className="text-sm text-gray-600 hover:text-blue-600"
+                        >
+                            관리자
+                        </button>
+                    )}
+                </div>
                 <div className="flex items-center gap-3">
                     <span className="text-sm text-gray-600">안녕하세요, {username}님</span>
                     <div ref={menuRef} className="relative">
