@@ -9,43 +9,35 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Message = void 0;
+exports.ChatRoomParticipant = void 0;
 const typeorm_1 = require("typeorm");
-const swagger_1 = require("@nestjs/swagger");
 const chat_room_entity_1 = require("./chat-room.entity");
-let Message = class Message {
+const user_entity_1 = require("../users/user.entity");
+let ChatRoomParticipant = class ChatRoomParticipant {
     id;
-    sender;
-    content;
     room;
+    user;
     createdAt;
 };
-exports.Message = Message;
+exports.ChatRoomParticipant = ChatRoomParticipant;
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '메시지 ID' }),
     (0, typeorm_1.PrimaryGeneratedColumn)(),
     __metadata("design:type", Number)
-], Message.prototype, "id", void 0);
+], ChatRoomParticipant.prototype, "id", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '발신자 이름', example: 'testuser' }),
-    (0, typeorm_1.Column)(),
-    __metadata("design:type", String)
-], Message.prototype, "sender", void 0);
+    (0, typeorm_1.ManyToOne)(() => chat_room_entity_1.ChatRoom, (room) => room.participants, { eager: true }),
+    __metadata("design:type", chat_room_entity_1.ChatRoom)
+], ChatRoomParticipant.prototype, "room", void 0);
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: '메시지 내용', example: '안녕하세요!' }),
-    (0, typeorm_1.Column)('text'),
-    __metadata("design:type", String)
-], Message.prototype, "content", void 0);
+    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, { eager: true }),
+    __metadata("design:type", user_entity_1.User)
+], ChatRoomParticipant.prototype, "user", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => chat_room_entity_1.ChatRoom, (room) => room.messages, { nullable: true }),
-    __metadata("design:type", Object)
-], Message.prototype, "room", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({ description: '생성 시간' }),
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
-], Message.prototype, "createdAt", void 0);
-exports.Message = Message = __decorate([
-    (0, typeorm_1.Entity)()
-], Message);
-//# sourceMappingURL=message.entity.js.map
+], ChatRoomParticipant.prototype, "createdAt", void 0);
+exports.ChatRoomParticipant = ChatRoomParticipant = __decorate([
+    (0, typeorm_1.Entity)(),
+    (0, typeorm_1.Unique)(['room', 'user'])
+], ChatRoomParticipant);
+//# sourceMappingURL=chat-room-participant.entity.js.map

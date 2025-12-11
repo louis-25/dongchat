@@ -1,24 +1,34 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  ManyToOne,
+} from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
+import { ChatRoom } from './chat-room.entity';
 
 /**
  * 채팅 메시지를 저장하는 엔티티입니다.
  */
 @Entity()
 export class Message {
-    @ApiProperty({ description: '메시지 ID' })
-    @PrimaryGeneratedColumn()
-    id: number;
+  @ApiProperty({ description: '메시지 ID' })
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @ApiProperty({ description: '발신자 이름', example: 'testuser' })
-    @Column()
-    sender: string;
+  @ApiProperty({ description: '발신자 이름', example: 'testuser' })
+  @Column()
+  sender: string;
 
-    @ApiProperty({ description: '메시지 내용', example: '안녕하세요!' })
-    @Column('text')
-    content: string;
+  @ApiProperty({ description: '메시지 내용', example: '안녕하세요!' })
+  @Column('text')
+  content: string;
 
-    @ApiProperty({ description: '생성 시간' })
-    @CreateDateColumn()
-    createdAt: Date;
+  @ManyToOne(() => ChatRoom, (room) => room.messages, { nullable: true })
+  room: ChatRoom | null;
+
+  @ApiProperty({ description: '생성 시간' })
+  @CreateDateColumn()
+  createdAt: Date;
 }
