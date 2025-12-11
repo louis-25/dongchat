@@ -21,7 +21,6 @@ const login_dto_1 = require("./dto/login.dto");
 const auth_response_dto_1 = require("./dto/auth-response.dto");
 const refresh_token_dto_1 = require("./dto/refresh-token.dto");
 const api_error_response_decorator_1 = require("../common/decorators/api-error-response.decorator");
-const auth_exception_1 = require("./exceptions/auth.exception");
 let AuthController = class AuthController {
     authService;
     constructor(authService) {
@@ -32,9 +31,6 @@ let AuthController = class AuthController {
     }
     async login(loginDto) {
         const user = await this.authService.validateUser(loginDto.username, loginDto.password);
-        if (!user) {
-            throw new auth_exception_1.InvalidPasswordException();
-        }
         return this.authService.login(user);
     }
     async refresh(refreshTokenDto) {

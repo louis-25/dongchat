@@ -6,7 +6,6 @@ import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ApiErrorResponse } from '../common/decorators/api-error-response.decorator';
-import { InvalidPasswordException } from './exceptions/auth.exception';
 
 /**
  * 인증 관련 API 요청을 처리하는 컨트롤러입니다.
@@ -39,9 +38,6 @@ export class AuthController {
     @ApiErrorResponse(404, '사용자를 찾을 수 없습니다.', 'AUTH_USER_NOT_FOUND')
     async login(@Body() loginDto: LoginDto) {
         const user = await this.authService.validateUser(loginDto.username, loginDto.password);
-        if (!user) {
-            throw new InvalidPasswordException();
-        }
         return this.authService.login(user);
     }
 

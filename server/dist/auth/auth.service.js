@@ -47,6 +47,7 @@ const common_1 = require("@nestjs/common");
 const users_service_1 = require("../users/users.service");
 const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
+const auth_exception_1 = require("./exceptions/auth.exception");
 let AuthService = class AuthService {
     usersService;
     jwtService;
@@ -56,11 +57,15 @@ let AuthService = class AuthService {
     }
     async validateUser(username, pass) {
         const user = await this.usersService.findOne(username);
-        if (user && (await bcrypt.compare(pass, user.password))) {
-            const { password, ...result } = user;
-            return result;
+        if (!user) {
+            throw new auth_exception_1.UserNotFoundException();
         }
-        return null;
+        const isPasswordValid = await bcrypt.compare(pass, user.password);
+        if (!isPasswordValid) {
+            throw new auth_exception_1.InvalidPasswordException();
+        }
+        const { password, ...result } = user;
+        return result;
     }
     async login(user) {
         const payload = { username: user.username, sub: user.id };
@@ -97,7 +102,7 @@ let AuthService = class AuthService {
     async register(username, pass) {
         const existingUser = await this.usersService.findOne(username);
         if (existingUser) {
-            throw new common_1.UnauthorizedException('이미 존재하는 사용자입니다.');
+            throw new auth_exception_1.DuplicateUserException();
         }
         return this.usersService.create(username, pass);
     }

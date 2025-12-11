@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { DuplicateUserException, InvalidPasswordException, UserNotFoundException } from './exceptions/auth.exception';
 
 /**
  * 인증 관련 로직을 처리하는 서비스입니다.
@@ -18,11 +19,17 @@ export class AuthService {
      */
     async validateUser(username: string, pass: string): Promise<any> {
         const user = await this.usersService.findOne(username);
-        if (user && (await bcrypt.compare(pass, user.password))) {
-            const { password, ...result } = user;
-            return result;
+        if (!user) {
+            throw new UserNotFoundException();
         }
-        return null;
+
+        const isPasswordValid = await bcrypt.compare(pass, user.password);
+        if (!isPasswordValid) {
+            throw new InvalidPasswordException();
+        }
+
+        const { password, ...result } = user;
+        return result;
     }
 
     /**
@@ -73,7 +80,7 @@ export class AuthService {
         // 이미 존재하는 사용자인지 확인
         const existingUser = await this.usersService.findOne(username);
         if (existingUser) {
-            throw new UnauthorizedException('이미 존재하는 사용자입니다.');
+            throw new DuplicateUserException();
         }
         return this.usersService.create(username, pass);
     }
