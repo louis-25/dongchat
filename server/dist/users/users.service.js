@@ -62,13 +62,29 @@ let UsersService = class UsersService {
     async findById(id) {
         return this.usersRepository.findOne({ where: { id } });
     }
-    async create(username, pass, role = UserRole.USER) {
+    async findByProvider(provider, providerId) {
+        return this.usersRepository.findOne({ where: { provider, providerId } });
+    }
+    async create(username, pass, role = user_entity_1.UserRole.USER) {
         const salt = await bcrypt.genSalt();
         const hashedPassword = await bcrypt.hash(pass, salt);
         const user = this.usersRepository.create({
             username,
             password: hashedPassword,
             role,
+        });
+        return this.usersRepository.save(user);
+    }
+    async createOAuthUser(payload) {
+        const salt = await bcrypt.genSalt();
+        const hashedPassword = await bcrypt.hash(payload.password, salt);
+        const user = this.usersRepository.create({
+            username: payload.username,
+            password: hashedPassword,
+            provider: payload.provider,
+            providerId: payload.providerId,
+            nickname: payload.nickname ?? null,
+            role: payload.role ?? user_entity_1.UserRole.USER,
         });
         return this.usersRepository.save(user);
     }

@@ -21,6 +21,9 @@ let User = class User {
     id;
     username;
     password;
+    provider;
+    providerId;
+    nickname;
     role;
     createdAt;
     updatedAt;
@@ -38,6 +41,18 @@ __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)
 ], User.prototype, "password", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: 'LOCAL' }),
+    __metadata("design:type", String)
+], User.prototype, "provider", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "providerId", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "nickname", void 0);
 __decorate([
     (0, typeorm_1.Column)({
         type: 'enum',

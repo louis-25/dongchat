@@ -7,6 +7,9 @@ export declare class User {
     id: number;
     username: string;
     password: string;
+    provider: string;
+    providerId: string | null;
+    nickname: string | null;
     role: UserRole;
     createdAt: Date;
     updatedAt: Date;

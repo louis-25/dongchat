@@ -49,6 +49,7 @@ const jwt_1 = require("@nestjs/jwt");
 const bcrypt = __importStar(require("bcrypt"));
 const auth_exception_1 = require("./exceptions/auth.exception");
 const user_entity_1 = require("../users/user.entity");
+const crypto_1 = require("crypto");
 let AuthService = class AuthService {
     usersService;
     jwtService;
@@ -69,7 +70,11 @@ let AuthService = class AuthService {
         return result;
     }
     async login(user) {
-        const payload = { username: user.username, sub: user.id, role: user.role ?? user_entity_1.UserRole.USER };
+        const payload = {
+            username: user.username,
+            sub: user.id,
+            role: user.role ?? user_entity_1.UserRole.USER,
+        };
         return {
             access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
             refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
@@ -77,7 +82,7 @@ let AuthService = class AuthService {
                 id: user.id,
                 username: user.username,
                 role: user.role ?? user_entity_1.UserRole.USER,
-            }
+            },
         };
     }
     async refreshTokens(refreshToken) {
@@ -87,14 +92,19 @@ let AuthService = class AuthService {
             if (!user) {
                 throw new common_1.UnauthorizedException('유효하지 않은 토큰입니다.');
             }
-            const newPayload = { username: user.username, sub: user.id };
+            const newPayload = {
+                username: user.username,
+                sub: user.id,
+                role: user.role ?? user_entity_1.UserRole.USER,
+            };
             return {
                 access_token: this.jwtService.sign(newPayload, { expiresIn: '15m' }),
                 refresh_token: this.jwtService.sign(newPayload, { expiresIn: '7d' }),
                 user: {
                     id: user.id,
                     username: user.username,
-                }
+                    role: user.role ?? user_entity_1.UserRole.USER,
+                },
             };
         }
         catch (error) {
@@ -107,6 +117,22 @@ let AuthService = class AuthService {
             throw new auth_exception_1.DuplicateUserException();
         }
         return this.usersService.create(username, pass, user_entity_1.UserRole.USER);
+    }
+    async loginWithKakao(providerId, nickname, usernameHint) {
+        const kakaoUsername = usernameHint || `kakao_${providerId}`;
+        let user = await this.usersService.findByProvider('KAKAO', providerId);
+        if (!user) {
+            const fallbackPassword = (0, crypto_1.randomBytes)(16).toString('hex');
+            user = await this.usersService.createOAuthUser({
+                username: kakaoUsername,
+                password: fallbackPassword,
+                provider: 'KAKAO',
+                providerId,
+                nickname: nickname || null,
+                role: user_entity_1.UserRole.USER,
+            });
+        }
+        return this.login(user);
     }
 };
 exports.AuthService = AuthService;

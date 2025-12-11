@@ -21,6 +21,7 @@ export declare class AuthController {
         user: {
             id: number;
             username: string;
+            role: import("../users/user.entity").UserRole;
         };
     }>;
 }
