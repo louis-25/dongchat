@@ -23,7 +23,7 @@ export class AuthService {
   /**
    * 사용자 자격 증명을 검증합니다.
    */
-  async validateUser(username: string, pass: string): Promise<any> {
+  async validateUser(username: string, pass: string): Promise<User> {
     const user = await this.usersService.findOne(username);
     if (!user) {
       throw new UserNotFoundException();
@@ -34,14 +34,13 @@ export class AuthService {
       throw new InvalidPasswordException();
     }
 
-    const { password, ...result } = user;
-    return result;
+    return user;
   }
 
   /**
    * 로그인을 처리하고 JWT 토큰을 발급합니다.
    */
-  async login(user: any) {
+  login(user: User) {
     const payload = {
       username: user.username,
       sub: user.id,
@@ -63,7 +62,9 @@ export class AuthService {
    */
   async refreshTokens(refreshToken: string) {
     try {
-      const payload = this.jwtService.verify(refreshToken);
+      const payload = this.jwtService.verify<{ username: string }>(
+        refreshToken,
+      );
       const user = await this.usersService.findOne(payload.username);
 
       if (!user) {
@@ -84,7 +85,7 @@ export class AuthService {
           role: user.role ?? UserRole.USER,
         },
       };
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('토큰이 만료되었거나 유효하지 않습니다.');
     }
   }
@@ -124,6 +125,6 @@ export class AuthService {
       });
     }
 
-    return this.login(user as User);
+    return this.login(user);
   }
 }
