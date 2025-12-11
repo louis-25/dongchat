@@ -119,6 +119,7 @@ const ChatRoomsTab = () => {
   const [showModal, setShowModal] = useState(false);
 
   const loadRooms = useCallback(async () => {
+    if (!token) return;
     try {
       const res = await fetch(`${BASE_URL}/chat/rooms`, {
         headers: authHeader,
@@ -133,60 +134,60 @@ const ChatRoomsTab = () => {
     } catch (e) {
       console.error(e);
     }
-  }, [authHeader, selectedRoomId]);
+  }, [authHeader, selectedRoomId, token]);
 
-  // useEffect(() => {
-  //   (async () => {
-  //     await loadRooms();
-  //   })();
-  // }, [loadRooms]);
+  useEffect(() => {
+    (async () => {
+      await loadRooms();
+    })();
+  }, [loadRooms]);
 
-  // useEffect(() => {
-  //   if (!socket || !user?.id || !selectedRoomId) return;
-  //   socket.emit("join_room", { roomId: selectedRoomId, userId: user.id });
-  // }, [socket, user?.id, selectedRoomId]);
+  useEffect(() => {
+    if (!socket || !user?.id || !selectedRoomId) return;
+    socket.emit("join_room", { roomId: selectedRoomId, userId: user.id });
+  }, [socket, user?.id, selectedRoomId]);
 
-  // useEffect(() => {
-  //   if (!socket) return;
+  useEffect(() => {
+    if (!socket) return;
 
-  //   socket.on("message", (payload: IncomingMessage) => {
-  //     if (payload.roomId === undefined || payload.roomId === null) return;
-  //     const roomKey = Number(payload.roomId);
-  //     setMessagesByRoom((prev) => {
-  //       const prevList = prev[roomKey] || [];
-  //       return {
-  //         ...prev,
-  //         [roomKey]: [
-  //           ...prevList,
-  //           {
-  //             sender: payload.sender,
-  //             message: payload.content ?? payload.message ?? "",
-  //             createdAt: payload.createdAt,
-  //           },
-  //         ],
-  //       };
-  //     });
-  //   });
+    socket.on("message", (payload: IncomingMessage) => {
+      if (payload.roomId === undefined || payload.roomId === null) return;
+      const roomKey = Number(payload.roomId);
+      setMessagesByRoom((prev) => {
+        const prevList = prev[roomKey] || [];
+        return {
+          ...prev,
+          [roomKey]: [
+            ...prevList,
+            {
+              sender: payload.sender,
+              message: payload.content ?? payload.message ?? "",
+              createdAt: payload.createdAt,
+            },
+          ],
+        };
+      });
+    });
 
-  //   socket.on(
-  //     "initial_messages",
-  //     (payload: { roomId: number; messages: IncomingMessage[] }) => {
-  //       if (payload?.roomId === undefined || payload?.roomId === null) return;
-  //       const roomKey = Number(payload.roomId);
-  //       const formatted = (payload.messages || []).map((m) => ({
-  //         sender: m.sender,
-  //         message: m.content ?? m.message ?? "",
-  //         createdAt: m.createdAt,
-  //       }));
-  //       setMessagesByRoom((prev) => ({ ...prev, [roomKey]: formatted }));
-  //     }
-  //   );
+    socket.on(
+      "initial_messages",
+      (payload: { roomId: number; messages: IncomingMessage[] }) => {
+        if (payload?.roomId === undefined || payload?.roomId === null) return;
+        const roomKey = Number(payload.roomId);
+        const formatted = (payload.messages || []).map((m) => ({
+          sender: m.sender,
+          message: m.content ?? m.message ?? "",
+          createdAt: m.createdAt,
+        }));
+        setMessagesByRoom((prev) => ({ ...prev, [roomKey]: formatted }));
+      }
+    );
 
-  //   return () => {
-  //     socket.off("message");
-  //     socket.off("initial_messages");
-  //   };
-  // }, [socket]);
+    return () => {
+      socket.off("message");
+      socket.off("initial_messages");
+    };
+  }, [socket]);
 
   const sendMessage = () => {
     if (socket && input.trim() && user?.username && selectedRoomId) {
