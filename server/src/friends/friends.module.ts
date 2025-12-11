@@ -6,10 +6,9 @@ import { FriendsController } from './friends.controller';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([Friend]), UsersModule],
-    providers: [FriendsService],
-    controllers: [FriendsController],
-    exports: [FriendsService],
+  imports: [TypeOrmModule.forFeature([Friend]), UsersModule],
+  providers: [FriendsService],
+  controllers: [FriendsController],
+  exports: [FriendsService],
 })
-export class FriendsModule { }
-
+export class FriendsModule {}

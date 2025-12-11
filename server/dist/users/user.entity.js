@@ -42,15 +42,15 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "password", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'LOCAL' }),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 100, default: 'LOCAL' }),
     __metadata("design:type", String)
 ], User.prototype, "provider", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true }),
     __metadata("design:type", Object)
 ], User.prototype, "providerId", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true }),
     __metadata("design:type", Object)
 ], User.prototype, "nickname", void 0);
 __decorate([

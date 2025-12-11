@@ -5,16 +5,16 @@ export declare class AuthService {
     private usersService;
     private jwtService;
     constructor(usersService: UsersService, jwtService: JwtService);
-    validateUser(username: string, pass: string): Promise<any>;
-    login(user: any): Promise<{
+    validateUser(username: string, pass: string): Promise<User>;
+    login(user: User): {
         access_token: string;
         refresh_token: string;
         user: {
-            id: any;
-            username: any;
-            role: any;
+            id: number;
+            username: string;
+            role: UserRole;
         };
-    }>;
+    };
     refreshTokens(refreshToken: string): Promise<{
         access_token: string;
         refresh_token: string;
@@ -29,9 +29,9 @@ export declare class AuthService {
         access_token: string;
         refresh_token: string;
         user: {
-            id: any;
-            username: any;
-            role: any;
+            id: number;
+            username: string;
+            role: UserRole;
         };
     }>;
 }

@@ -28,11 +28,11 @@ __decorate([
     __metadata("design:type", Number)
 ], ChatRoom.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true }),
     __metadata("design:type", Object)
 ], ChatRoom.prototype, "name", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: false }),
+    (0, typeorm_1.Column)({ type: 'boolean', default: false }),
     __metadata("design:type", Boolean)
 ], ChatRoom.prototype, "isGroup", void 0);
 __decorate([

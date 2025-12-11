@@ -66,10 +66,9 @@ let AuthService = class AuthService {
         if (!isPasswordValid) {
             throw new auth_exception_1.InvalidPasswordException();
         }
-        const { password, ...result } = user;
-        return result;
+        return user;
     }
-    async login(user) {
+    login(user) {
         const payload = {
             username: user.username,
             sub: user.id,
@@ -107,7 +106,7 @@ let AuthService = class AuthService {
                 },
             };
         }
-        catch (error) {
+        catch {
             throw new common_1.UnauthorizedException('토큰이 만료되었거나 유효하지 않습니다.');
         }
     }

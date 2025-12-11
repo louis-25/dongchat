@@ -40,7 +40,10 @@ let AuthController = class AuthController {
 exports.AuthController = AuthController;
 __decorate([
     (0, common_1.Post)('register'),
-    (0, swagger_1.ApiOperation)({ summary: '회원가입', description: '새로운 사용자를 등록합니다.' }),
+    (0, swagger_1.ApiOperation)({
+        summary: '회원가입',
+        description: '새로운 사용자를 등록합니다.',
+    }),
     (0, swagger_1.ApiBody)({ type: register_dto_1.RegisterDto }),
     (0, swagger_1.ApiResponse)({ status: 201, description: '회원가입 성공', type: Object }),
     (0, api_error_response_decorator_1.ApiErrorResponse)(409, '이미 존재하는 사용자입니다.', 'AUTH_DUPLICATE_USER'),
@@ -51,9 +54,16 @@ __decorate([
 ], AuthController.prototype, "register", null);
 __decorate([
     (0, common_1.Post)('login'),
-    (0, swagger_1.ApiOperation)({ summary: '로그인', description: '사용자 인증 후 JWT 토큰을 발급합니다.' }),
+    (0, swagger_1.ApiOperation)({
+        summary: '로그인',
+        description: '사용자 인증 후 JWT 토큰을 발급합니다.',
+    }),
     (0, swagger_1.ApiBody)({ type: login_dto_1.LoginDto }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '로그인 성공', type: auth_response_dto_1.AuthResponseDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '로그인 성공',
+        type: auth_response_dto_1.AuthResponseDto,
+    }),
     (0, api_error_response_decorator_1.ApiErrorResponse)(401, '비밀번호가 일치하지 않습니다.', 'AUTH_INVALID_PASSWORD'),
     (0, api_error_response_decorator_1.ApiErrorResponse)(404, '사용자를 찾을 수 없습니다.', 'AUTH_USER_NOT_FOUND'),
     __param(0, (0, common_1.Body)()),
@@ -63,9 +73,16 @@ __decorate([
 ], AuthController.prototype, "login", null);
 __decorate([
     (0, common_1.Post)('refresh'),
-    (0, swagger_1.ApiOperation)({ summary: '토큰 갱신', description: 'Refresh 토큰으로 새로운 Access 토큰을 발급합니다.' }),
+    (0, swagger_1.ApiOperation)({
+        summary: '토큰 갱신',
+        description: 'Refresh 토큰으로 새로운 Access 토큰을 발급합니다.',
+    }),
     (0, swagger_1.ApiBody)({ type: refresh_token_dto_1.RefreshTokenDto }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: '토큰 갱신 성공', type: auth_response_dto_1.AuthResponseDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 200,
+        description: '토큰 갱신 성공',
+        type: auth_response_dto_1.AuthResponseDto,
+    }),
     (0, api_error_response_decorator_1.ApiErrorResponse)(401, '토큰이 만료되었거나 유효하지 않습니다.', 'AUTH_UNAUTHORIZED'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),

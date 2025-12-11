@@ -26,13 +26,13 @@ export class User {
   @Column()
   password: string;
 
-  @Column({ default: 'LOCAL' })
+  @Column({ type: 'varchar', length: 100, default: 'LOCAL' })
   provider: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   providerId: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   nickname: string | null;
 
   @Column({

@@ -117,13 +117,18 @@ export default function AdminUsersPage() {
                     <td className="px-3 py-2">{u.username}</td>
                     <td className="px-3 py-2">{u.role}</td>
                     <td className="px-3 py-2">
-                      {u.createdAt ? new Date(u.createdAt).toLocaleString() : "-"}
+                      {u.createdAt
+                        ? new Date(u.createdAt).toLocaleString()
+                        : "-"}
                     </td>
                   </tr>
                 ))}
                 {users.length === 0 && (
                   <tr>
-                    <td className="px-3 py-3 text-center text-gray-500" colSpan={4}>
+                    <td
+                      className="px-3 py-3 text-center text-gray-500"
+                      colSpan={4}
+                    >
                       데이터가 없습니다.
                     </td>
                   </tr>
@@ -156,4 +161,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-

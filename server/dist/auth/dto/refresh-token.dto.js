@@ -16,7 +16,10 @@ class RefreshTokenDto {
 }
 exports.RefreshTokenDto = RefreshTokenDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({ description: 'Refresh Token', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' }),
+    (0, swagger_1.ApiProperty)({
+        description: 'Refresh Token',
+        example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    }),
     __metadata("design:type", String)
 ], RefreshTokenDto.prototype, "refresh_token", void 0);
 //# sourceMappingURL=refresh-token.dto.js.map

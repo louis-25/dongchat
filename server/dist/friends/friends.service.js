@@ -31,6 +31,9 @@ let FriendsService = class FriendsService {
         if (!receiver) {
             throw new common_1.NotFoundException('사용자를 찾을 수 없습니다.');
         }
+        if (!requester) {
+            throw new common_1.NotFoundException('요청자를 찾을 수 없습니다.');
+        }
         if (requester.id === receiver.id) {
             throw new common_1.BadRequestException('본인에게 친구 요청을 보낼 수 없습니다.');
         }
@@ -51,14 +54,17 @@ let FriendsService = class FriendsService {
         return this.friendRepository.save(entity);
     }
     async respondRequest(requestId, userId, action) {
-        const request = await this.friendRepository.findOne({ where: { id: requestId } });
+        const request = await this.friendRepository.findOne({
+            where: { id: requestId },
+        });
         if (!request) {
             throw new common_1.NotFoundException('요청을 찾을 수 없습니다.');
         }
         if (request.receiver.id !== userId) {
             throw new common_1.BadRequestException('승인/차단 권한이 없습니다.');
         }
-        request.status = action === 'accept' ? friend_entity_1.FriendStatus.ACCEPTED : friend_entity_1.FriendStatus.BLOCKED;
+        request.status =
+            action === 'accept' ? friend_entity_1.FriendStatus.ACCEPTED : friend_entity_1.FriendStatus.BLOCKED;
         return this.friendRepository.save(request);
     }
     async listFriends(userId) {
@@ -76,9 +82,7 @@ let FriendsService = class FriendsService {
     }
     async listPending(userId) {
         return this.friendRepository.find({
-            where: [
-                { receiver: { id: userId }, status: friend_entity_1.FriendStatus.PENDING },
-            ],
+            where: [{ receiver: { id: userId }, status: friend_entity_1.FriendStatus.PENDING }],
         });
     }
 };

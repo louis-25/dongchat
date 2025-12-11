@@ -7,9 +7,9 @@ export declare class KakaoController {
         access_token: string;
         refresh_token: string;
         user: {
-            id: any;
-            username: any;
-            role: any;
+            id: number;
+            username: string;
+            role: import("../users/user.entity").UserRole;
         };
     }>;
 }

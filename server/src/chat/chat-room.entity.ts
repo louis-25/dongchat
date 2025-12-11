@@ -14,10 +14,10 @@ export class ChatRoom {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   name: string | null;
 
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   isGroup: boolean;
 
   @OneToMany(() => Message, (message) => message.room)

@@ -39,9 +39,24 @@ let ChatController = class ChatController {
 exports.ChatController = ChatController;
 __decorate([
     (0, common_1.Get)(),
-    (0, swagger_1.ApiOperation)({ summary: '메시지 조회', description: '저장된 채팅 메시지를 페이지네이션하여 조회합니다.' }),
-    (0, swagger_1.ApiQuery)({ name: 'page', required: false, type: Number, description: '페이지 번호', example: 1 }),
-    (0, swagger_1.ApiQuery)({ name: 'limit', required: false, type: Number, description: '페이지당 항목 수', example: 50 }),
+    (0, swagger_1.ApiOperation)({
+        summary: '메시지 조회',
+        description: '저장된 채팅 메시지를 페이지네이션하여 조회합니다.',
+    }),
+    (0, swagger_1.ApiQuery)({
+        name: 'page',
+        required: false,
+        type: Number,
+        description: '페이지 번호',
+        example: 1,
+    }),
+    (0, swagger_1.ApiQuery)({
+        name: 'limit',
+        required: false,
+        type: Number,
+        description: '페이지당 항목 수',
+        example: 50,
+    }),
     (0, swagger_1.ApiResponse)({ status: 200, description: '메시지 목록', type: [message_entity_1.Message] }),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),

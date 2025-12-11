@@ -32,14 +32,14 @@ let ChatRoomsService = class ChatRoomsService {
         const usernames = dto.participantUsernames || [];
         const uniqueUsernames = Array.from(new Set([...usernames]));
         const users = await Promise.all(uniqueUsernames.map((u) => this.usersService.findOne(u)));
-        const missing = users.filter((u) => !u);
-        if (missing.length > 0) {
+        const existingUsers = users.filter((u) => !!u);
+        if (existingUsers.length !== uniqueUsernames.length) {
             throw new common_1.NotFoundException('참여자 중 존재하지 않는 사용자가 있습니다.');
         }
         const currentUser = await this.usersService.findById(currentUserId);
         if (!currentUser)
             throw new common_1.NotFoundException('사용자를 찾을 수 없습니다.');
-        const participants = [currentUser, ...users].filter((u, idx, arr) => arr.findIndex((x) => x.id === u.id) === idx);
+        const participants = [currentUser, ...existingUsers].filter((u, idx, arr) => arr.findIndex((x) => x.id === u.id) === idx);
         if (!dto.isGroup && participants.length !== 2) {
             throw new common_1.BadRequestException('1:1 채팅은 정확히 2명이어야 합니다.');
         }

@@ -10,7 +10,7 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
     private participantRepository;
     server: Server;
     constructor(messageRepository: Repository<Message>, roomRepository: Repository<ChatRoom>, participantRepository: Repository<ChatRoomParticipant>);
-    handleConnection(client: Socket): Promise<void>;
+    handleConnection(client: Socket): void;
     handleDisconnect(client: Socket): void;
     handleJoinRoom(client: Socket, payload: {
         roomId: number;

@@ -78,7 +78,9 @@ export default function ChatPage() {
 
   const loadRooms = useCallback(async () => {
     try {
-      const res = await fetch(`${BASE_URL}/chat/rooms`, { headers: authHeader });
+      const res = await fetch(`${BASE_URL}/chat/rooms`, {
+        headers: authHeader,
+      });
       if (res.ok) {
         const data = await res.json();
         setRooms(data || []);
@@ -265,17 +267,27 @@ export default function ChatPage() {
                       {p.requester?.username} → {p.receiver?.username}
                     </span>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => respondFriend(p.id, "accept")}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => respondFriend(p.id, "accept")}
+                      >
                         수락
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => respondFriend(p.id, "block")}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => respondFriend(p.id, "block")}
+                      >
                         차단
                       </Button>
                     </div>
                   </div>
                 ))}
                 {pending.length === 0 && (
-                  <div className="text-sm text-gray-500">대기 중인 요청이 없습니다.</div>
+                  <div className="text-sm text-gray-500">
+                    대기 중인 요청이 없습니다.
+                  </div>
                 )}
               </div>
             </div>
@@ -330,11 +342,16 @@ export default function ChatPage() {
                     key={room.id}
                     onClick={() => setSelectedRoomId(room.id)}
                     className={`w-full text-left rounded px-2 py-2 border ${
-                      selectedRoomId === room.id ? "border-blue-500 bg-blue-50" : "border-gray-200"
+                      selectedRoomId === room.id
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200"
                     }`}
                   >
                     <div className="font-semibold">
-                      {room.name || (room.isGroup ? `그룹방 #${room.id}` : `1:1 방 #${room.id}`)}
+                      {room.name ||
+                        (room.isGroup
+                          ? `그룹방 #${room.id}`
+                          : `1:1 방 #${room.id}`)}
                     </div>
                     <div className="text-xs text-gray-600">
                       {room.participants
@@ -345,7 +362,9 @@ export default function ChatPage() {
                   </button>
                 ))}
                 {rooms.length === 0 && (
-                  <div className="text-sm text-gray-500">참여 중인 방이 없습니다.</div>
+                  <div className="text-sm text-gray-500">
+                    참여 중인 방이 없습니다.
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -366,7 +385,9 @@ export default function ChatPage() {
                   >
                     <span className="text-xs text-gray-500">
                       {msg.sender}
-                      {msg.createdAt ? ` • ${new Date(msg.createdAt).toLocaleTimeString()}` : ""}
+                      {msg.createdAt
+                        ? ` • ${new Date(msg.createdAt).toLocaleTimeString()}`
+                        : ""}
                     </span>
                     <div
                       className={`p-2 rounded-lg max-w-[80%] ${
@@ -380,10 +401,14 @@ export default function ChatPage() {
                   </div>
                 ))}
                 {selectedRoomId && currentMessages.length === 0 && (
-                  <div className="text-sm text-gray-500">메시지가 없습니다.</div>
+                  <div className="text-sm text-gray-500">
+                    메시지가 없습니다.
+                  </div>
                 )}
                 {!selectedRoomId && (
-                  <div className="text-sm text-gray-500">채팅방을 선택하세요.</div>
+                  <div className="text-sm text-gray-500">
+                    채팅방을 선택하세요.
+                  </div>
                 )}
               </div>
               <div className="flex gap-2">

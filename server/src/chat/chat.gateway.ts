@@ -32,14 +32,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private participantRepository: Repository<ChatRoomParticipant>,
   ) {}
 
-  async handleConnection(client: Socket) {
+  handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
   }
-
   handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
   }
-
   @SubscribeMessage('join_room')
   async handleJoinRoom(
     client: Socket,

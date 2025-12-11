@@ -6,7 +6,7 @@ export declare class FriendsService {
     private friendRepository;
     private usersService;
     constructor(friendRepository: Repository<Friend>, usersService: UsersService);
-    sendRequest(requesterId: number, receiverUsername: string): Promise<Friend[]>;
+    sendRequest(requesterId: number, receiverUsername: string): Promise<Friend>;
     respondRequest(requestId: number, userId: number, action: 'accept' | 'block'): Promise<Friend>;
     listFriends(userId: number): Promise<{
         id: number;

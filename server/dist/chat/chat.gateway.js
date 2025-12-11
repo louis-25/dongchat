@@ -30,7 +30,7 @@ let ChatGateway = class ChatGateway {
         this.roomRepository = roomRepository;
         this.participantRepository = participantRepository;
     }
-    async handleConnection(client) {
+    handleConnection(client) {
         console.log(`Client connected: ${client.id}`);
     }
     handleDisconnect(client) {
