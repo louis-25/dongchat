@@ -34,7 +34,7 @@ __decorate([
 __decorate([
     (0, swagger_1.ApiProperty)({
         description: '사용자 정보',
-        example: { id: 1, username: 'testuser' },
+        example: { id: 1, username: 'testuser', role: 'USER', profileImage: null },
     }),
     __metadata("design:type", Object)
 ], AuthResponseDto.prototype, "user", void 0);

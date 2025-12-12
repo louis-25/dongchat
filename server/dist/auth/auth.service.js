@@ -74,14 +74,17 @@ let AuthService = class AuthService {
             sub: user.id,
             role: user.role ?? user_entity_1.UserRole.USER,
         };
+        const profileImageValue = user.profileImage ?? null;
+        const userResponse = {
+            id: user.id,
+            username: user.username,
+            role: user.role ?? user_entity_1.UserRole.USER,
+            profileImage: profileImageValue,
+        };
         return {
             access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
             refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
-            user: {
-                id: user.id,
-                username: user.username,
-                role: user.role ?? user_entity_1.UserRole.USER,
-            },
+            user: userResponse,
         };
     }
     async refreshTokens(refreshToken) {
@@ -96,14 +99,17 @@ let AuthService = class AuthService {
                 sub: user.id,
                 role: user.role ?? user_entity_1.UserRole.USER,
             };
+            const profileImageValue = user.profileImage ?? null;
+            const userResponse = {
+                id: user.id,
+                username: user.username,
+                role: user.role ?? user_entity_1.UserRole.USER,
+                profileImage: profileImageValue,
+            };
             return {
                 access_token: this.jwtService.sign(newPayload, { expiresIn: '15m' }),
                 refresh_token: this.jwtService.sign(newPayload, { expiresIn: '7d' }),
-                user: {
-                    id: user.id,
-                    username: user.username,
-                    role: user.role ?? user_entity_1.UserRole.USER,
-                },
+                user: userResponse,
             };
         }
         catch {
@@ -117,8 +123,8 @@ let AuthService = class AuthService {
         }
         return this.usersService.create(username, pass, user_entity_1.UserRole.USER);
     }
-    async loginWithKakao(providerId, nickname, usernameHint) {
-        const kakaoUsername = usernameHint || `kakao_${providerId}`;
+    async loginWithKakao(providerId, nickname, usernameHint, profileImage) {
+        const kakaoUsername = usernameHint || nickname || `kakao_${providerId}`;
         let user = await this.usersService.findByProvider('KAKAO', providerId);
         if (!user) {
             const fallbackPassword = (0, crypto_1.randomBytes)(16).toString('hex');
@@ -128,8 +134,24 @@ let AuthService = class AuthService {
                 provider: 'KAKAO',
                 providerId,
                 nickname: nickname || null,
+                profileImage: profileImage || null,
                 role: user_entity_1.UserRole.USER,
             });
+        }
+        else {
+            let needsUpdate = false;
+            if (nickname && user.nickname !== nickname) {
+                user.nickname = nickname;
+                needsUpdate = true;
+            }
+            if (profileImage && user.profileImage !== profileImage) {
+                user.profileImage = profileImage;
+                needsUpdate = true;
+            }
+            if (needsUpdate && user) {
+                const updatedUser = await this.usersService.update(user);
+                user = updatedUser;
+            }
         }
         return this.login(user);
     }

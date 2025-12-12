@@ -13,6 +13,8 @@ export declare class UsersService {
         provider: string;
         providerId: string;
         nickname?: string | null;
+        profileImage?: string | null;
         role?: UserRole;
     }): Promise<User>;
+    update(user: User): Promise<User>;
 }

@@ -24,6 +24,7 @@ let User = class User {
     provider;
     providerId;
     nickname;
+    profileImage;
     role;
     createdAt;
     updatedAt;
@@ -53,6 +54,10 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true }),
     __metadata("design:type", Object)
 ], User.prototype, "nickname", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 500, nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "profileImage", void 0);
 __decorate([
     (0, typeorm_1.Column)({
         type: 'enum',

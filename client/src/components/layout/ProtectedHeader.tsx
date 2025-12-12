@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAtom } from "jotai";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import useRouter from "@/hooks/useRouter";
 import { accessTokenAtom, userAtom } from "@/store/auth";
 import { setAccessToken } from "@/lib/api-client";
@@ -13,6 +14,18 @@ type ProtectedHeaderProps = {
   user: AuthResponseDtoUser | null;
 };
 
+// User 타입 가드
+type UserWithFields = {
+  id?: number;
+  username?: string;
+  role?: string;
+  profileImage?: string;
+};
+
+const isUserWithFields = (user: unknown): user is UserWithFields => {
+  return typeof user === "object" && user !== null;
+};
+
 const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -20,22 +33,19 @@ const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
   const [, setUser] = useAtom(userAtom);
   const { goLogin, router } = useRouter();
 
-  const initials =
-    typeof user === "object" && user && "username" in user
-      ? String((user as any).username || "")
-          .charAt(0)
-          .toUpperCase() || "?"
-      : "?";
+  const userData = isUserWithFields(user) ? user : null;
 
-  const username =
-    typeof user === "object" && user && "username" in user
-      ? String((user as any).username || "")
-      : "알 수 없음";
+  const initials = userData?.username
+    ? userData.username.charAt(0).toUpperCase() || "?"
+    : "?";
 
-  const userId =
-    typeof user === "object" && user && "id" in user
-      ? String((user as any).id ?? "-")
-      : "-";
+  const username = userData?.username || "알 수 없음";
+
+  const userId = userData?.id ? String(userData.id) : "-";
+
+  const profileImage = userData?.profileImage;
+
+  const userRole = userData?.role;
 
   const handleLogout = () => {
     localStorage.removeItem("refreshToken");
@@ -48,6 +58,7 @@ const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
   };
 
   useEffect(() => {
+    console.log("userData", userData);
     if (!isMenuOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -68,7 +79,7 @@ const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
           >
             DongChat
           </button>
-          {(user as any)?.role === "ADMIN" && (
+          {userRole === "ADMIN" && (
             <button
               onClick={() => router.push("/admin/users")}
               className="text-sm text-gray-600 hover:text-blue-600"
@@ -89,14 +100,19 @@ const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
               onClick={() => setIsMenuOpen((prev) => !prev)}
               className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-2 py-1 shadow-sm transition hover:shadow"
             >
-              <div
-                className={cn(
-                  "flex size-9 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white",
-                  !user && "bg-gray-400"
-                )}
-              >
-                {initials}
-              </div>
+              <Avatar className="size-9">
+                {profileImage ? (
+                  <AvatarImage src={profileImage} alt={username} />
+                ) : null}
+                <AvatarFallback
+                  className={cn(
+                    "bg-blue-600 text-sm font-semibold text-white",
+                    !user && "bg-gray-400"
+                  )}
+                >
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
             </button>
             {isMenuOpen && (
               <div className="absolute right-0 mt-2 w-56 rounded-md border border-gray-200 bg-white shadow-lg">

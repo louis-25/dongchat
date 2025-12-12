@@ -61,6 +61,7 @@ export class UsersService {
     provider: string;
     providerId: string;
     nickname?: string | null;
+    profileImage?: string | null;
     role?: UserRole;
   }): Promise<User> {
     const salt = await bcrypt.genSalt();
@@ -72,9 +73,14 @@ export class UsersService {
       provider: payload.provider,
       providerId: payload.providerId,
       nickname: payload.nickname ?? null,
+      profileImage: payload.profileImage ?? null,
       role: payload.role ?? UserRole.USER,
     });
 
+    return this.usersRepository.save(user);
+  }
+
+  async update(user: User): Promise<User> {
     return this.usersRepository.save(user);
   }
 }

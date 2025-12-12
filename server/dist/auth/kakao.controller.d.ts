@@ -10,6 +10,7 @@ export declare class KakaoController {
             id: number;
             username: string;
             role: import("../users/user.entity").UserRole;
+            profileImage: string | null;
         };
     }>;
 }

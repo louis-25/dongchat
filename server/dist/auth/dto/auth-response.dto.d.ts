@@ -5,5 +5,6 @@ export declare class AuthResponseDto {
         id: number;
         username: string;
         role: string;
+        profileImage: string | null;
     };
 }

@@ -20,4 +20,11 @@ export class KakaoLoginDto {
     required: false,
   })
   username?: string;
+
+  @ApiProperty({
+    description: '프로필 이미지 URL',
+    example: 'https://k.kakaocdn.net/dn/.../img_640x640.jpg',
+    required: false,
+  })
+  profileImage?: string;
 }

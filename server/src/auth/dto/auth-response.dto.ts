@@ -18,11 +18,12 @@ export class AuthResponseDto {
 
   @ApiProperty({
     description: '사용자 정보',
-    example: { id: 1, username: 'testuser' },
+    example: { id: 1, username: 'testuser', role: 'USER', profileImage: null },
   })
   user: {
     id: number;
     username: string;
     role: string;
+    profileImage: string | null;
   };
 }

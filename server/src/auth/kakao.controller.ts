@@ -15,6 +15,7 @@ export class KakaoController {
       body.providerId,
       body.nickname,
       body.username,
+      body.profileImage,
     );
   }
 }

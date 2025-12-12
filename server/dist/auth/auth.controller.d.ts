@@ -14,6 +14,7 @@ export declare class AuthController {
             id: number;
             username: string;
             role: import("../users/user.entity").UserRole;
+            profileImage: string | null;
         };
     }>;
     refresh(refreshTokenDto: RefreshTokenDto): Promise<{
@@ -23,6 +24,7 @@ export declare class AuthController {
             id: number;
             username: string;
             role: import("../users/user.entity").UserRole;
+            profileImage: string | null;
         };
     }>;
 }

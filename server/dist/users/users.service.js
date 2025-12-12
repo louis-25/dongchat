@@ -84,8 +84,12 @@ let UsersService = class UsersService {
             provider: payload.provider,
             providerId: payload.providerId,
             nickname: payload.nickname ?? null,
+            profileImage: payload.profileImage ?? null,
             role: payload.role ?? user_entity_1.UserRole.USER,
         });
+        return this.usersRepository.save(user);
+    }
+    async update(user) {
         return this.usersRepository.save(user);
     }
 };

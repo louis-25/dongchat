@@ -54,7 +54,10 @@ export default function AdminUsersPage() {
   };
 
   useEffect(() => {
-    fetchUsers();
+    const fetchData = async () => {
+      await fetchUsers();
+    };
+    fetchData();
   }, [page, limit, sort, order]);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));

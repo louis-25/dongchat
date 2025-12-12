@@ -15,6 +15,7 @@ class KakaoLoginDto {
     providerId;
     nickname;
     username;
+    profileImage;
 }
 exports.KakaoLoginDto = KakaoLoginDto;
 __decorate([
@@ -40,4 +41,12 @@ __decorate([
     }),
     __metadata("design:type", String)
 ], KakaoLoginDto.prototype, "username", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '프로필 이미지 URL',
+        example: 'https://k.kakaocdn.net/dn/.../img_640x640.jpg',
+        required: false,
+    }),
+    __metadata("design:type", String)
+], KakaoLoginDto.prototype, "profileImage", void 0);
 //# sourceMappingURL=kakao-login.dto.js.map

@@ -10,6 +10,7 @@ export declare class User {
     provider: string;
     providerId: string | null;
     nickname: string | null;
+    profileImage: string | null;
     role: UserRole;
     createdAt: Date;
     updatedAt: Date;

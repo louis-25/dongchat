@@ -23,7 +23,7 @@ let KakaoController = class KakaoController {
         this.authService = authService;
     }
     async kakaoLogin(body) {
-        return this.authService.loginWithKakao(body.providerId, body.nickname, body.username);
+        return this.authService.loginWithKakao(body.providerId, body.nickname, body.username, body.profileImage);
     }
 };
 exports.KakaoController = KakaoController;

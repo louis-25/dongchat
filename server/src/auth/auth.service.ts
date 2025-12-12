@@ -40,27 +40,54 @@ export class AuthService {
   /**
    * 로그인을 처리하고 JWT 토큰을 발급합니다.
    */
-  login(user: User) {
+  login(user: User): {
+    access_token: string;
+    refresh_token: string;
+    user: {
+      id: number;
+      username: string;
+      role: UserRole;
+      profileImage: string | null;
+    };
+  } {
     const payload = {
       username: user.username,
       sub: user.id,
       role: user.role ?? UserRole.USER,
     };
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const profileImageValue: string | null = user.profileImage ?? null;
+    const userResponse: {
+      id: number;
+      username: string;
+      role: UserRole;
+      profileImage: string | null;
+    } = {
+      id: user.id,
+      username: user.username,
+      role: user.role ?? UserRole.USER,
+      profileImage: profileImageValue,
+    };
     return {
       access_token: this.jwtService.sign(payload, { expiresIn: '15m' }),
       refresh_token: this.jwtService.sign(payload, { expiresIn: '7d' }),
-      user: {
-        id: user.id,
-        username: user.username,
-        role: user.role ?? UserRole.USER,
-      },
+      user: userResponse,
     };
   }
 
   /**
    * Refresh 토큰으로 새로운 Access 토큰을 발급합니다.
    */
-  async refreshTokens(refreshToken: string) {
+  async refreshTokens(refreshToken: string): Promise<{
+    access_token: string;
+    refresh_token: string;
+    user: {
+      id: number;
+      username: string;
+      role: UserRole;
+      profileImage: string | null;
+    };
+  }> {
     try {
       const payload = this.jwtService.verify<{ username: string }>(
         refreshToken,
@@ -76,14 +103,23 @@ export class AuthService {
         sub: user.id,
         role: user.role ?? UserRole.USER,
       };
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const profileImageValue: string | null = user.profileImage ?? null;
+      const userResponse: {
+        id: number;
+        username: string;
+        role: UserRole;
+        profileImage: string | null;
+      } = {
+        id: user.id,
+        username: user.username,
+        role: user.role ?? UserRole.USER,
+        profileImage: profileImageValue,
+      };
       return {
         access_token: this.jwtService.sign(newPayload, { expiresIn: '15m' }),
         refresh_token: this.jwtService.sign(newPayload, { expiresIn: '7d' }),
-        user: {
-          id: user.id,
-          username: user.username,
-          role: user.role ?? UserRole.USER,
-        },
+        user: userResponse,
       };
     } catch {
       throw new UnauthorizedException('토큰이 만료되었거나 유효하지 않습니다.');
@@ -109,8 +145,10 @@ export class AuthService {
     providerId: string,
     nickname?: string,
     usernameHint?: string,
+    profileImage?: string,
   ) {
-    const kakaoUsername = usernameHint || `kakao_${providerId}`;
+    // username은 nickname을 우선 사용, 없으면 providerId 기반 생성
+    const kakaoUsername = usernameHint || nickname || `kakao_${providerId}`;
     let user = await this.usersService.findByProvider('KAKAO', providerId);
 
     if (!user) {
@@ -121,8 +159,26 @@ export class AuthService {
         provider: 'KAKAO',
         providerId,
         nickname: nickname || null,
+        profileImage: profileImage || null,
         role: UserRole.USER,
       });
+    } else {
+      // 기존 사용자의 경우 프로필 정보 업데이트
+      let needsUpdate = false;
+      if (nickname && user.nickname !== nickname) {
+        user.nickname = nickname;
+        needsUpdate = true;
+      }
+      if (profileImage && user.profileImage !== profileImage) {
+        user.profileImage = profileImage;
+        needsUpdate = true;
+      }
+      if (needsUpdate && user) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+        const updatedUser = await this.usersService.update(user);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        user = updatedUser;
+      }
     }
 
     return this.login(user);
