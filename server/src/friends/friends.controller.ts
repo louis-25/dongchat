@@ -11,6 +11,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FriendsService } from './friends.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { SendFriendRequestDto } from './dto/send-friend-request.dto';
 
 @ApiTags('Friends')
 @ApiBearerAuth()
@@ -23,9 +24,9 @@ export class FriendsController {
   @ApiOperation({ summary: '친구 요청 보내기' })
   async request(
     @Req() req: { user: { userId: number } },
-    @Body('username') username: string,
+    @Body() dto: SendFriendRequestDto,
   ) {
-    return this.friendsService.sendRequest(req.user.userId, username);
+    return this.friendsService.sendRequest(req.user.userId, dto.username);
   }
 
   @Patch(':id/accept')

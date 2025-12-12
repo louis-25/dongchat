@@ -5,10 +5,7 @@
  * 실시간 채팅 애플리케이션 API 문서
  * OpenAPI spec version: 1.0
  */
-import {
-  useMutation,
-  useQuery
-} from '@tanstack/react-query';
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -21,382 +18,584 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult
-} from '@tanstack/react-query';
+  UseQueryResult,
+} from "@tanstack/react-query";
 
-import { customInstance } from '../../lib/api-client';
-import type { ErrorType } from '../../lib/api-client';
+import type { SendFriendRequestDto } from "../../lib/api/models";
 
+import { customInstance } from "../../lib/api-client";
+import type { ErrorType } from "../../lib/api-client";
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
-
 
 /**
  * @summary 친구 요청 보내기
  */
 export const friendsControllerRequest = (
-    
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  sendFriendRequestDto: SendFriendRequestDto,
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal
 ) => {
-      
-      
-      return customInstance<void>(
-      {url: `/friends/request`, method: 'POST', signal
+  return customInstance<void>(
+    {
+      url: `/friends/request`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: sendFriendRequestDto,
+      signal,
     },
-      options);
-    }
-  
+    options
+  );
+};
 
+export const getFriendsControllerRequestMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof friendsControllerRequest>>,
+    TError,
+    { data: SendFriendRequestDto },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof friendsControllerRequest>>,
+  TError,
+  { data: SendFriendRequestDto },
+  TContext
+> => {
+  const mutationKey = ["friendsControllerRequest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
 
-export const getFriendsControllerRequestMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof friendsControllerRequest>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof friendsControllerRequest>>, TError,void, TContext> => {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof friendsControllerRequest>>,
+    { data: SendFriendRequestDto }
+  > = (props) => {
+    const { data } = props ?? {};
 
-const mutationKey = ['friendsControllerRequest'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+    return friendsControllerRequest(data, requestOptions);
+  };
 
-      
+  return { mutationFn, ...mutationOptions };
+};
 
+export type FriendsControllerRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof friendsControllerRequest>>
+>;
+export type FriendsControllerRequestMutationBody = SendFriendRequestDto;
+export type FriendsControllerRequestMutationError = ErrorType<unknown>;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof friendsControllerRequest>>, void> = () => {
-          
-
-          return  friendsControllerRequest(requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type FriendsControllerRequestMutationResult = NonNullable<Awaited<ReturnType<typeof friendsControllerRequest>>>
-    
-    export type FriendsControllerRequestMutationError = ErrorType<unknown>
-
-    /**
+/**
  * @summary 친구 요청 보내기
  */
-export const useFriendsControllerRequest = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof friendsControllerRequest>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof friendsControllerRequest>>,
-        TError,
-        void,
-        TContext
-      > => {
+export const useFriendsControllerRequest = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof friendsControllerRequest>>,
+      TError,
+      { data: SendFriendRequestDto },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof friendsControllerRequest>>,
+  TError,
+  { data: SendFriendRequestDto },
+  TContext
+> => {
+  const mutationOptions = getFriendsControllerRequestMutationOptions(options);
 
-      const mutationOptions = getFriendsControllerRequestMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+  return useMutation(mutationOptions, queryClient);
+};
+/**
  * @summary 친구 요청 수락
  */
 export const friendsControllerAccept = (
-    id: string,
- options?: SecondParameter<typeof customInstance>,) => {
-      
-      
-      return customInstance<void>(
-      {url: `/friends/${id}/accept`, method: 'PATCH'
-    },
-      options);
-    }
-  
+  id: string,
+  options?: SecondParameter<typeof customInstance>
+) => {
+  return customInstance<void>(
+    { url: `/friends/${id}/accept`, method: "PATCH" },
+    options
+  );
+};
 
+export const getFriendsControllerAcceptMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof friendsControllerAccept>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof friendsControllerAccept>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["friendsControllerAccept"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
 
-export const getFriendsControllerAcceptMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof friendsControllerAccept>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof friendsControllerAccept>>, TError,{id: string}, TContext> => {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof friendsControllerAccept>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
 
-const mutationKey = ['friendsControllerAccept'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+    return friendsControllerAccept(id, requestOptions);
+  };
 
-      
+  return { mutationFn, ...mutationOptions };
+};
 
+export type FriendsControllerAcceptMutationResult = NonNullable<
+  Awaited<ReturnType<typeof friendsControllerAccept>>
+>;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof friendsControllerAccept>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
+export type FriendsControllerAcceptMutationError = ErrorType<unknown>;
 
-          return  friendsControllerAccept(id,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type FriendsControllerAcceptMutationResult = NonNullable<Awaited<ReturnType<typeof friendsControllerAccept>>>
-    
-    export type FriendsControllerAcceptMutationError = ErrorType<unknown>
-
-    /**
+/**
  * @summary 친구 요청 수락
  */
-export const useFriendsControllerAccept = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof friendsControllerAccept>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof friendsControllerAccept>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
+export const useFriendsControllerAccept = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof friendsControllerAccept>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof friendsControllerAccept>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions = getFriendsControllerAcceptMutationOptions(options);
 
-      const mutationOptions = getFriendsControllerAcceptMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+  return useMutation(mutationOptions, queryClient);
+};
+/**
  * @summary 친구 요청 차단
  */
 export const friendsControllerBlock = (
-    id: string,
- options?: SecondParameter<typeof customInstance>,) => {
-      
-      
-      return customInstance<void>(
-      {url: `/friends/${id}/block`, method: 'PATCH'
-    },
-      options);
-    }
-  
+  id: string,
+  options?: SecondParameter<typeof customInstance>
+) => {
+  return customInstance<void>(
+    { url: `/friends/${id}/block`, method: "PATCH" },
+    options
+  );
+};
 
+export const getFriendsControllerBlockMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof friendsControllerBlock>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof friendsControllerBlock>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["friendsControllerBlock"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
 
-export const getFriendsControllerBlockMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof friendsControllerBlock>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof friendsControllerBlock>>, TError,{id: string}, TContext> => {
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof friendsControllerBlock>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
 
-const mutationKey = ['friendsControllerBlock'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
+    return friendsControllerBlock(id, requestOptions);
+  };
 
-      
+  return { mutationFn, ...mutationOptions };
+};
 
+export type FriendsControllerBlockMutationResult = NonNullable<
+  Awaited<ReturnType<typeof friendsControllerBlock>>
+>;
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof friendsControllerBlock>>, {id: string}> = (props) => {
-          const {id} = props ?? {};
+export type FriendsControllerBlockMutationError = ErrorType<unknown>;
 
-          return  friendsControllerBlock(id,requestOptions)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type FriendsControllerBlockMutationResult = NonNullable<Awaited<ReturnType<typeof friendsControllerBlock>>>
-    
-    export type FriendsControllerBlockMutationError = ErrorType<unknown>
-
-    /**
+/**
  * @summary 친구 요청 차단
  */
-export const useFriendsControllerBlock = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof friendsControllerBlock>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof friendsControllerBlock>>,
-        TError,
-        {id: string},
-        TContext
-      > => {
+export const useFriendsControllerBlock = <
+  TError = ErrorType<unknown>,
+  TContext = unknown
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof friendsControllerBlock>>,
+      TError,
+      { id: string },
+      TContext
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof friendsControllerBlock>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationOptions = getFriendsControllerBlockMutationOptions(options);
 
-      const mutationOptions = getFriendsControllerBlockMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    /**
+  return useMutation(mutationOptions, queryClient);
+};
+/**
  * @summary 친구 목록 조회
  */
 export const friendsControllerList = (
-    
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal
 ) => {
-      
-      
-      return customInstance<void>(
-      {url: `/friends`, method: 'GET', signal
-    },
-      options);
-    }
-  
+  return customInstance<void>(
+    { url: `/friends`, method: "GET", signal },
+    options
+  );
+};
 
+const getFriendsControllerListQueryKey = () => {
+  return [`/friends`] as const;
+};
 
+export const getFriendsControllerListQueryOptions = <
+  TData = Awaited<ReturnType<typeof friendsControllerList>>,
+  TError = ErrorType<unknown>
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof friendsControllerList>>,
+      TError,
+      TData
+    >
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-export const getFriendsControllerListQueryKey = () => {
-    return [
-    `/friends`
-    ] as const;
-    }
+  const queryKey = queryOptions?.queryKey ?? getFriendsControllerListQueryKey();
 
-    
-export const getFriendsControllerListQueryOptions = <TData = Awaited<ReturnType<typeof friendsControllerList>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof friendsControllerList>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof friendsControllerList>>
+  > = ({ signal }) => friendsControllerList(requestOptions, signal);
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+  return {
+    queryKey,
+    queryFn,
+    staleTime: 60000,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof friendsControllerList>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-  const queryKey =  queryOptions?.queryKey ?? getFriendsControllerListQueryKey();
+export type FriendsControllerListQueryResult = NonNullable<
+  Awaited<ReturnType<typeof friendsControllerList>>
+>;
+export type FriendsControllerListQueryError = ErrorType<unknown>;
 
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof friendsControllerList>>> = ({ signal }) => friendsControllerList(requestOptions, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn,   staleTime: 60000,  ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof friendsControllerList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type FriendsControllerListQueryResult = NonNullable<Awaited<ReturnType<typeof friendsControllerList>>>
-export type FriendsControllerListQueryError = ErrorType<unknown>
-
-
-export function useFriendsControllerList<TData = Awaited<ReturnType<typeof friendsControllerList>>, TError = ErrorType<unknown>>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof friendsControllerList>>, TError, TData>> & Pick<
+export function useFriendsControllerList<
+  TData = Awaited<ReturnType<typeof friendsControllerList>>,
+  TError = ErrorType<unknown>
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof friendsControllerList>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof friendsControllerList>>,
           TError,
           Awaited<ReturnType<typeof friendsControllerList>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useFriendsControllerList<TData = Awaited<ReturnType<typeof friendsControllerList>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof friendsControllerList>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useFriendsControllerList<
+  TData = Awaited<ReturnType<typeof friendsControllerList>>,
+  TError = ErrorType<unknown>
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof friendsControllerList>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof friendsControllerList>>,
           TError,
           Awaited<ReturnType<typeof friendsControllerList>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useFriendsControllerList<TData = Awaited<ReturnType<typeof friendsControllerList>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof friendsControllerList>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useFriendsControllerList<
+  TData = Awaited<ReturnType<typeof friendsControllerList>>,
+  TError = ErrorType<unknown>
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof friendsControllerList>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary 친구 목록 조회
  */
 
-export function useFriendsControllerList<TData = Awaited<ReturnType<typeof friendsControllerList>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof friendsControllerList>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useFriendsControllerList<
+  TData = Awaited<ReturnType<typeof friendsControllerList>>,
+  TError = ErrorType<unknown>
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof friendsControllerList>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getFriendsControllerListQueryOptions(options);
 
-  const queryOptions = getFriendsControllerListQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+  const query = useQuery(queryOptions, queryClient);
+  return { queryKey: queryOptions.queryKey, ...query } as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 }
-
-
-
 
 /**
  * @summary 받은 친구 요청 목록 조회
  */
 export const friendsControllerPending = (
-    
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+  options?: SecondParameter<typeof customInstance>,
+  signal?: AbortSignal
 ) => {
-      
-      
-      return customInstance<void>(
-      {url: `/friends/pending`, method: 'GET', signal
-    },
-      options);
-    }
-  
+  return customInstance<void>(
+    { url: `/friends/pending`, method: "GET", signal },
+    options
+  );
+};
 
+const getFriendsControllerPendingQueryKey = () => {
+  return [`/friends/pending`] as const;
+};
 
+export const getFriendsControllerPendingQueryOptions = <
+  TData = Awaited<ReturnType<typeof friendsControllerPending>>,
+  TError = ErrorType<unknown>
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<
+      Awaited<ReturnType<typeof friendsControllerPending>>,
+      TError,
+      TData
+    >
+  >;
+  request?: SecondParameter<typeof customInstance>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-export const getFriendsControllerPendingQueryKey = () => {
-    return [
-    `/friends/pending`
-    ] as const;
-    }
+  const queryKey =
+    queryOptions?.queryKey ?? getFriendsControllerPendingQueryKey();
 
-    
-export const getFriendsControllerPendingQueryOptions = <TData = Awaited<ReturnType<typeof friendsControllerPending>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof friendsControllerPending>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof friendsControllerPending>>
+  > = ({ signal }) => friendsControllerPending(requestOptions, signal);
 
-const {query: queryOptions, request: requestOptions} = options ?? {};
+  return {
+    queryKey,
+    queryFn,
+    staleTime: 60000,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof friendsControllerPending>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
 
-  const queryKey =  queryOptions?.queryKey ?? getFriendsControllerPendingQueryKey();
+export type FriendsControllerPendingQueryResult = NonNullable<
+  Awaited<ReturnType<typeof friendsControllerPending>>
+>;
+export type FriendsControllerPendingQueryError = ErrorType<unknown>;
 
-  
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof friendsControllerPending>>> = ({ signal }) => friendsControllerPending(requestOptions, signal);
-
-      
-
-      
-
-   return  { queryKey, queryFn,   staleTime: 60000,  ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof friendsControllerPending>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type FriendsControllerPendingQueryResult = NonNullable<Awaited<ReturnType<typeof friendsControllerPending>>>
-export type FriendsControllerPendingQueryError = ErrorType<unknown>
-
-
-export function useFriendsControllerPending<TData = Awaited<ReturnType<typeof friendsControllerPending>>, TError = ErrorType<unknown>>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof friendsControllerPending>>, TError, TData>> & Pick<
+export function useFriendsControllerPending<
+  TData = Awaited<ReturnType<typeof friendsControllerPending>>,
+  TError = ErrorType<unknown>
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof friendsControllerPending>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof friendsControllerPending>>,
           TError,
           Awaited<ReturnType<typeof friendsControllerPending>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useFriendsControllerPending<TData = Awaited<ReturnType<typeof friendsControllerPending>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof friendsControllerPending>>, TError, TData>> & Pick<
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useFriendsControllerPending<
+  TData = Awaited<ReturnType<typeof friendsControllerPending>>,
+  TError = ErrorType<unknown>
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof friendsControllerPending>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof friendsControllerPending>>,
           TError,
           Awaited<ReturnType<typeof friendsControllerPending>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useFriendsControllerPending<TData = Awaited<ReturnType<typeof friendsControllerPending>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof friendsControllerPending>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useFriendsControllerPending<
+  TData = Awaited<ReturnType<typeof friendsControllerPending>>,
+  TError = ErrorType<unknown>
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof friendsControllerPending>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+};
 /**
  * @summary 받은 친구 요청 목록 조회
  */
 
-export function useFriendsControllerPending<TData = Awaited<ReturnType<typeof friendsControllerPending>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof friendsControllerPending>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient 
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+export function useFriendsControllerPending<
+  TData = Awaited<ReturnType<typeof friendsControllerPending>>,
+  TError = ErrorType<unknown>
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof friendsControllerPending>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof customInstance>;
+  },
+  queryClient?: QueryClient
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>;
+} {
+  const queryOptions = getFriendsControllerPendingQueryOptions(options);
 
-  const queryOptions = getFriendsControllerPendingQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+  const query = useQuery(queryOptions, queryClient);
+  return { queryKey: queryOptions.queryKey, ...query } as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
 }
-
-
-
-

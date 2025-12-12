@@ -118,7 +118,7 @@ export const chatRoomsControllerList = (
 
 
 
-export const getChatRoomsControllerListQueryKey = () => {
+const getChatRoomsControllerListQueryKey = () => {
     return [
     `/chat/rooms`
     ] as const;
@@ -182,11 +182,8 @@ export function useChatRoomsControllerList<TData = Awaited<ReturnType<typeof cha
 
   const queryOptions = getChatRoomsControllerListQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+  const query = useQuery(queryOptions, queryClient);
+return { queryKey: queryOptions.queryKey, ...query } as UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 }
 
 

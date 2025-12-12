@@ -52,7 +52,7 @@ export const usersControllerFindAll = (
 
 
 
-export const getUsersControllerFindAllQueryKey = (params?: UsersControllerFindAllParams,) => {
+const getUsersControllerFindAllQueryKey = (params?: UsersControllerFindAllParams,) => {
     return [
     `/users`, ...(params ? [params]: [])
     ] as const;
@@ -116,11 +116,8 @@ export function useUsersControllerFindAll<TData = Awaited<ReturnType<typeof user
 
   const queryOptions = getUsersControllerFindAllQueryOptions(params,options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+  const query = useQuery(queryOptions, queryClient);
+return { queryKey: queryOptions.queryKey, ...query } as UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 }
 
 

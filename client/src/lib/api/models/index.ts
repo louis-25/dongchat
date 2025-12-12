@@ -20,5 +20,6 @@ export * from './loginDto';
 export * from './message';
 export * from './refreshTokenDto';
 export * from './registerDto';
+export * from './sendFriendRequestDto';
 export * from './user';
 export * from './usersControllerFindAllParams';

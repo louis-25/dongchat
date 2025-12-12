@@ -53,7 +53,7 @@ export const chatControllerGetMessages = (
 
 
 
-export const getChatControllerGetMessagesQueryKey = (params?: ChatControllerGetMessagesParams,) => {
+const getChatControllerGetMessagesQueryKey = (params?: ChatControllerGetMessagesParams,) => {
     return [
     `/chat`, ...(params ? [params]: [])
     ] as const;
@@ -117,11 +117,8 @@ export function useChatControllerGetMessages<TData = Awaited<ReturnType<typeof c
 
   const queryOptions = getChatControllerGetMessagesQueryOptions(params,options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+  const query = useQuery(queryOptions, queryClient);
+return { queryKey: queryOptions.queryKey, ...query } as UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 }
 
 

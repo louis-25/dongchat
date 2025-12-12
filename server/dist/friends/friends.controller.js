@@ -17,13 +17,14 @@ const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const friends_service_1 = require("./friends.service");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
+const send_friend_request_dto_1 = require("./dto/send-friend-request.dto");
 let FriendsController = class FriendsController {
     friendsService;
     constructor(friendsService) {
         this.friendsService = friendsService;
     }
-    async request(req, username) {
-        return this.friendsService.sendRequest(req.user.userId, username);
+    async request(req, dto) {
+        return this.friendsService.sendRequest(req.user.userId, dto.username);
     }
     async accept(req, id) {
         return this.friendsService.respondRequest(Number(id), req.user.userId, 'accept');
@@ -43,9 +44,9 @@ __decorate([
     (0, common_1.Post)('request'),
     (0, swagger_1.ApiOperation)({ summary: '친구 요청 보내기' }),
     __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Body)('username')),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, send_friend_request_dto_1.SendFriendRequestDto]),
     __metadata("design:returntype", Promise)
 ], FriendsController.prototype, "request", null);
 __decorate([

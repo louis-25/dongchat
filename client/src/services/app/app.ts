@@ -43,7 +43,7 @@ export const appControllerGetHello = (
 
 
 
-export const getAppControllerGetHelloQueryKey = () => {
+const getAppControllerGetHelloQueryKey = () => {
     return [
     `/`
     ] as const;
@@ -104,11 +104,8 @@ export function useAppControllerGetHello<TData = Awaited<ReturnType<typeof appCo
 
   const queryOptions = getAppControllerGetHelloQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+  const query = useQuery(queryOptions, queryClient);
+return { queryKey: queryOptions.queryKey, ...query } as UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 }
 
 
@@ -129,7 +126,7 @@ export const appControllerGetProfile = (
 
 
 
-export const getAppControllerGetProfileQueryKey = () => {
+const getAppControllerGetProfileQueryKey = () => {
     return [
     `/profile`
     ] as const;
@@ -190,11 +187,8 @@ export function useAppControllerGetProfile<TData = Awaited<ReturnType<typeof app
 
   const queryOptions = getAppControllerGetProfileQueryOptions(options)
 
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  query.queryKey = queryOptions.queryKey ;
-
-  return query;
+  const query = useQuery(queryOptions, queryClient);
+return { queryKey: queryOptions.queryKey, ...query } as UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 }
 
 

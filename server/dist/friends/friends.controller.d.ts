@@ -1,4 +1,5 @@
 import { FriendsService } from './friends.service';
+import { SendFriendRequestDto } from './dto/send-friend-request.dto';
 export declare class FriendsController {
     private friendsService;
     constructor(friendsService: FriendsService);
@@ -6,7 +7,7 @@ export declare class FriendsController {
         user: {
             userId: number;
         };
-    }, username: string): Promise<import("./friend.entity").Friend>;
+    }, dto: SendFriendRequestDto): Promise<import("./friend.entity").Friend>;
     accept(req: {
         user: {
             userId: number;

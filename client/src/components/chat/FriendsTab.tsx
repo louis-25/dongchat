@@ -57,7 +57,8 @@ const FriendsTab = () => {
   } = usePendingFriends();
 
   // 친구 요청/수락/차단 mutation 훅
-  const requestMutation = useSendFriendReq();
+  const { mutate: requestMutation, isPending: requestMutationPending } =
+    useSendFriendReq();
   const acceptMutation = useAcceptFriendReq();
   const blockMutation = useBlockFriendReq();
 
@@ -72,18 +73,23 @@ const FriendsTab = () => {
 
   // 친구 요청 전송
   const onSubmit = (data: AddFriendFormValues) => {
-    requestMutation.mutate(data.username.trim(), {
-      onSuccess: () => {
-        reset();
-        refetchFriends();
-        refetchPending();
-        success("친구 요청을 보냈습니다.");
+    requestMutation(
+      {
+        data: { username: data.username.trim() },
       },
-      onError: (e: ErrorType<void>) => {
-        const message = getErrorMessage(e);
-        error(`친구 요청 실패: ${message}`);
-      },
-    });
+      {
+        onSuccess: () => {
+          reset();
+          refetchFriends();
+          refetchPending();
+          success("친구 요청을 보냈습니다.");
+        },
+        onError: (e: ErrorType<void>) => {
+          const message = getErrorMessage(e);
+          error(`친구 요청 실패: ${message}`);
+        },
+      }
+    );
   };
 
   // 친구 요청 응답 (수락/차단)
@@ -129,15 +135,15 @@ const FriendsTab = () => {
               <FormInput
                 name="username"
                 placeholder="추가할 사용자 아이디"
-                disabled={requestMutation.isPending}
+                disabled={requestMutationPending}
               />
             </div>
             <Button
               type="submit"
-              disabled={requestMutation.isPending}
+              disabled={requestMutationPending}
               className="mt-6"
             >
-              {requestMutation.isPending ? "요청 중..." : "친구 추가"}
+              {requestMutationPending ? "요청 중..." : "친구 추가"}
             </Button>
           </form>
         </FormProvider>
