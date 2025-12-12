@@ -30,10 +30,17 @@ export class FriendsService {
       throw new BadRequestException('본인에게 친구 요청을 보낼 수 없습니다.');
     }
 
+    // 동일/역방향 요청이 이미 존재하는지 ID 기준으로 확인 (중복 DB 에러 방지)
     const existing = await this.friendRepository.findOne({
       where: [
-        { requester, receiver },
-        { requester: receiver, receiver: requester },
+        {
+          requester: { id: requester.id },
+          receiver: { id: receiver.id },
+        },
+        {
+          requester: { id: receiver.id },
+          receiver: { id: requester.id },
+        },
       ],
     });
     if (existing) {

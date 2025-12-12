@@ -39,8 +39,14 @@ let FriendsService = class FriendsService {
         }
         const existing = await this.friendRepository.findOne({
             where: [
-                { requester, receiver },
-                { requester: receiver, receiver: requester },
+                {
+                    requester: { id: requester.id },
+                    receiver: { id: receiver.id },
+                },
+                {
+                    requester: { id: receiver.id },
+                    receiver: { id: requester.id },
+                },
             ],
         });
         if (existing) {

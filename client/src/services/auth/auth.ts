@@ -22,6 +22,7 @@ import type {
   AuthControllerRegister201,
   AuthControllerRegister409,
   AuthResponseDto,
+  KakaoLoginDto,
   LoginDto,
   RefreshTokenDto,
   RegisterDto
@@ -227,6 +228,70 @@ export const useAuthControllerRefresh = <TError = ErrorType<AuthControllerRefres
       > => {
 
       const mutationOptions = getAuthControllerRefreshMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
+ * @summary 카카오 OAuth 로그인/회원가입
+ */
+export const kakaoControllerKakaoLogin = (
+    kakaoLoginDto: KakaoLoginDto,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<void>(
+      {url: `/auth/kakao`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: kakaoLoginDto, signal
+    },
+      options);
+    }
+  
+
+
+export const getKakaoControllerKakaoLoginMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof kakaoControllerKakaoLogin>>, TError,{data: KakaoLoginDto}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof kakaoControllerKakaoLogin>>, TError,{data: KakaoLoginDto}, TContext> => {
+
+const mutationKey = ['kakaoControllerKakaoLogin'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof kakaoControllerKakaoLogin>>, {data: KakaoLoginDto}> = (props) => {
+          const {data} = props ?? {};
+
+          return  kakaoControllerKakaoLogin(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type KakaoControllerKakaoLoginMutationResult = NonNullable<Awaited<ReturnType<typeof kakaoControllerKakaoLogin>>>
+    export type KakaoControllerKakaoLoginMutationBody = KakaoLoginDto
+    export type KakaoControllerKakaoLoginMutationError = ErrorType<unknown>
+
+    /**
+ * @summary 카카오 OAuth 로그인/회원가입
+ */
+export const useKakaoControllerKakaoLogin = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof kakaoControllerKakaoLogin>>, TError,{data: KakaoLoginDto}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof kakaoControllerKakaoLogin>>,
+        TError,
+        {data: KakaoLoginDto},
+        TContext
+      > => {
+
+      const mutationOptions = getKakaoControllerKakaoLoginMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

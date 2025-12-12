@@ -8,6 +8,12 @@ import { BASE_URL } from "@/config";
 import { getAccessToken } from "@/lib/api-client";
 import useAuth from "@/hooks/useAuth";
 import { useChat } from "@/components/chat-provider";
+import useToast from "@/hooks/useToast";
+import { useForm, FormProvider } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+import FormInput from "@/components/common/RHF/FormInput";
+import { Label } from "@/components/ui/label";
 
 type IncomingMessage = {
   roomId?: number;
@@ -24,6 +30,25 @@ type ChatRoom = {
   participants?: { user: { id: number; username: string } }[];
 };
 
+// 채팅방 생성 폼 스키마
+const createRoomSchema = yup.object().shape({
+  name: yup.string().optional().default(""),
+  participants: yup
+    .string()
+    .required("참여자를 입력해주세요.")
+    .test("not-empty", "최소 1명의 참여자를 입력해주세요.", (value) => {
+      if (!value) return false;
+      const participants = value
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean);
+      return participants.length > 0;
+    }),
+  isGroup: yup.boolean().default(false),
+});
+
+type CreateRoomFormValues = yup.InferType<typeof createRoomSchema>;
+
 type ModalProps = {
   open: boolean;
   onClose: () => void;
@@ -35,15 +60,31 @@ type ModalProps = {
 };
 
 const CreateRoomModal = ({ open, onClose, onSubmit }: ModalProps) => {
-  const [roomName, setRoomName] = useState("");
-  const [roomParticipants, setRoomParticipants] = useState("");
-  const [isGroup, setIsGroup] = useState(false);
+  const methods = useForm<CreateRoomFormValues>({
+    resolver: yupResolver(createRoomSchema),
+    defaultValues: {
+      name: "",
+      participants: "",
+      isGroup: false,
+    },
+  });
+  const { handleSubmit, reset, register } = methods;
 
   const handleClose = () => {
-    setRoomName("");
-    setRoomParticipants("");
-    setIsGroup(false);
+    reset();
     onClose();
+  };
+
+  const onFormSubmit = (data: CreateRoomFormValues) => {
+    onSubmit({
+      name: data.name?.trim() || undefined,
+      participants: data.participants
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean),
+      isGroup: data.isGroup,
+    });
+    reset();
   };
 
   if (!open) return null;
@@ -54,45 +95,36 @@ const CreateRoomModal = ({ open, onClose, onSubmit }: ModalProps) => {
         <div className="border-b px-4 py-3 text-lg font-semibold">
           채팅방 생성
         </div>
-        <div className="space-y-3 p-4">
-          <Input
-            placeholder="방 이름 (선택)"
-            value={roomName}
-            onChange={(e) => setRoomName(e.target.value)}
-          />
-          <Input
-            placeholder="참여자 아이디(쉼표 구분)"
-            value={roomParticipants}
-            onChange={(e) => setRoomParticipants(e.target.value)}
-          />
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={isGroup}
-              onChange={(e) => setIsGroup(e.target.checked)}
+        <FormProvider {...methods}>
+          <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-3 p-4">
+            <FormInput name="name" placeholder="방 이름 (선택)" />
+            <FormInput
+              name="participants"
+              placeholder="참여자 아이디(쉼표 구분)"
+              required
             />
-            그룹방 여부
-          </label>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={handleClose}>
-              취소
-            </Button>
-            <Button
-              onClick={() =>
-                onSubmit({
-                  name: roomName || undefined,
-                  participants: roomParticipants
-                    .split(",")
-                    .map((p) => p.trim())
-                    .filter(Boolean),
-                  isGroup,
-                })
-              }
-            >
-              만들기
-            </Button>
-          </div>
-        </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isGroup"
+                {...register("isGroup")}
+                className="h-4 w-4"
+              />
+              <Label
+                htmlFor="isGroup"
+                className="text-sm text-gray-700 cursor-pointer"
+              >
+                그룹방 여부
+              </Label>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={handleClose}>
+                취소
+              </Button>
+              <Button type="submit">만들기</Button>
+            </div>
+          </form>
+        </FormProvider>
       </div>
     </div>
   );
@@ -110,16 +142,30 @@ const ChatRoomsTab = () => {
     [token]
   );
 
+  const { success, error } = useToast();
+
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
   const [messagesByRoom, setMessagesByRoom] = useState<
     Record<number, { sender: string; message: string; createdAt?: string }[]>
   >({});
-  const [input, setInput] = useState("");
   const [showModal, setShowModal] = useState(false);
 
+  // 메시지 입력 폼
+  const messageMethods = useForm<{ message: string }>({
+    defaultValues: { message: "" },
+  });
+  const {
+    handleSubmit: handleMessageSubmit,
+    reset: resetMessage,
+    register: registerMessage,
+  } = messageMethods;
+
   const loadRooms = useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      error("인증 정보가 없습니다. 다시 로그인 해주세요.");
+      return;
+    }
     try {
       const res = await fetch(`${BASE_URL}/chat/rooms`, {
         headers: authHeader,
@@ -130,11 +176,14 @@ const ChatRoomsTab = () => {
         if (!selectedRoomId && data?.length > 0) {
           setSelectedRoomId(data[0].id);
         }
+      } else {
+        error("채팅방 목록을 불러오지 못했습니다.");
       }
     } catch (e) {
       console.error(e);
+      error("채팅방 데이터를 불러오는 중 오류가 발생했습니다.");
     }
-  }, [authHeader, selectedRoomId, token]);
+  }, [authHeader, error, selectedRoomId, token]);
 
   useEffect(() => {
     (async () => {
@@ -144,12 +193,14 @@ const ChatRoomsTab = () => {
 
   useEffect(() => {
     if (!socket || !user?.id || !selectedRoomId) return;
+    // 현재 선택된 방에 합류
     socket.emit("join_room", { roomId: selectedRoomId, userId: user.id });
   }, [socket, user?.id, selectedRoomId]);
 
   useEffect(() => {
     if (!socket) return;
 
+    // 실시간 메시지 수신 핸들러
     socket.on("message", (payload: IncomingMessage) => {
       if (payload.roomId === undefined || payload.roomId === null) return;
       const roomKey = Number(payload.roomId);
@@ -169,6 +220,7 @@ const ChatRoomsTab = () => {
       });
     });
 
+    // 방 입장 시 기존 메시지 초기 로드
     socket.on(
       "initial_messages",
       (payload: { roomId: number; messages: IncomingMessage[] }) => {
@@ -189,15 +241,23 @@ const ChatRoomsTab = () => {
     };
   }, [socket]);
 
-  const sendMessage = () => {
-    if (socket && input.trim() && user?.username && selectedRoomId) {
-      socket.emit("message", {
-        sender: user.username,
-        message: input,
-        roomId: selectedRoomId,
-      });
-      setInput("");
+  const sendMessage = (data: { message: string }) => {
+    if (!selectedRoomId) {
+      error("채팅방을 먼저 선택하세요.");
+      return;
     }
+    if (!socket || !user?.username) {
+      error("메시지를 보낼 수 없습니다. 연결 상태를 확인하세요.");
+      return;
+    }
+    if (!data.message.trim()) return;
+
+    socket.emit("message", {
+      sender: user.username,
+      message: data.message.trim(),
+      roomId: selectedRoomId,
+    });
+    resetMessage();
   };
 
   const handleCreateRoom = async (payload: {
@@ -220,9 +280,16 @@ const ChatRoomsTab = () => {
         await loadRooms();
         setSelectedRoomId(data?.id ?? null);
         setShowModal(false);
+        success("채팅방을 생성했습니다.");
+      } else {
+        const errorData = await res.json().catch(() => null);
+        error(errorData?.message || "채팅방 생성에 실패했습니다.");
       }
     } catch (e) {
       console.error(e);
+      const errorMessage =
+        e instanceof Error ? e.message : "채팅방 생성 중 오류가 발생했습니다.";
+      error(errorMessage);
     }
   };
 
@@ -320,19 +387,28 @@ const ChatRoomsTab = () => {
                 </div>
               )}
             </div>
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="메시지를 입력하세요..."
-                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                disabled={!selectedRoomId}
-              />
-              <Button onClick={sendMessage} disabled={!selectedRoomId}>
-                전송
-              </Button>
-            </div>
+            <FormProvider {...messageMethods}>
+              <form
+                onSubmit={handleMessageSubmit(sendMessage)}
+                className="flex gap-2"
+              >
+                <Input
+                  type="text"
+                  {...registerMessage("message")}
+                  placeholder="메시지를 입력하세요..."
+                  disabled={!selectedRoomId}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleMessageSubmit(sendMessage)();
+                    }
+                  }}
+                />
+                <Button type="submit" disabled={!selectedRoomId}>
+                  전송
+                </Button>
+              </form>
+            </FormProvider>
           </CardContent>
         </Card>
       </div>

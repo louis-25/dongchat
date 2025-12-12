@@ -1,0 +1,12 @@
+# 빌드 결과물
+/dist
+
+# 의존성 패키지
+/node_modules
+
+# 기타 빌드/테스트 관련
+/build
+/coverage
+/logs
+/tmp
+/temp
