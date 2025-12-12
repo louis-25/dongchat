@@ -9,11 +9,12 @@ import { getAccessToken } from "@/lib/api-client";
 import useAuth from "@/hooks/useAuth";
 import { useChat } from "@/components/chat-provider";
 import useToast from "@/hooks/useToast";
-import { useForm, FormProvider } from "react-hook-form";
+import { useForm, FormProvider, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import FormInput from "@/components/common/RHF/FormInput";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type IncomingMessage = {
   roomId?: number;
@@ -68,7 +69,7 @@ const CreateRoomModal = ({ open, onClose, onSubmit }: ModalProps) => {
       isGroup: false,
     },
   });
-  const { handleSubmit, reset, register } = methods;
+  const { handleSubmit, reset, control } = methods;
 
   const handleClose = () => {
     reset();
@@ -104,18 +105,25 @@ const CreateRoomModal = ({ open, onClose, onSubmit }: ModalProps) => {
               required
             />
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isGroup"
-                {...register("isGroup")}
-                className="h-4 w-4"
+              <Controller
+                name="isGroup"
+                control={control}
+                render={({ field }) => (
+                  <>
+                    <Checkbox
+                      id="isGroup"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                    <Label
+                      htmlFor="isGroup"
+                      className="text-sm text-gray-700 cursor-pointer"
+                    >
+                      그룹방 여부
+                    </Label>
+                  </>
+                )}
               />
-              <Label
-                htmlFor="isGroup"
-                className="text-sm text-gray-700 cursor-pointer"
-              >
-                그룹방 여부
-              </Label>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={handleClose}>
