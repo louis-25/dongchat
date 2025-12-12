@@ -1,10 +1,57 @@
 import { BASE_URL } from "@/config";
-import NextAuth from "next-auth";
+import NextAuth, { type DefaultSession, type DefaultUser } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import KakaoProvider from "next-auth/providers/kakao";
 
+// NextAuth 타입 확장
+declare module "next-auth" {
+  interface User extends DefaultUser {
+    id: number;
+    username: string;
+    role?: string;
+  }
+
+  interface Session extends DefaultSession {
+    user: {
+      id: number;
+      name: string;
+      role?: string;
+    } & DefaultSession["user"];
+    backendAccessToken?: string;
+    backendRefreshToken?: string;
+    backendUser?: {
+      id: number;
+      username: string;
+      role?: string;
+    };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: number;
+    role?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    user?: {
+      id: number;
+      username: string;
+      role?: string;
+    };
+  }
+}
+
+// Kakao 프로필 타입 정의
+interface KakaoProfile {
+  id: string | number;
+  nickname?: string;
+  properties?: {
+    nickname?: string;
+  };
+}
+
 // NextAuth 설정
-const handler = NextAuth({
+export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -12,7 +59,7 @@ const handler = NextAuth({
         username: { label: "Username", type: "text", placeholder: "user" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials, req) {
+      async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null;
 
         try {
@@ -54,18 +101,19 @@ const handler = NextAuth({
   callbacks: {
     async jwt({ token, user, account, profile }) {
       if (user) {
-        token.id = (user as any).id;
-        token.name = (user as any).username;
+        token.id = typeof user.id === "number" ? user.id : Number(user.id);
+        token.name = user.username;
+        token.role = user.role;
       }
 
       if (account?.provider === "kakao") {
         try {
           const providerId = account.providerAccountId;
+          const kakaoProfile = profile as KakaoProfile | undefined;
           const nickname =
-            (profile as any)?.properties?.nickname ||
-            (profile as any)?.nickname;
-          const usernameHint = (profile as any)?.id
-            ? String((profile as any)?.id)
+            kakaoProfile?.properties?.nickname || kakaoProfile?.nickname;
+          const usernameHint = kakaoProfile?.id
+            ? String(kakaoProfile.id)
             : undefined;
           const res = await fetch(`${BASE_URL}/auth/kakao`, {
             method: "POST",
@@ -95,14 +143,14 @@ const handler = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
+      if (session.user && token.id !== undefined) {
         session.user.name = token.name as string;
-        (session.user as any).id = token.id;
-        (session.user as any).role = (token as any).role;
+        session.user.id = token.id;
+        session.user.role = token.role;
       }
-      (session as any).backendAccessToken = (token as any).accessToken;
-      (session as any).backendRefreshToken = (token as any).refreshToken;
-      (session as any).backendUser = (token as any).user;
+      session.backendAccessToken = token.accessToken;
+      session.backendRefreshToken = token.refreshToken;
+      session.backendUser = token.user;
       return session;
     },
   },
@@ -112,4 +160,5 @@ const handler = NextAuth({
   debug: true, // Enable debug mode to see detailed logs
 });
 
-export { handler as GET, handler as POST };
+// Route Handler export (Next.js App Router)
+export const { GET, POST } = handlers;

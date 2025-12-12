@@ -130,7 +130,10 @@ const FriendsTab = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         <FormProvider {...methods}>
-          <form onSubmit={handleSubmit(onSubmit)} className="flex gap-2">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex items-center gap-2"
+          >
             <div className="flex-1">
               <FormInput
                 name="username"
@@ -138,11 +141,7 @@ const FriendsTab = () => {
                 disabled={requestMutationPending}
               />
             </div>
-            <Button
-              type="submit"
-              disabled={requestMutationPending}
-              className="mt-6"
-            >
+            <Button type="submit" disabled={requestMutationPending}>
               {requestMutationPending ? "요청 중..." : "친구 추가"}
             </Button>
           </form>
