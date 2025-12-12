@@ -9,6 +9,7 @@ import { accessTokenAtom, userAtom } from "@/store/auth";
 import { setAccessToken } from "@/lib/api-client";
 import type { AuthResponseDtoUser } from "@/lib/api/models";
 import { cn } from "@/lib/utils";
+import { signOut } from "next-auth/react";
 
 type ProtectedHeaderProps = {
   user: AuthResponseDtoUser | null;
@@ -47,13 +48,28 @@ const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
 
   const userRole = userData?.role;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // NextAuth 세션 정리 (카카오 로그인 세션 포함)
+      await signOut({
+        redirect: false, // 수동으로 리다이렉트 처리
+        callbackUrl: "/login",
+      });
+    } catch (error) {
+      console.error("NextAuth signOut error:", error);
+    }
+
+    // localStorage 정리
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
+
+    // atom 상태 초기화
     setAccessToken(null);
     setAccessTokenAtom(null);
     setUser(null);
     setIsMenuOpen(false);
+
+    // 로그인 페이지로 리다이렉트
     goLogin();
   };
 

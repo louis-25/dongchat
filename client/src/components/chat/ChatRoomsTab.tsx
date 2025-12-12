@@ -15,6 +15,22 @@ import * as yup from "yup";
 import FormInput from "@/components/common/RHF/FormInput";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useFriendsList } from "@/hooks/api/useFriends";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { CheckIcon, ChevronsUpDownIcon, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type IncomingMessage = {
   roomId?: number;
@@ -35,16 +51,10 @@ type ChatRoom = {
 const createRoomSchema = yup.object().shape({
   name: yup.string().optional().default(""),
   participants: yup
-    .string()
-    .required("참여자를 입력해주세요.")
-    .test("not-empty", "최소 1명의 참여자를 입력해주세요.", (value) => {
-      if (!value) return false;
-      const participants = value
-        .split(",")
-        .map((p) => p.trim())
-        .filter(Boolean);
-      return participants.length > 0;
-    }),
+    .array()
+    .of(yup.string())
+    .min(1, "최소 1명의 참여자를 선택해주세요.")
+    .required("참여자를 선택해주세요."),
   isGroup: yup.boolean().default(false),
 });
 
@@ -60,33 +70,73 @@ type ModalProps = {
   }) => void;
 };
 
+type FriendEntry = { id: number; friend: { id: number; username: string } };
+
 const CreateRoomModal = ({ open, onClose, onSubmit }: ModalProps) => {
+  const { data: friends = [] as FriendEntry[], isLoading: friendsLoading } =
+    useFriendsList();
+  const [comboboxOpen, setComboboxOpen] = useState(false);
+
   const methods = useForm<CreateRoomFormValues>({
     resolver: yupResolver(createRoomSchema),
     defaultValues: {
       name: "",
-      participants: "",
+      participants: [],
       isGroup: false,
     },
   });
-  const { handleSubmit, reset, control } = methods;
+  const { handleSubmit, reset, control, watch, setValue } = methods;
+
+  const selectedParticipants: string[] =
+    watch("participants")?.filter((p): p is string => typeof p === "string") ||
+    [];
 
   const handleClose = () => {
     reset();
+    setComboboxOpen(false);
     onClose();
   };
 
   const onFormSubmit = (data: CreateRoomFormValues) => {
     onSubmit({
       name: data.name?.trim() || undefined,
-      participants: data.participants
-        .split(",")
-        .map((p) => p.trim())
-        .filter(Boolean),
+      participants: (data.participants || []).filter(
+        (p): p is string => typeof p === "string"
+      ),
       isGroup: data.isGroup,
     });
     reset();
+    setComboboxOpen(false);
   };
+
+  const toggleParticipant = (username: string) => {
+    const current = selectedParticipants || [];
+    if (current.includes(username)) {
+      setValue(
+        "participants",
+        current.filter((p) => p !== username),
+        { shouldValidate: true }
+      );
+    } else {
+      setValue("participants", [...current, username], {
+        shouldValidate: true,
+      });
+    }
+  };
+
+  const removeParticipant = (username: string) => {
+    const current = selectedParticipants || [];
+    setValue(
+      "participants",
+      current.filter((p) => p !== username),
+      { shouldValidate: true }
+    );
+  };
+
+  const friendOptions = friends.map((f) => ({
+    value: f.friend.username,
+    label: f.friend.username,
+  }));
 
   if (!open) return null;
 
@@ -99,11 +149,92 @@ const CreateRoomModal = ({ open, onClose, onSubmit }: ModalProps) => {
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-3 p-4">
             <FormInput name="name" placeholder="방 이름 (선택)" />
-            <FormInput
-              name="participants"
-              placeholder="참여자 아이디(쉼표 구분)"
-              required
-            />
+            <div className="space-y-2">
+              <Label>참여자 선택</Label>
+              <Controller
+                name="participants"
+                control={control}
+                render={({ fieldState }) => (
+                  <div className="space-y-2">
+                    <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={comboboxOpen}
+                          className="w-full justify-between"
+                        >
+                          친구 선택...
+                          <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput
+                            placeholder="친구 검색..."
+                            disabled={friendsLoading}
+                          />
+                          <CommandList>
+                            <CommandEmpty>
+                              {friendsLoading
+                                ? "불러오는 중..."
+                                : "친구를 찾을 수 없습니다."}
+                            </CommandEmpty>
+                            <CommandGroup>
+                              {friendOptions.map((friend) => (
+                                <CommandItem
+                                  key={friend.value}
+                                  value={friend.value}
+                                  onSelect={() => {
+                                    toggleParticipant(friend.value);
+                                  }}
+                                >
+                                  <CheckIcon
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      selectedParticipants.includes(
+                                        friend.value
+                                      )
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {friend.label}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    {selectedParticipants.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {selectedParticipants.map((username) => (
+                          <div
+                            key={username}
+                            className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm"
+                          >
+                            <span>{username}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeParticipant(username)}
+                              className="hover:bg-blue-200 rounded-full p-0.5"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {fieldState.invalid && (
+                      <p className="text-sm text-red-500">
+                        {fieldState.error?.message}
+                      </p>
+                    )}
+                  </div>
+                )}
+              />
+            </div>
             <div className="flex items-center gap-2">
               <Controller
                 name="isGroup"
