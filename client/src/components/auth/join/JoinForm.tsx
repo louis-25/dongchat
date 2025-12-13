@@ -61,8 +61,11 @@ const JoinForm = () => {
 
         if (sessionAccess && sessionRefresh && sessionUser) {
           processedSessionRef.current = sessionAccess;
+          // refreshToken만 localStorage에 저장
           localStorage.setItem("refreshToken", sessionRefresh);
-          localStorage.setItem("user", JSON.stringify(sessionUser));
+          // 나머지는 sessionStorage와 전역 상태로 관리
+          sessionStorage.setItem("user", JSON.stringify(sessionUser));
+          sessionStorage.setItem("accessToken", sessionAccess);
           setAccessToken(sessionAccess);
           setAccessTokenAtom(sessionAccess);
           setUser(sessionUser);

@@ -72,7 +72,7 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error("[API Request Error]", error);
+    console?.error("[API Request Error]", error);
     return Promise.reject(error);
   }
 );
@@ -140,8 +140,12 @@ const handleError = async (error: AxiosError): Promise<never> => {
       // Refresh token이 없으면 로그인 페이지로 이동
       processQueue(new Error("No refresh token"), null);
       isRefreshing = false;
-      localStorage.clear();
+      // refreshToken만 localStorage에서 제거
+      localStorage.removeItem("refreshToken");
+      // sessionStorage 정리
       if (typeof window !== "undefined") {
+        sessionStorage.removeItem("accessToken");
+        sessionStorage.removeItem("user");
         window.location.href = "/login";
       }
       return Promise.reject(createApiError(error));
@@ -156,7 +160,12 @@ const handleError = async (error: AxiosError): Promise<never> => {
 
       // 새 토큰 저장
       setAccessToken(access_token);
+      // refreshToken만 localStorage에 저장
       localStorage.setItem("refreshToken", newRefreshToken);
+      // accessToken은 sessionStorage에 저장
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("accessToken", access_token);
+      }
 
       // 대기 중인 요청들 재시도
       processQueue(null, access_token);
@@ -168,8 +177,12 @@ const handleError = async (error: AxiosError): Promise<never> => {
       // Refresh token도 만료된 경우
       processQueue(refreshError as Error, null);
       isRefreshing = false;
-      localStorage.clear();
+      // refreshToken만 localStorage에서 제거
+      localStorage.removeItem("refreshToken");
+      // sessionStorage 정리
       if (typeof window !== "undefined") {
+        sessionStorage.removeItem("accessToken");
+        sessionStorage.removeItem("user");
         window.location.href = "/login";
       }
       return Promise.reject(refreshError);
@@ -193,7 +206,7 @@ const createApiError = (error: AxiosError): ApiError => {
     apiError.message = errorData?.message || `서버 오류 (${status})`;
     apiError.code = errorData?.code || error.code;
 
-    console.error(`[API Error] ${status}:`, {
+    console?.error(`[API Error] ${status}:`, {
       url: error.config?.url,
       method: error.config?.method,
       message: apiError.message,
@@ -201,10 +214,10 @@ const createApiError = (error: AxiosError): ApiError => {
     });
   } else if (error.request) {
     apiError.message = "서버로부터 응답이 없습니다.";
-    console.error("[API Error] No response:", error.request);
+    console?.error("[API Error] No response:", error.request);
   } else {
     apiError.message = error.message;
-    console.error("[API Error] Request setup:", error.message);
+    console?.error("[API Error] Request setup:", error.message);
   }
 
   return apiError;

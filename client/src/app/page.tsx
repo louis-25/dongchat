@@ -7,10 +7,13 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    const user = localStorage.getItem("user");
+    // refreshToken만 localStorage에서 확인
+    const refreshToken = localStorage.getItem("refreshToken");
+    // 나머지는 sessionStorage에서 확인
+    const accessToken = sessionStorage.getItem("accessToken");
+    const user = sessionStorage.getItem("user");
 
-    if (token && user) {
+    if (refreshToken && accessToken && user) {
       router.push("/chat");
     } else {
       router.push("/login");

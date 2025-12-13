@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { signOut } from "next-auth/react";
 
 type ProtectedHeaderProps = {
-  user: AuthResponseDtoUser | null;
+  user?: AuthResponseDtoUser | null;
 };
 
 // User 타입 가드
@@ -27,26 +27,52 @@ const isUserWithFields = (user: unknown): user is UserWithFields => {
   return typeof user === "object" && user !== null;
 };
 
-const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
+const ProtectedHeader = ({ user: userProp }: ProtectedHeaderProps) => {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [, setAccessTokenAtom] = useAtom(accessTokenAtom);
-  const [, setUser] = useAtom(userAtom);
+  const [userFromAtom, setUser] = useAtom(userAtom);
   const { goLogin, router } = useRouter();
+  const [isMounted, setIsMounted] = useState(() => false);
 
+  // 클라이언트에서만 마운트 확인 (hydration mismatch 방지)
+  useEffect(() => {
+    // 비동기로 마운트 상태 업데이트하여 hydration mismatch 방지
+    queueMicrotask(() => {
+      setIsMounted(true);
+    });
+
+    // 초기 마운트 시 sessionStorage에서 사용자 정보 복원 (새로고침 대응)
+    if (!userFromAtom && !userProp) {
+      try {
+        const storedUser = sessionStorage.getItem("user");
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+        }
+      } catch (e) {
+        console.error("Failed to parse user from sessionStorage", e);
+      }
+    }
+  }, [userFromAtom, userProp, setUser]);
+
+  // prop의 user가 있으면 사용하고, 없으면 atom에서 가져옴 (새로고침 대응)
+  const user = userProp ?? userFromAtom;
   const userData = isUserWithFields(user) ? user : null;
 
-  const initials = userData?.username
-    ? userData.username.charAt(0).toUpperCase() || "?"
-    : "?";
+  // hydration mismatch 방지를 위해 클라이언트에서만 실제 값 표시
+  const initials =
+    isMounted && userData?.username
+      ? userData.username.charAt(0).toUpperCase() || "?"
+      : "?";
 
-  const username = userData?.username || "알 수 없음";
+  const username = isMounted && userData?.username ? userData.username : "";
 
-  const userId = userData?.id ? String(userData.id) : "-";
+  const userId = isMounted && userData?.id ? String(userData.id) : "";
 
-  const profileImage = userData?.profileImage;
+  const profileImage = isMounted ? userData?.profileImage : undefined;
 
-  const userRole = userData?.role;
+  const userRole = isMounted ? userData?.role : undefined;
 
   const handleLogout = async () => {
     try {
@@ -59,9 +85,11 @@ const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
       console.error("NextAuth signOut error:", error);
     }
 
-    // localStorage 정리
+    // localStorage 정리 (refreshToken만)
     localStorage.removeItem("refreshToken");
-    localStorage.removeItem("user");
+    // sessionStorage 정리
+    sessionStorage.removeItem("user");
+    sessionStorage.removeItem("accessToken");
 
     // atom 상태 초기화
     setAccessToken(null);
@@ -74,7 +102,6 @@ const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
   };
 
   useEffect(() => {
-    console.log("userData", userData);
     if (!isMenuOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -105,9 +132,11 @@ const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-600">
-            안녕하세요, {username}님
-          </span>
+          {isMounted && username && (
+            <span className="text-sm text-gray-600">
+              안녕하세요, {username}님
+            </span>
+          )}
           <div ref={menuRef} className="relative">
             <button
               type="button"

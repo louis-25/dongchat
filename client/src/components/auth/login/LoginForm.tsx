@@ -62,8 +62,11 @@ const LoginForm = () => {
 
         if (sessionAccess && sessionRefresh && sessionUser) {
           processedSessionRef.current = sessionAccess;
+          // refreshToken만 localStorage에 저장
           localStorage.setItem("refreshToken", sessionRefresh);
-          localStorage.setItem("user", JSON.stringify(sessionUser));
+          // 나머지는 sessionStorage와 전역 상태로 관리
+          sessionStorage.setItem("user", JSON.stringify(sessionUser));
+          sessionStorage.setItem("accessToken", sessionAccess);
           setAccessToken(sessionAccess);
           setAccessTokenAtom(sessionAccess);
           setUser(sessionUser);
@@ -103,15 +106,18 @@ const LoginForm = () => {
       { data: { username: data.username, password: data.password } },
       {
         onSuccess: (data) => {
+          // refreshToken만 localStorage에 저장
           if (data.refresh_token) {
             localStorage.setItem("refreshToken", data.refresh_token);
           }
+          // 나머지는 sessionStorage와 전역 상태로 관리
           if (data.access_token) {
+            sessionStorage.setItem("accessToken", data.access_token);
             setAccessToken(data.access_token);
             setAccessTokenAtom(data.access_token);
           }
           if (data.user) {
-            localStorage.setItem("user", JSON.stringify(data.user));
+            sessionStorage.setItem("user", JSON.stringify(data.user));
             setUser(data.user);
           }
           success("로그인 성공!");

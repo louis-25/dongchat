@@ -1,94 +1,85 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { BASE_URL } from "@/config";
-import { getAccessToken } from "@/lib/api-client";
+import { useEffect, useState, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useChatRoomsControllerList,
+  useChatRoomsControllerCreate,
+} from "@/services/chat-rooms/chat-rooms";
 import useToast from "@/hooks/useToast";
+import { getErrorMessage } from "@/lib/error-handler";
+import type { ErrorType } from "@/lib/api-client";
 import type { ChatRoom, CreateRoomPayload } from "../types";
 
 export const useChatRooms = () => {
-  const token = useMemo(() => getAccessToken(), []);
-  const authHeader = useMemo(
-    () =>
-      token
-        ? ({ Authorization: `Bearer ${token}` } as Record<string, string>)
-        : ({} as Record<string, string>),
-    [token]
-  );
-
   const { success, error } = useToast();
+  const queryClient = useQueryClient();
+  const hasInitializedRef = useRef(false);
 
-  const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
 
-  const loadRooms = useCallback(async () => {
-    if (!token) {
-      error("인증 정보가 없습니다. 다시 로그인 해주세요.");
-      return;
-    }
-    try {
-      const res = await fetch(`${BASE_URL}/chat/rooms`, {
-        headers: authHeader,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setRooms(data || []);
-        if (!selectedRoomId && data?.length > 0) {
-          setSelectedRoomId(data[0].id);
-        }
-      } else {
-        error("채팅방 목록을 불러오지 못했습니다.");
-      }
-    } catch (e) {
-      console.error(e);
-      error("채팅방 데이터를 불러오는 중 오류가 발생했습니다.");
-    }
-  }, [authHeader, error, selectedRoomId, token]);
+  // 채팅방 목록 조회 - react-query 사용
+  const {
+    data: rooms = [] as ChatRoom[],
+    isLoading: roomsLoading,
+    refetch: refetchRooms,
+  } = useChatRoomsControllerList();
 
-  useEffect(() => {
-    (async () => {
-      await loadRooms();
-    })();
-  }, [loadRooms]);
-
-  const createRoom = useCallback(
-    async (payload: CreateRoomPayload) => {
-      try {
-        const res = await fetch(`${BASE_URL}/chat/rooms`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...authHeader },
-          body: JSON.stringify({
-            name: payload.name,
-            isGroup: payload.isGroup,
-            participantUsernames: payload.participants,
-          }),
+  // 채팅방 생성 - react-query mutation 사용
+  const createRoomMutation = useChatRoomsControllerCreate({
+    mutation: {
+      onSuccess: () => {
+        // 쿼리 무효화하여 목록 다시 불러오기
+        queryClient.invalidateQueries({
+          queryKey: ["/chat/rooms"],
         });
-        if (res.ok) {
-          const data = await res.json();
-          await loadRooms();
-          setSelectedRoomId(data?.id ?? null);
-          success("채팅방을 생성했습니다.");
-          return true;
-        } else {
-          const errorData = await res.json().catch(() => null);
-          error(errorData?.message || "채팅방 생성에 실패했습니다.");
-          return false;
-        }
-      } catch (e) {
-        console.error(e);
-        const errorMessage =
-          e instanceof Error ? e.message : "채팅방 생성 중 오류가 발생했습니다.";
-        error(errorMessage);
-        return false;
-      }
+        success("채팅방을 생성했습니다.");
+      },
+      onError: (e: ErrorType<unknown>) => {
+        const message = getErrorMessage(e);
+        error(`채팅방 생성 실패: ${message}`);
+      },
     },
-    [authHeader, error, loadRooms, success]
-  );
+  });
+
+  // 방 목록이 로드되고 초기 선택이 필요할 때만 첫 번째 방 선택
+  useEffect(() => {
+    if (
+      !hasInitializedRef.current &&
+      rooms.length > 0 &&
+      selectedRoomId === null
+    ) {
+      hasInitializedRef.current = true;
+      // 비동기로 처리하여 effect 내부 setState 경고 완화
+      queueMicrotask(() => {
+        setSelectedRoomId(rooms[0].id);
+      });
+    }
+  }, [rooms, selectedRoomId]);
+
+  const createRoom = async (payload: CreateRoomPayload) => {
+    try {
+      await createRoomMutation.mutateAsync({
+        data: {
+          name: payload.name,
+          isGroup: payload.isGroup,
+          participantUsernames: payload.participants,
+        },
+      });
+      // 성공 시 목록 다시 불러오기 (invalidateQueries로 자동 갱신됨)
+      // 새로 불러온 목록에서 첫 번째 방 선택
+      await refetchRooms();
+      return true;
+    } catch {
+      // 에러는 mutation의 onError에서 처리됨
+      return false;
+    }
+  };
 
   return {
     rooms,
     selectedRoomId,
     setSelectedRoomId,
-    loadRooms,
+    loadRooms: refetchRooms,
     createRoom,
+    isLoading: roomsLoading,
   };
 };
-

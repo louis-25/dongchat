@@ -39,8 +39,13 @@ const useAuth = () => {
 
     // NextAuth 세션이 있고 백엔드 정보가 있으면 사용
     if (sessionAccess && sessionRefresh && sessionUser) {
+      // refreshToken만 localStorage에 저장
       localStorage.setItem("refreshToken", sessionRefresh);
-      localStorage.setItem("user", JSON.stringify(sessionUser));
+      // 나머지는 sessionStorage와 전역 상태로 관리
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("user", JSON.stringify(sessionUser));
+        sessionStorage.setItem("accessToken", sessionAccess);
+      }
       setAccessToken(sessionAccess);
       setAccessTokenAtom(sessionAccess);
       setUser(sessionUser);
@@ -48,22 +53,34 @@ const useAuth = () => {
     }
 
     const refreshToken = localStorage.getItem("refreshToken");
-    const storedUser = localStorage.getItem("user");
 
-    if (!refreshToken || !storedUser) {
+    if (!refreshToken) {
       router.push("/login");
       return;
     }
 
-    try {
-      const parsedUser = JSON.parse(storedUser);
-      console.log("parsedUser", parsedUser);
-      setUser(parsedUser);
-      // refreshToken이 있으면 API 호출 시 자동으로 갱신됨
-    } catch (e) {
-      console.error("Failed to parse user from localStorage", e);
-      router.push("/login");
+    // 클라이언트에서만 sessionStorage에서 사용자 정보 복원 (hydration mismatch 방지)
+    if (typeof window !== "undefined") {
+      const storedUser = sessionStorage.getItem("user");
+      const storedAccessToken = sessionStorage.getItem("accessToken");
+
+      // sessionStorage에서 사용자 정보 복원
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+        } catch (e) {
+          console.error("Failed to parse user from sessionStorage", e);
+        }
+      }
+
+      // sessionStorage에서 액세스 토큰 복원
+      if (storedAccessToken) {
+        setAccessToken(storedAccessToken);
+        setAccessTokenAtom(storedAccessToken);
+      }
     }
+    // refreshToken이 있으면 API 호출 시 자동으로 갱신됨
   }, [session, status, setUser, setAccessTokenAtom, router]);
 
   return { user };

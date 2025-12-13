@@ -165,7 +165,7 @@ const CreateRoomModal = ({ open, onClose, onSubmit }: CreateRoomModalProps) => {
                                   <CommandItem
                                     key={friend.value}
                                     value={friend.value}
-                                    disabled={false}
+                                    // disabled={false}
                                     onSelect={() => {
                                       handleFriendSelect(friend.value);
                                     }}
