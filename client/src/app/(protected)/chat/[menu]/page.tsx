@@ -1,6 +1,6 @@
 import Link from "next/link";
-import FriendsTab from "@/components/chat/FriendsTab";
-import ChatRoomsTab from "@/components/chat/ChatRoomsTab";
+import FriendsTab from "@/app/(protected)/chat/[menu]/_components/Friends";
+import ChatRoomsTab from "@/app/(protected)/chat/[menu]/_components/ChatRooms";
 import { Button } from "@/components/ui/button";
 
 interface PageProps {
