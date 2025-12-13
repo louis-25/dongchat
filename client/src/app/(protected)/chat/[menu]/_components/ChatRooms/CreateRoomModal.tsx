@@ -111,8 +111,19 @@ const CreateRoomModal = ({ open, onClose, onSubmit }: CreateRoomModalProps) => {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-md rounded-lg bg-white shadow-lg">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+      onClick={(e) => {
+        // Modal 배경 클릭 시에만 닫기 (Popover 클릭은 제외)
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
+      <div
+        className="w-full max-w-md rounded-lg bg-white shadow-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="border-b px-4 py-3 text-lg font-semibold">
           채팅방 생성
         </div>
@@ -144,6 +155,11 @@ const CreateRoomModal = ({ open, onClose, onSubmit }: CreateRoomModalProps) => {
                         align="start"
                         style={{
                           width: popoverWidth ? `${popoverWidth}px` : undefined,
+                          zIndex: 60,
+                        }}
+                        onInteractOutside={(e) => {
+                          // Modal 내부 클릭은 무시
+                          e.preventDefault();
                         }}
                       >
                         <Command>
@@ -165,24 +181,22 @@ const CreateRoomModal = ({ open, onClose, onSubmit }: CreateRoomModalProps) => {
                                   <CommandItem
                                     key={friend.value}
                                     value={friend.value}
-                                    // disabled={false}
                                     onSelect={() => {
+                                      // 다중 선택을 위해 항상 toggle 처리
                                       handleFriendSelect(friend.value);
+                                      // Popover는 닫지 않음 (다중 선택을 위해)
                                     }}
                                     onClick={(e) => {
-                                      e.preventDefault();
+                                      // 클릭 이벤트도 처리하여 확실하게 동작하도록
                                       e.stopPropagation();
                                       handleFriendSelect(friend.value);
                                     }}
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      handleFriendSelect(friend.value);
-                                    }}
-                                    className="cursor-pointer"
+                                    className="cursor-pointer aria-selected:bg-accent/50 pointer-events-auto"
+                                    style={{ pointerEvents: "auto" }}
                                   >
                                     <CheckIcon
                                       className={cn(
-                                        "mr-2 h-4 w-4 shrink-0",
+                                        "mr-2 h-4 w-4 shrink-0 pointer-events-none",
                                         isSelected ? "opacity-100" : "opacity-0"
                                       )}
                                     />

@@ -4,16 +4,37 @@ import {
   KAKAO_CLIENT_SECRET,
   NEXTAUTH_SECRET,
 } from "@/config";
-import NextAuth, { type DefaultSession, type DefaultUser } from "next-auth";
-import type { JWT as DefaultJWT } from "next-auth/jwt";
+import NextAuth, { type DefaultSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import KakaoProvider from "next-auth/providers/kakao";
 
-// NextAuth 타입 확장
-declare module "next-auth" {
-  interface User extends DefaultUser {
+// JWT 토큰 타입 정의
+type JWTToken = {
+  id?: number;
+  name?: string | null;
+  role?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  user?: {
     id: number;
     username: string;
+    role?: string;
+    profileImage?: string | null;
+  };
+  sub?: string;
+  iat?: number;
+  exp?: number;
+  jti?: string;
+};
+
+// NextAuth 타입 확장
+declare module "next-auth" {
+  interface User {
+    id: number;
+    username: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
     role?: string;
   }
 
@@ -21,26 +42,13 @@ declare module "next-auth" {
     user: {
       id: number;
       name: string;
+      email?: string | null;
+      image?: string | null;
       role?: string;
-    } & DefaultSession["user"];
+    };
     backendAccessToken?: string;
     backendRefreshToken?: string;
     backendUser?: {
-      id: number;
-      username: string;
-      role?: string;
-      profileImage?: string | null;
-    };
-  }
-}
-
-declare module "next-auth/jwt" {
-  interface JWT extends DefaultJWT {
-    id?: number;
-    role?: string;
-    accessToken?: string;
-    refreshToken?: string;
-    user?: {
       id: number;
       username: string;
       role?: string;
@@ -115,7 +123,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user, account, profile }) {
+    async jwt({ token, user, account, profile }): Promise<JWTToken> {
       if (user) {
         token.id = typeof user.id === "number" ? user.id : Number(user.id);
         token.name = user.username;
@@ -167,43 +175,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      if (session.user && typeof token.id === "number") {
-        session.user.name = typeof token.name === "string" ? token.name : "";
-        session.user.id = token.id;
-        session.user.role =
-          typeof token.role === "string" ? token.role : undefined;
-      }
-      if (typeof token.accessToken === "string") {
-        session.backendAccessToken = token.accessToken;
-      }
-      if (typeof token.refreshToken === "string") {
-        session.backendRefreshToken = token.refreshToken;
-      }
-      if (
-        token.user &&
-        typeof token.user === "object" &&
-        "id" in token.user &&
-        "username" in token.user
-      ) {
-        const user = token.user as {
-          id: number;
-          username: string;
-          role?: string;
-          profileImage?: string | null;
-        };
-        session.backendUser = {
-          id: typeof user.id === "number" ? user.id : 0,
-          username: typeof user.username === "string" ? user.username : "",
-          role: typeof user.role === "string" ? user.role : undefined,
-          profileImage:
-            typeof user.profileImage === "string"
-              ? user.profileImage
-              : user.profileImage === null
-              ? null
-              : undefined,
-        };
-      }
-      return session;
+      return {
+        ...session,
+        user: {
+          ...session.user,
+          id: typeof token.id === "number" ? token.id : 0,
+          name: typeof token.name === "string" ? token.name : session.user.name || "",
+          role: typeof token.role === "string" ? token.role : undefined,
+        },
+        backendAccessToken: typeof token.accessToken === "string" ? token.accessToken : undefined,
+        backendRefreshToken: typeof token.refreshToken === "string" ? token.refreshToken : undefined,
+        backendUser:
+          token.user &&
+          typeof token.user === "object" &&
+          "id" in token.user &&
+          "username" in token.user
+            ? (() => {
+                const user = token.user as {
+                  id: number;
+                  username: string;
+                  role?: string;
+                  profileImage?: string | null;
+                };
+                return {
+                  id: typeof user.id === "number" ? user.id : 0,
+                  username: typeof user.username === "string" ? user.username : "",
+                  role: typeof user.role === "string" ? user.role : undefined,
+                  profileImage:
+                    typeof user.profileImage === "string"
+                      ? user.profileImage
+                      : user.profileImage === null
+                      ? null
+                      : undefined,
+                };
+              })()
+            : undefined,
+      };
     },
   },
   pages: {

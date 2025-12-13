@@ -7,7 +7,7 @@ const http_exception_filter_1 = require("./common/filters/http-exception.filter"
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.enableCors({
-        origin: 'http://localhost:3000',
+        origin: process.env.FRONTEND_URL || 'http://localhost:3000',
         credentials: true,
     });
     app.useGlobalFilters(new http_exception_filter_1.HttpExceptionFilter());

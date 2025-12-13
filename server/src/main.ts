@@ -7,7 +7,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
   });
 
@@ -28,6 +28,8 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 4000);
   console.log(`서버 실행 중: http://localhost:${process.env.PORT ?? 4000}`);
-  console.log(`Swagger 문서: http://localhost:${process.env.PORT ?? 4000}/api-docs`);
+  console.log(
+    `Swagger 문서: http://localhost:${process.env.PORT ?? 4000}/api-docs`,
+  );
 }
 bootstrap();
