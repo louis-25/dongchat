@@ -7,9 +7,16 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // CORS origin 설정: 환경 변수에서 여러 URL을 쉼표로 구분하여 받거나 기본값 사용
+  // URL 끝의 슬래시 제거하여 정규화
+  const normalizeUrl = (url: string): string => {
+    return url.trim().replace(/\/+$/, '');
+  };
+
   const allowedOrigins = process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',').map((url) => url.trim())
+    ? process.env.FRONTEND_URL.split(',').map(normalizeUrl)
     : ['http://localhost:3000'];
+
+  console.log('[CORS] 허용된 origins:', allowedOrigins);
 
   app.enableCors({
     origin: (
@@ -21,19 +28,31 @@ async function bootstrap() {
         callback(null, true);
         return;
       }
+
+      // origin도 정규화하여 비교
+      const normalizedOrigin = normalizeUrl(origin);
+
+      console.log('[CORS] 요청 origin:', origin, '→ 정규화:', normalizedOrigin);
+
       // 허용된 origin 목록에 있으면 허용
-      if (allowedOrigins.includes(origin)) {
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        console.log('[CORS] 허용됨:', normalizedOrigin);
         callback(null, true);
         return;
       }
+
       // 개발 환경에서는 localhost 허용
       if (
         process.env.NODE_ENV !== 'production' &&
-        origin.includes('localhost')
+        normalizedOrigin.includes('localhost')
       ) {
+        console.log('[CORS] 개발 환경 localhost 허용:', normalizedOrigin);
         callback(null, true);
         return;
       }
+
+      console.error('[CORS] 차단됨:', normalizedOrigin);
+      console.error('[CORS] 허용된 목록:', allowedOrigins);
       callback(new Error('CORS 정책에 의해 차단되었습니다.'));
     },
     credentials: true,

@@ -13,10 +13,15 @@ import { Message } from './message.entity';
 import { ChatRoom } from './chat-room.entity';
 import { ChatRoomParticipant } from './chat-room-participant.entity';
 
+// URL 정규화 함수: 끝의 슬래시 제거
+const normalizeUrl = (url: string): string => {
+  return url.trim().replace(/\/+$/, '');
+};
+
 @WebSocketGateway({
   cors: {
     origin: process.env.FRONTEND_URL
-      ? process.env.FRONTEND_URL.split(',').map((url) => url.trim())
+      ? process.env.FRONTEND_URL.split(',').map(normalizeUrl)
       : ['http://localhost:3000'],
     credentials: true,
   },
