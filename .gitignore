@@ -1,4 +1,4 @@
 /server/dist
-/server/dist
-/server/dist
-/server/dist
+/server/node_modules
+/client/node_modules
+/client/.next
