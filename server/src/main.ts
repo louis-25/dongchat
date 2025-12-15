@@ -6,8 +6,36 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // CORS origin 설정: 환경 변수에서 여러 URL을 쉼표로 구분하여 받거나 기본값 사용
+  const allowedOrigins = process.env.FRONTEND_URL
+    ? process.env.FRONTEND_URL.split(',').map((url) => url.trim())
+    : ['http://localhost:3000'];
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      // origin이 없으면 (같은 도메인 요청 등) 허용
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      // 허용된 origin 목록에 있으면 허용
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      // 개발 환경에서는 localhost 허용
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        origin.includes('localhost')
+      ) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('CORS 정책에 의해 차단되었습니다.'));
+    },
     credentials: true,
   });
 
@@ -32,4 +60,4 @@ async function bootstrap() {
     `Swagger 문서: http://localhost:${process.env.PORT ?? 4000}/api-docs`,
   );
 }
-bootstrap();
+void bootstrap();
