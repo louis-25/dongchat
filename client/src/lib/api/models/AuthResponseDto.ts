@@ -5,9 +5,10 @@
  * 실시간 채팅 애플리케이션 API 문서
  * OpenAPI spec version: 1.0
  */
-import type { AuthResponseDtoUser } from './authResponseDtoUser';
+import type { AuthResponseDtoUser } from "./authResponseDtoUser";
 
 export interface AuthResponseDto {
+  // test
   /** JWT 액세스 토큰 */
   access_token: string;
   /** JWT 리프레시 토큰 */
