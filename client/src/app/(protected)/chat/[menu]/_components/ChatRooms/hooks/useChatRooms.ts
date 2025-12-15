@@ -50,7 +50,7 @@ export const useChatRooms = () => {
       hasInitializedRef.current = true;
       // 비동기로 처리하여 effect 내부 setState 경고 완화
       queueMicrotask(() => {
-        setSelectedRoomId(rooms[0].id);
+        setSelectedRoomId(rooms[0]?.id);
       });
     }
   }, [rooms, selectedRoomId]);
