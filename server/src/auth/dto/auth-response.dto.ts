@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { AuthResponseDtoUser } from './auth-response-user.dto';
 
 /**
  * 인증 응답 DTO
@@ -18,12 +19,7 @@ export class AuthResponseDto {
 
   @ApiProperty({
     description: '사용자 정보',
-    example: { id: 1, username: 'testuser', role: 'USER', profileImage: null },
+    type: AuthResponseDtoUser,
   })
-  user: {
-    id: number;
-    username: string;
-    role: string;
-    profileImage: string | null;
-  };
+  user: AuthResponseDtoUser;
 }

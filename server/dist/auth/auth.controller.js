@@ -19,6 +19,7 @@ const auth_service_1 = require("./auth.service");
 const register_dto_1 = require("./dto/register.dto");
 const login_dto_1 = require("./dto/login.dto");
 const auth_response_dto_1 = require("./dto/auth-response.dto");
+const auth_response_user_dto_1 = require("./dto/auth-response-user.dto");
 const refresh_token_dto_1 = require("./dto/refresh-token.dto");
 const api_error_response_decorator_1 = require("../common/decorators/api-error-response.decorator");
 let AuthController = class AuthController {
@@ -91,6 +92,7 @@ __decorate([
 ], AuthController.prototype, "refresh", null);
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('Auth'),
+    (0, swagger_1.ApiExtraModels)(auth_response_user_dto_1.AuthResponseDtoUser),
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])
 ], AuthController);

@@ -1,9 +1,10 @@
 import { Controller, Post, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiExtraModels } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { AuthResponseDtoUser } from './dto/auth-response-user.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ApiErrorResponse } from '../common/decorators/api-error-response.decorator';
 import { User } from '../users/user.entity';
@@ -12,6 +13,7 @@ import { User } from '../users/user.entity';
  * 인증 관련 API 요청을 처리하는 컨트롤러입니다.
  */
 @ApiTags('Auth')
+@ApiExtraModels(AuthResponseDtoUser)
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}

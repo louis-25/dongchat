@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthResponseDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
+const auth_response_user_dto_1 = require("./auth-response-user.dto");
 class AuthResponseDto {
     access_token;
     refresh_token;
@@ -34,8 +35,8 @@ __decorate([
 __decorate([
     (0, swagger_1.ApiProperty)({
         description: '사용자 정보',
-        example: { id: 1, username: 'testuser', role: 'USER', profileImage: null },
+        type: auth_response_user_dto_1.AuthResponseDtoUser,
     }),
-    __metadata("design:type", Object)
+    __metadata("design:type", auth_response_user_dto_1.AuthResponseDtoUser)
 ], AuthResponseDto.prototype, "user", void 0);
 //# sourceMappingURL=auth-response.dto.js.map

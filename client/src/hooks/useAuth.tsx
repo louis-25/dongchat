@@ -5,6 +5,8 @@ import useRouter from "./useRouter";
 import { useSession } from "next-auth/react";
 import type { Session } from "next-auth";
 import { setAccessToken } from "@/lib/api-client";
+import type { AuthResponseDtoUser } from "@/lib/api/models";
+import { AuthResponseDtoUserRole } from "@/lib/api/models";
 
 // 확장된 Session 타입 정의
 type ExtendedSession = Session & {
@@ -41,14 +43,21 @@ const useAuth = () => {
     if (sessionAccess && sessionRefresh && sessionUser) {
       // refreshToken만 localStorage에 저장
       localStorage.setItem("refreshToken", sessionRefresh);
+      // sessionUser를 AuthResponseDtoUser 타입으로 변환
+      const userData: AuthResponseDtoUser = {
+        id: sessionUser.id,
+        username: sessionUser.username,
+        role: (sessionUser.role as AuthResponseDtoUserRole) || AuthResponseDtoUserRole.USER,
+        profileImage: (sessionUser.profileImage as AuthResponseDtoUser['profileImage']) ?? null,
+      };
       // 나머지는 sessionStorage와 전역 상태로 관리
       if (typeof window !== "undefined") {
-        sessionStorage.setItem("user", JSON.stringify(sessionUser));
+        sessionStorage.setItem("user", JSON.stringify(userData));
         sessionStorage.setItem("accessToken", sessionAccess);
       }
       setAccessToken(sessionAccess);
       setAccessTokenAtom(sessionAccess);
-      setUser(sessionUser);
+      setUser(userData);
       return;
     }
 
@@ -67,7 +76,7 @@ const useAuth = () => {
       // sessionStorage에서 사용자 정보 복원
       if (storedUser) {
         try {
-          const parsedUser = JSON.parse(storedUser);
+          const parsedUser = JSON.parse(storedUser) as AuthResponseDtoUser;
           setUser(parsedUser);
         } catch (e) {
           console.error("Failed to parse user from sessionStorage", e);

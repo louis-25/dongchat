@@ -5,13 +5,14 @@ import { useAtom } from "jotai";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import useRouter from "@/hooks/useRouter";
-import { accessTokenAtom, userAtom, type User } from "@/store/auth";
+import { accessTokenAtom, userAtom } from "@/store/auth";
 import { setAccessToken } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { signOut } from "next-auth/react";
+import type { AuthResponseDtoUser } from "@/lib/api/models";
 
 type ProtectedHeaderProps = {
-  user?: User | null;
+  user?: AuthResponseDtoUser | null;
 };
 
 // User 타입 가드
@@ -69,7 +70,14 @@ const ProtectedHeader = ({ user: userProp }: ProtectedHeaderProps) => {
 
   const userId = isMounted && userData?.id ? String(userData.id) : "";
 
-  const profileImage = isMounted ? userData?.profileImage : undefined;
+  // profileImage는 AuthResponseDtoUserProfileImage 타입 ({ [key: string]: unknown } | null)
+  // 실제로는 string | null이지만, 타입 안전성을 위해 체크
+  const profileImage =
+    isMounted &&
+    userData?.profileImage &&
+    typeof userData.profileImage === "string"
+      ? userData.profileImage
+      : undefined;
 
   const userRole = isMounted ? userData?.role : undefined;
 

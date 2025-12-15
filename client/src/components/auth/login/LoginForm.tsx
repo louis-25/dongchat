@@ -1,6 +1,6 @@
 import useToast from "@/hooks/useToast";
 import { useAtom } from "jotai";
-import { accessTokenAtom, userAtom, type User } from "@/store/auth";
+import { accessTokenAtom, userAtom } from "@/store/auth";
 import { useLogin } from "@/hooks/api/useAuthMutation";
 import { getErrorMessage } from "@/lib/error-handler";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import { signIn } from "next-auth/react";
 import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import type { Session } from "next-auth";
+import type { AuthResponseDtoUser } from "@/lib/api/models";
+import { AuthResponseDtoUserRole } from "@/lib/api/models";
 
 const loginSchema = yup.object().shape({
   username: yup.string().required("아이디를 입력해주세요."),
@@ -64,12 +66,19 @@ const LoginForm = () => {
           processedSessionRef.current = sessionAccess;
           // refreshToken만 localStorage에 저장
           localStorage.setItem("refreshToken", sessionRefresh);
+          // sessionUser를 AuthResponseDtoUser 타입으로 변환
+          const userData: AuthResponseDtoUser = {
+            id: sessionUser.id,
+            username: sessionUser.username,
+            role: (sessionUser.role as AuthResponseDtoUserRole) || AuthResponseDtoUserRole.USER,
+            profileImage: null,
+          };
           // 나머지는 sessionStorage와 전역 상태로 관리
-          sessionStorage.setItem("user", JSON.stringify(sessionUser));
+          sessionStorage.setItem("user", JSON.stringify(userData));
           sessionStorage.setItem("accessToken", sessionAccess);
           setAccessToken(sessionAccess);
           setAccessTokenAtom(sessionAccess);
-          setUser(sessionUser);
+          setUser(userData);
           success("카카오 로그인 성공!");
           setTimeout(() => {
             setIsKakaoLoading(false);
@@ -118,9 +127,7 @@ const LoginForm = () => {
           }
           if (data.user) {
             sessionStorage.setItem("user", JSON.stringify(data.user));
-            // API 응답의 user를 User 타입으로 변환
-            const userData = data.user as unknown as User;
-            setUser(userData);
+            setUser(data.user);
           }
           success("로그인 성공!");
           goChat();
