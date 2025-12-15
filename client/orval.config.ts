@@ -1,9 +1,12 @@
 import { defineConfig } from "orval";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API_DOCS_URL = `${API_URL}/api-docs-json`;
+
 export default defineConfig({
   dongchat: {
     input: {
-      target: "http://localhost:4000/api-docs-json",
+      target: API_DOCS_URL,
     },
     output: {
       mode: "tags-split",

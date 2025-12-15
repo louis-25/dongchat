@@ -13,4 +13,6 @@ export interface KakaoLoginDto {
   nickname?: string;
   /** username 대체 값 */
   username?: string;
+  /** 프로필 이미지 URL */
+  profileImage?: string;
 }
