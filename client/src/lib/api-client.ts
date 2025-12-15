@@ -4,7 +4,7 @@ import axios, {
   AxiosRequestConfig,
   InternalAxiosRequestConfig,
 } from "axios";
-import { BASE_URL } from "@/config";
+import { BASE_URL, joinUrl } from "@/config";
 
 // 토큰 관리를 위한 유틸리티
 let currentAccessToken: string | null = null;
@@ -153,7 +153,7 @@ const handleError = async (error: AxiosError): Promise<never> => {
 
     try {
       // Refresh token으로 새 토큰 발급
-      const response = await axios.post(`${BASE_URL}/auth/refresh`, {
+      const response = await axios.post(joinUrl(BASE_URL, "/auth/refresh"), {
         refresh_token: refreshToken,
       });
       const { access_token, refresh_token: newRefreshToken } = response.data;

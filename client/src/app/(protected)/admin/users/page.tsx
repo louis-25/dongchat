@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getAccessToken } from "@/lib/api-client";
-import { BASE_URL } from "@/config";
+import { BASE_URL, joinUrl } from "@/config";
 
 type UserRow = {
   id: number;
@@ -40,7 +40,7 @@ export default function AdminUsersPage() {
       order,
     });
     try {
-      const res = await fetch(`${BASE_URL}/users?${params.toString()}`, {
+      const res = await fetch(joinUrl(BASE_URL, `/users?${params.toString()}`), {
         headers: authHeader,
       });
       if (res.ok) {

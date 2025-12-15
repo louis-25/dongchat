@@ -3,6 +3,7 @@ import {
   KAKAO_CLIENT_ID,
   KAKAO_CLIENT_SECRET,
   NEXTAUTH_SECRET,
+  joinUrl,
 } from "@/config";
 import NextAuth, { type DefaultSession } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -88,7 +89,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         try {
           console.log("[NextAuth] Attempting login for:", credentials.username);
-          const res = await fetch(`${BASE_URL}/auth/login`, {
+          const res = await fetch(joinUrl(BASE_URL, "/auth/login"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -146,7 +147,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             kakaoProfile?.properties?.thumbnail_image ||
             kakaoProfile?.kakao_account?.profile?.thumbnail_image_url;
           // username은 nickname을 사용 (숫자 ID 대신)
-          const res = await fetch(`${BASE_URL}/auth/kakao`, {
+          const res = await fetch(joinUrl(BASE_URL, "/auth/kakao"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -180,11 +181,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         user: {
           ...session.user,
           id: typeof token.id === "number" ? token.id : 0,
-          name: typeof token.name === "string" ? token.name : session.user.name || "",
+          name:
+            typeof token.name === "string"
+              ? token.name
+              : session.user.name || "",
           role: typeof token.role === "string" ? token.role : undefined,
         },
-        backendAccessToken: typeof token.accessToken === "string" ? token.accessToken : undefined,
-        backendRefreshToken: typeof token.refreshToken === "string" ? token.refreshToken : undefined,
+        backendAccessToken:
+          typeof token.accessToken === "string" ? token.accessToken : undefined,
+        backendRefreshToken:
+          typeof token.refreshToken === "string"
+            ? token.refreshToken
+            : undefined,
         backendUser:
           token.user &&
           typeof token.user === "object" &&
@@ -199,7 +207,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 };
                 return {
                   id: typeof user.id === "number" ? user.id : 0,
-                  username: typeof user.username === "string" ? user.username : "",
+                  username:
+                    typeof user.username === "string" ? user.username : "",
                   role: typeof user.role === "string" ? user.role : undefined,
                   profileImage:
                     typeof user.profileImage === "string"
