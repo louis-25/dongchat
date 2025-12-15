@@ -5,14 +5,13 @@ import { useAtom } from "jotai";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import useRouter from "@/hooks/useRouter";
-import { accessTokenAtom, userAtom } from "@/store/auth";
+import { accessTokenAtom, userAtom, type User } from "@/store/auth";
 import { setAccessToken } from "@/lib/api-client";
-import type { AuthResponseDtoUser } from "@/lib/api/models";
 import { cn } from "@/lib/utils";
 import { signOut } from "next-auth/react";
 
 type ProtectedHeaderProps = {
-  user?: AuthResponseDtoUser | null;
+  user?: User | null;
 };
 
 // User 타입 가드

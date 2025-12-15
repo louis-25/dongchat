@@ -11,7 +11,7 @@ import { signIn } from "next-auth/react";
 import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useAtom } from "jotai";
-import { accessTokenAtom, userAtom } from "@/store/auth";
+import { accessTokenAtom, userAtom, type User } from "@/store/auth";
 import { setAccessToken } from "@/lib/api-client";
 import type { Session } from "next-auth";
 

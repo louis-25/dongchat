@@ -1,6 +1,6 @@
 import useToast from "@/hooks/useToast";
 import { useAtom } from "jotai";
-import { accessTokenAtom, userAtom } from "@/store/auth";
+import { accessTokenAtom, userAtom, type User } from "@/store/auth";
 import { useLogin } from "@/hooks/api/useAuthMutation";
 import { getErrorMessage } from "@/lib/error-handler";
 import { Button } from "@/components/ui/button";
@@ -118,7 +118,9 @@ const LoginForm = () => {
           }
           if (data.user) {
             sessionStorage.setItem("user", JSON.stringify(data.user));
-            setUser(data.user);
+            // API 응답의 user를 User 타입으로 변환
+            const userData = data.user as unknown as User;
+            setUser(userData);
           }
           success("로그인 성공!");
           goChat();
