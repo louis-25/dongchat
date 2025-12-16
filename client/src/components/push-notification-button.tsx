@@ -6,13 +6,8 @@ import { Bell, BellOff } from "lucide-react";
 import { toast } from "sonner";
 
 export function PushNotificationButton() {
-  const {
-    isSupported,
-    isSubscribed,
-    isLoading,
-    subscribe,
-    unsubscribe,
-  } = usePushNotification();
+  const { isSupported, isSubscribed, isLoading, subscribe, unsubscribe } =
+    usePushNotification();
 
   if (!isSupported) {
     return null;
@@ -63,4 +58,3 @@ export function PushNotificationButton() {
     </Button>
   );
 }
-

@@ -18,9 +18,7 @@ interface PushSubscriptionData {
  */
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
 
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
@@ -42,9 +40,7 @@ export function usePushNotification() {
 
   useEffect(() => {
     // 브라우저 지원 여부 확인
-    setIsSupported(
-      "serviceWorker" in navigator && "PushManager" in window
-    );
+    setIsSupported("serviceWorker" in navigator && "PushManager" in window);
   }, []);
 
   /**
@@ -91,7 +87,9 @@ export function usePushNotification() {
       // 푸시 구독
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        applicationServerKey: urlBase64ToUint8Array(
+          vapidPublicKey
+        ) as ArrayBufferView<ArrayBuffer>,
       });
 
       // 구독 정보를 서버에 전송
@@ -99,7 +97,9 @@ export function usePushNotification() {
         endpoint: subscription.endpoint,
         keys: {
           p256dh: btoa(
-            String.fromCharCode(...new Uint8Array(subscription.getKey("p256dh")!))
+            String.fromCharCode(
+              ...new Uint8Array(subscription.getKey("p256dh")!)
+            )
           )
             .replace(/\+/g, "-")
             .replace(/\//g, "_")
@@ -184,4 +184,3 @@ export function usePushNotification() {
     checkSubscription,
   };
 }
-
