@@ -2,6 +2,7 @@ import Link from "next/link";
 import FriendsTab from "@/app/(protected)/chat/[menu]/_components/Friends";
 import ChatRoomsTab from "@/app/(protected)/chat/[menu]/_components/ChatRooms";
 import { Button } from "@/components/ui/button";
+import { PushNotificationButton } from "@/components/push-notification-button";
 
 interface PageProps {
   params: Promise<{ menu: string }>;
@@ -20,8 +21,7 @@ export default async function ChatMenuPage({ params }: PageProps) {
           <Link href="/chat/rooms">채팅</Link>
         </Button>
       </div>
-
-      {menu === "friends" && <FriendsTab />}
+      <PushNotificationButton />;{menu === "friends" && <FriendsTab />}
       {menu === "rooms" && <ChatRoomsTab />}
     </div>
   );

@@ -12,6 +12,7 @@ import { Repository } from 'typeorm';
 import { Message } from './message.entity';
 import { ChatRoom } from './chat-room.entity';
 import { ChatRoomParticipant } from './chat-room-participant.entity';
+import { PushService } from '../push/push.service';
 
 // URL 정규화 함수: 끝의 슬래시 제거
 const normalizeUrl = (url: string): string => {
@@ -37,6 +38,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private roomRepository: Repository<ChatRoom>,
     @InjectRepository(ChatRoomParticipant)
     private participantRepository: Repository<ChatRoomParticipant>,
+    private pushService: PushService,
   ) {}
 
   handleConnection(client: Socket) {
@@ -80,12 +82,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('message')
   async handleMessage(
-    @MessageBody() payload: { sender: string; message: string; roomId: number },
+    @MessageBody() payload: { sender: string; message: string; roomId: number; senderId?: number },
   ): Promise<void> {
     if (!payload.roomId) return;
 
     const room = await this.roomRepository.findOne({
       where: { id: payload.roomId },
+      relations: ['participants', 'participants.user'],
     });
     if (!room) return;
 
@@ -95,11 +98,34 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       room,
     });
     await this.messageRepository.save(newMessage);
+    
+    // Socket.io로 메시지 전송
     this.server.to(String(payload.roomId)).emit('message', {
       roomId: payload.roomId,
       sender: newMessage.sender,
       message: newMessage.content,
       createdAt: newMessage.createdAt,
     });
+
+    // 푸시 알림 전송 (메시지를 보낸 사람 제외)
+    if (room.participants && room.participants.length > 0) {
+      const recipientIds = room.participants
+        .filter((p) => p.user.id !== payload.senderId)
+        .map((p) => p.user.id);
+
+      if (recipientIds.length > 0) {
+        await this.pushService.sendNotificationToUsers(recipientIds, {
+          title: room.name || payload.sender,
+          body: payload.message,
+          icon: '/icon.png',
+          badge: '/badge.png',
+          data: {
+            roomId: payload.roomId,
+            sender: payload.sender,
+            url: `/chat/${payload.roomId}`,
+          },
+        });
+      }
+    }
   }
 }

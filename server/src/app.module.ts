@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ChatModule } from './chat/chat.module';
 import { FriendsModule } from './friends/friends.module';
+import { PushModule } from './push/push.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -31,6 +32,7 @@ import { AppService } from './app.service';
     UsersModule,
     ChatModule,
     FriendsModule,
+    PushModule,
   ],
   controllers: [AppController],
   providers: [AppService],

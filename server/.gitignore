@@ -10,3 +10,4 @@
 /logs
 /tmp
 /tempnode_modules
+.env

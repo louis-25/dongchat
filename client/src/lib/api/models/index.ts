@@ -20,6 +20,7 @@ export * from './createRoomDto';
 export * from './kakaoLoginDto';
 export * from './loginDto';
 export * from './message';
+export * from './pushSubscribeDto';
 export * from './refreshTokenDto';
 export * from './registerDto';
 export * from './sendFriendRequestDto';

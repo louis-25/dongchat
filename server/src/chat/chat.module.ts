@@ -8,11 +8,13 @@ import { ChatRoomParticipant } from './chat-room-participant.entity';
 import { ChatRoomsController } from './chat.rooms.controller';
 import { ChatRoomsService } from './chat.rooms.service';
 import { UsersModule } from '../users/users.module';
+import { PushModule } from '../push/push.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Message, ChatRoom, ChatRoomParticipant]),
     UsersModule,
+    PushModule,
   ],
   controllers: [ChatController, ChatRoomsController],
   providers: [ChatGateway, ChatRoomsService],

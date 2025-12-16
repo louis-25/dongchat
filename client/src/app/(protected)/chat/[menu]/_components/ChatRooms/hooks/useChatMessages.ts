@@ -80,6 +80,7 @@ export const useChatMessages = (selectedRoomId: number | null) => {
       sender: user.username,
       message: message.trim(),
       roomId: selectedRoomId,
+      senderId: user.id,
     });
   };
 
