@@ -20,6 +20,12 @@ export const getErrorMessage = (error: ErrorType<void>): string => {
                 return '접근 권한이 없습니다.';
             case 'VALIDATION_FAILED':
                 return '입력값이 올바르지 않습니다.';
+            case 'CHAT_FORBIDDEN':
+                return '해당 채팅에 접근할 권한이 없습니다.';
+            case 'MESSAGE_NOT_FOUND':
+                return '메시지를 찾을 수 없습니다.';
+            case 'CHAT_ROOM_NOT_FOUND':
+                return '채팅방을 찾을 수 없습니다.';
             default:
                 // 코드는 있지만 매핑되지 않은 경우 메시지 반환
                 return error.message || '오류가 발생했습니다.';

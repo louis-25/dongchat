@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import CreateRoomModal from "./CreateRoomModal";
 import { RoomList } from "./components/RoomList";
@@ -8,14 +8,36 @@ import { MessageList } from "./components/MessageList";
 import { MessageInput } from "./components/MessageInput";
 import { useChatRooms } from "./hooks/useChatRooms";
 import { useChatMessages } from "./hooks/useChatMessages";
-import useAuth from "@/hooks/useAuth";
+import type { ChatMessage } from "./types";
 
 const ChatRoomsTab = () => {
-  const { user } = useAuth();
   const { rooms, selectedRoomId, setSelectedRoomId, createRoom } =
     useChatRooms();
-  const { currentMessages, sendMessage } = useChatMessages(selectedRoomId);
+
+  // 선택된 방의 참여자 ID (안 읽은 인원 수 계산용, Design Ref: §3.3)
+  const participantIds = useMemo(() => {
+    const room = rooms.find((r) => r.id === selectedRoomId);
+    return (room?.participants ?? []).map((p) => p.user.id);
+  }, [rooms, selectedRoomId]);
+
+  const {
+    currentMessages,
+    sendMessage,
+    editMessage,
+    deleteMessage,
+    loadOlder,
+    hasMore,
+    loadingOlder,
+    currentUserId,
+  } = useChatMessages(selectedRoomId, participantIds);
+
   const [showModal, setShowModal] = useState(false);
+  const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
+
+  const handleSend = (message: string) => {
+    sendMessage(message, replyTarget?.id);
+    setReplyTarget(null);
+  };
 
   const handleCreateRoom = async (payload: {
     name?: string;
@@ -45,13 +67,21 @@ const ChatRoomsTab = () => {
         <Card className="md:col-span-2 h-[80vh] flex flex-col">
           <MessageList
             messages={currentMessages}
-            currentUsername={user?.username as string | undefined}
+            currentUserId={currentUserId}
             selectedRoomId={selectedRoomId}
+            onReply={setReplyTarget}
+            onEdit={editMessage}
+            onDelete={deleteMessage}
+            onLoadOlder={loadOlder}
+            hasMore={hasMore}
+            loadingOlder={loadingOlder}
           />
           <div className="p-4 border-t">
             <MessageInput
-              onSendMessage={sendMessage}
+              onSendMessage={handleSend}
               disabled={!selectedRoomId}
+              replyTarget={replyTarget}
+              onCancelReply={() => setReplyTarget(null)}
             />
           </div>
         </Card>

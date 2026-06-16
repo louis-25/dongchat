@@ -9,13 +9,9 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
-import { Message } from './message.entity';
-import { ChatRoom } from './chat-room.entity';
-import { ChatRoomParticipant } from './chat-room-participant.entity';
-import { PushService } from '../push/push.service';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ChatMessageService } from './chat-message.service';
 
 // 소켓 핸드셰이크에서 JWT를 추출한다. (auth.token 우선, 없으면 Authorization 헤더)
 const extractToken = (socket: Socket): string | null => {
@@ -33,9 +29,30 @@ interface JwtPayload {
   role?: string;
 }
 
+// 검증된 소켓 신원. socket.data(any)를 타입 안전하게 다루기 위한 형태.
+interface AuthedSocketData {
+  userId: number;
+  username: string;
+}
+
+const sdata = (socket: Socket): AuthedSocketData =>
+  socket.data as AuthedSocketData;
+
 // URL 정규화 함수: 끝의 슬래시 제거
 const normalizeUrl = (url: string): string => {
   return url.trim().replace(/\/+$/, '');
+};
+
+// 도메인 예외 → 소켓 에러 코드 매핑 (Design Ref: §6.1)
+const toErrorCode = (e: unknown): { code: string; message: string } => {
+  if (e instanceof ForbiddenException || e instanceof NotFoundException) {
+    const res = e.getResponse() as { code?: string; message?: string };
+    return {
+      code: res.code ?? 'CHAT_ERROR',
+      message: res.message ?? '요청을 처리할 수 없습니다.',
+    };
+  }
+  return { code: 'CHAT_ERROR', message: '요청을 처리할 수 없습니다.' };
 };
 
 @WebSocketGateway({
@@ -53,18 +70,12 @@ export class ChatGateway
   server: Server;
 
   constructor(
-    @InjectRepository(Message)
-    private messageRepository: Repository<Message>,
-    @InjectRepository(ChatRoom)
-    private roomRepository: Repository<ChatRoom>,
-    @InjectRepository(ChatRoomParticipant)
-    private participantRepository: Repository<ChatRoomParticipant>,
-    private pushService: PushService,
-    private jwtService: JwtService,
+    // Design Ref: §2 — 영속/읽음/수정/삭제 로직은 서비스에 위임하고 게이트웨이는 얇게 유지.
+    private readonly messageService: ChatMessageService,
+    private readonly jwtService: JwtService,
   ) {}
 
   // 모든 소켓 연결에 대해 JWT를 검증하는 미들웨어를 등록한다.
-  // 실패 시 next(Error)로 connect_error를 보내 클라이언트가 재연결(토큰 준비 후)을 시도할 수 있게 한다.
   afterInit(server: Server) {
     server.use((socket, next) => {
       try {
@@ -74,8 +85,9 @@ export class ChatGateway
           return;
         }
         const payload = this.jwtService.verify<JwtPayload>(token);
-        socket.data.userId = payload.sub;
-        socket.data.username = payload.username;
+        const data = sdata(socket);
+        data.userId = payload.sub;
+        data.username = payload.username;
         next();
       } catch {
         next(new Error('Unauthorized'));
@@ -85,104 +97,140 @@ export class ChatGateway
 
   handleConnection(client: Socket) {
     console.log(
-      `Client connected: ${client.id} (userId=${client.data.userId})`,
+      `Client connected: ${client.id} (userId=${sdata(client).userId})`,
     );
   }
   handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
   }
+
   @SubscribeMessage('join_room')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: { roomId: number },
   ) {
     // userId는 클라이언트 입력이 아닌 검증된 소켓 신원을 사용한다.
-    const userId = client.data.userId as number;
-    const membership = await this.participantRepository.findOne({
-      where: {
-        room: { id: payload.roomId },
-        user: { id: userId },
-      },
-      relations: ['room'],
-    });
-    if (!membership) {
+    const userId = sdata(client).userId;
+    try {
+      await this.messageService.assertMembership(payload.roomId, userId);
+    } catch {
       client.emit('join_error', { message: '권한이 없습니다.' });
       return;
     }
 
-    client.join(String(payload.roomId));
-    const messages = await this.messageRepository.find({
-      where: { room: { id: payload.roomId } },
-      order: { createdAt: 'ASC' },
-      take: 50,
-    });
-    client.emit('initial_messages', {
-      roomId: payload.roomId,
-      messages: messages.map((m) => ({
-        sender: m.sender,
-        message: m.content,
-        createdAt: m.createdAt,
-      })),
-    });
+    await client.join(String(payload.roomId));
+
+    // Design Ref: §4.2 — 입장 시 최신 메시지 페이지(기본 30개)를 View로 전달.
+    const messages = await this.messageService.getRoomMessages(payload.roomId);
+    client.emit('initial_messages', { roomId: payload.roomId, messages });
+
+    // 입장과 동시에 읽음 처리하고 방에 브로드캐스트 (FR-02)
+    const lastReadMessageId = await this.messageService.markRead(
+      payload.roomId,
+      userId,
+    );
+    if (lastReadMessageId !== null) {
+      this.server.to(String(payload.roomId)).emit('read_update', {
+        roomId: payload.roomId,
+        userId,
+        lastReadMessageId,
+      });
+    }
   }
 
   @SubscribeMessage('message')
   async handleMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { message: string; roomId: number },
+    @MessageBody()
+    payload: {
+      roomId: number;
+      content?: string;
+      message?: string;
+      replyToId?: number;
+    },
   ): Promise<void> {
     if (!payload.roomId) return;
-
     // 발신자 신원은 클라이언트 입력이 아닌 검증된 소켓에서 가져온다(스푸핑 방지).
-    const senderId = client.data.userId as number;
-    const sender = client.data.username as string;
+    const { userId: senderId, username: sender } = sdata(client);
+    const content = (payload.content ?? payload.message ?? '').trim();
+    if (!content) return;
 
-    const room = await this.roomRepository.findOne({
-      where: { id: payload.roomId },
-      relations: ['participants', 'participants.user'],
-    });
-    if (!room) return;
+    try {
+      const view = await this.messageService.createMessage(
+        payload.roomId,
+        senderId,
+        sender,
+        content,
+        payload.replyToId,
+      );
+      this.server.to(String(payload.roomId)).emit('message', view);
+    } catch (e) {
+      client.emit('message_error', toErrorCode(e));
+    }
+  }
 
-    // 발신자가 실제 방 참여자인지 확인한다.
-    const isParticipant = room.participants?.some(
-      (p) => p.user.id === senderId,
-    );
-    if (!isParticipant) return;
-
-    const newMessage = this.messageRepository.create({
-      sender,
-      content: payload.message,
-      room,
-    });
-    await this.messageRepository.save(newMessage);
-    
-    // Socket.io로 메시지 전송
-    this.server.to(String(payload.roomId)).emit('message', {
-      roomId: payload.roomId,
-      sender: newMessage.sender,
-      message: newMessage.content,
-      createdAt: newMessage.createdAt,
-    });
-
-    // 푸시 알림 전송 (메시지를 보낸 사람 제외)
-    if (room.participants && room.participants.length > 0) {
-      const recipientIds = room.participants
-        .filter((p) => p.user.id !== senderId)
-        .map((p) => p.user.id);
-
-      if (recipientIds.length > 0) {
-        await this.pushService.sendNotificationToUsers(recipientIds, {
-          title: room.name || sender,
-          body: payload.message,
-          icon: '/icon.png',
-          badge: '/badge.png',
-          data: {
-            roomId: payload.roomId,
-            sender: sender,
-            url: `/chat/${payload.roomId}`,
-          },
+  // Design Ref: §4.1 — 읽음 처리 (FR-02)
+  @SubscribeMessage('message_read')
+  async handleRead(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { roomId: number },
+  ): Promise<void> {
+    if (!payload?.roomId) return;
+    const userId = sdata(client).userId;
+    try {
+      const lastReadMessageId = await this.messageService.markRead(
+        payload.roomId,
+        userId,
+      );
+      if (lastReadMessageId !== null) {
+        this.server.to(String(payload.roomId)).emit('read_update', {
+          roomId: payload.roomId,
+          userId,
+          lastReadMessageId,
         });
       }
+    } catch (e) {
+      client.emit('message_error', toErrorCode(e));
+    }
+  }
+
+  // Design Ref: §4.1 — 메시지 수정 (FR-04, 소유권 검증)
+  @SubscribeMessage('message_edit')
+  async handleEdit(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { messageId: number; content: string },
+  ): Promise<void> {
+    const userId = sdata(client).userId;
+    const content = (payload?.content ?? '').trim();
+    if (!payload?.messageId || !content) return;
+    try {
+      const result = await this.messageService.editMessage(
+        payload.messageId,
+        userId,
+        content,
+      );
+      this.server.to(String(result.roomId)).emit('message_edited', result);
+    } catch (e) {
+      client.emit('message_error', toErrorCode(e));
+    }
+  }
+
+  // Design Ref: §4.1 — 메시지 삭제 (FR-05, soft delete, 소유권 검증)
+  @SubscribeMessage('message_delete')
+  async handleDelete(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { messageId: number },
+  ): Promise<void> {
+    const userId = sdata(client).userId;
+    if (!payload?.messageId) return;
+    try {
+      const result = await this.messageService.deleteMessage(
+        payload.messageId,
+        userId,
+      );
+      this.server.to(String(result.roomId)).emit('message_deleted', result);
+    } catch (e) {
+      client.emit('message_error', toErrorCode(e));
     }
   }
 }
