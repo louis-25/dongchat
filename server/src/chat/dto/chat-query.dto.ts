@@ -5,6 +5,12 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
  */
 export class ChatQueryDto {
   @ApiPropertyOptional({
+    description: '조회할 채팅방 ID (지정 시 해당 방의 멤버여야 함)',
+    example: 1,
+  })
+  roomId?: number;
+
+  @ApiPropertyOptional({
     description: '페이지 번호',
     example: 1,
     default: 1,

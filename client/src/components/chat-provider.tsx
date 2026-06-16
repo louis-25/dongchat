@@ -1,8 +1,19 @@
 "use client";
 
 import { BASE_URL } from "@/config";
+import { getAccessToken } from "@/lib/api-client";
 import React, { createContext, useContext, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
+
+// 소켓 연결/재연결 시마다 최신 액세스 토큰을 읽어 전달한다.
+const readToken = (): string => {
+  const token =
+    getAccessToken() ||
+    (typeof window !== "undefined"
+      ? sessionStorage.getItem("accessToken")
+      : null);
+  return token ?? "";
+};
 
 interface ChatContextType {
   socket: Socket | null;
@@ -18,6 +29,8 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     const newSocket = io(`${BASE_URL}`, {
       withCredentials: true,
       autoConnect: true, // 명시적으로 자동 연결 활성화
+      // 함수형 auth: 최초 연결 및 재연결(토큰 갱신 후)마다 호출되어 최신 토큰을 전달한다.
+      auth: (cb) => cb({ token: readToken() }),
     });
     return newSocket;
   }, []);
