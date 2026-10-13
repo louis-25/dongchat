@@ -5,3 +5,10 @@
 
 .bkit/
 .omc/
+# Supabase local
+supabase/.branches
+supabase/.temp
+supabase/.env
+
+# superpowers 실행 작업공간
+.superpowers/

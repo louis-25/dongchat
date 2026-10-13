@@ -1695,11 +1695,11 @@ git commit -m "feat(db): 로컬 시드(admin/alice/bob), advisors 점검, DB 타
 
 | 항목 | 결과 | 비고 |
 |---|---|---|
-| `realtime.send` 인자 | | Task 1 Step 4 |
-| `realtime.topic()` 존재 | | Task 1 Step 4 |
-| postgres의 `auth.sessions`/`auth.users` SELECT | | Task 1 Step 4 |
-| `auth.sessions` 트리거 생성 가능 | | 불가 시 Task 8 Step 3b 생략 |
-| `realtime.messages` 정책 생성 가능 | | 불가 시 중단·보고 |
+| `realtime.send` 인자 | `payload jsonb, event text, topic text, private boolean`, postgres EXECUTE 가능 | Task 1 Step 4 (PG 17.11) |
+| `realtime.topic()` 존재 | 있음(인자 없음) | Task 1 Step 4 |
+| postgres의 `auth.sessions`/`auth.users` SELECT | 둘 다 가능 | Task 1 Step 4 |
+| `auth.sessions` 트리거 생성 가능 | 가능 → Task 8 Step 3b 수행 | psql begin/rollback 프로브 |
+| `realtime.messages` 정책 생성 가능 | 가능 | psql begin/rollback 프로브 |
 | 정책 내 헬퍼의 `authenticated` EXECUTE 필요 | | Task 2 테스트로 확인(현재 GRANT 유지) |
 | 실제 Auth 가입 → profiles 생성 | | Task 2 Step 5 |
 | advisors 의도된 예외 | | Task 9 Step 3 |
