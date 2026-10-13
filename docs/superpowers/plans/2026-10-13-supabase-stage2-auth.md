@@ -1153,8 +1153,8 @@ Expected: `307 http://localhost:3000/login`, `307 http://localhost:3000/login`, 
 
 | 항목 | 결과 | 비고 |
 |---|---|---|
-| 카카오 provider 설정으로 supabase 기동 | | Task 1 Step 5 |
-| 중복 이메일 에러 코드 = `user_already_exists` | | Task 1 Step 8 |
-| `setAll`의 두 번째 인자(headers) 타입 호환 | | Task 3 Step 5 |
-| `response.cookies.setAll` 존재 | | Task 3 Step 5 |
-| 브라우저 체크리스트 수행 주체 | | Task 5 Step 4 |
+| 카카오 provider 설정으로 supabase 기동 | 정상(settings external.kakao=true) | Task 1 Step 5 |
+| 중복 이메일 에러 코드 = `user_already_exists` | 일치 | Task 1 Step 8 |
+| `setAll`의 두 번째 인자(headers) 타입 호환 | 호환(선택 인자) | Task 3 Step 5 |
+| `response.cookies.setAll` 존재 | 없음 → getAll().forEach(set) | Task 3 Step 5 |
+| 브라우저 체크리스트 수행 주체 | 사용자(Chrome 확장 미연결) | Task 5 Step 4 |
