@@ -85,6 +85,9 @@ as $$
 declare
   v_next uuid;
 begin
+  -- 방 행을 잠가 동시 퇴장을 직렬화한다(둘 다 서로를 남은 멤버로 보고 빈 방이 남는 것 방지).
+  perform 1 from public.chat_rooms where id = old.room_id for update;
+
   select p.user_id into v_next
   from public.chat_room_participants p
   where p.room_id = old.room_id
@@ -95,7 +98,8 @@ begin
     delete from public.chat_rooms where id = old.room_id;
   else
     update public.chat_rooms set created_by = v_next
-    where id = old.room_id and created_by is not distinct from old.user_id;
+    -- created_by가 NULL인 경우: 방장 계정 삭제 시 FK(on delete set null)가 이 트리거보다 먼저 적용된다.
+    where id = old.room_id and (created_by is null or created_by = old.user_id);
   end if;
   return null;
 end;

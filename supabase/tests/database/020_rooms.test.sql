@@ -1,5 +1,5 @@
 begin;
-select plan(22);
+select plan(23);
 
 select tests.create_user('alice@test.com', '{"username":"alice"}');
 select tests.create_user('bob@test.com', '{"username":"bob"}');
@@ -54,6 +54,13 @@ select is((select created_by from public.chat_rooms where name = 'grp'), tests.u
 -- 20: Studio 직접 삭제도 동일 처리 (Review Focus 3)
 delete from public.chat_room_participants where room_id = tests.room_id('grp') and user_id = tests.uid('bob@test.com');
 select is((select count(*)::int from public.chat_rooms where name = 'grp'), 0, '마지막 멤버 삭제 시 방 삭제');
+
+-- 방장 계정 삭제 시에도 남은 멤버에게 승계 (리뷰 #2)
+select tests.login_as(tests.uid('carol@test.com'));
+select public.create_room('grp2', true, array['bob','eve']);
+reset role;
+delete from auth.users where id = tests.uid('carol@test.com');
+select ok((select created_by from public.chat_rooms where name = 'grp2') in (tests.uid('bob@test.com'), tests.uid('eve@test.com')), '방장 계정 삭제 시 남은 멤버에게 승계');
 
 -- 21~22: 비활성 세션
 insert into private.user_access (user_id, sessions_revoked_at) values (tests.uid('alice@test.com'), now());
