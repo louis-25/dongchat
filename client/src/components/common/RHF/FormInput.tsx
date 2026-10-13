@@ -8,7 +8,7 @@ interface IFormInput {
     name: string;
     label?: string;
     placeholder?: string;
-    type?: "text" | "password" | "number" | "textarea" | "tel";
+    type?: "text" | "email" | "password" | "number" | "textarea" | "tel";
     disabled?: boolean;
     required?: boolean;
 }

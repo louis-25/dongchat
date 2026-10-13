@@ -233,6 +233,7 @@ export const useChatMessages = (
     loadOlder,
     hasMore,
     loadingOlder,
-    currentUserId: user?.id ?? null,
+    // ponytail: 사용자 id가 uuid(string)로 바뀌었다. 채팅은 4단계에서 재작성하므로 그때까지 본인 메시지 판별 비활성.
+    currentUserId: null as number | null,
   };
 };

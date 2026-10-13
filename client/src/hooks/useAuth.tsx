@@ -1,98 +1,40 @@
+"use client";
+
 import { useEffect } from "react";
-import { useAtom } from "jotai";
-import { accessTokenAtom, userAtom } from "@/store/auth";
-import useRouter from "./useRouter";
-import { useSession } from "next-auth/react";
-import type { Session } from "next-auth";
-import { setAccessToken } from "@/lib/api-client";
-import type { AuthResponseDtoUser } from "@/lib/api/models";
-import { AuthResponseDtoUserRole } from "@/lib/api/models";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { getCurrentUser, onAuthChange, signOut } from "@/services/auth";
+import type { DomainError } from "@/types/domain";
 
-// 확장된 Session 타입 정의
-type ExtendedSession = Session & {
-  backendAccessToken?: string;
-  backendRefreshToken?: string;
-  backendUser?: {
-    id: number;
-    username: string;
-    role?: string;
-    profileImage?: string | null;
-  };
-};
+export const AUTH_QUERY_KEY = ["auth", "me"] as const;
 
+// 현재 사용자. 세션 변화는 onAuthChange로 반영하고, 정지·강제 로그아웃이면 로그인 화면으로 보낸다.
+// ponytail: 호출하는 컴포넌트마다 구독이 생긴다(현재 3곳). 늘어나면 Provider로 올릴 것.
 const useAuth = () => {
-  const { router } = useRouter();
-  const [user, setUser] = useAtom(userAtom);
-  const [, setAccessTokenAtom] = useAtom(accessTokenAtom);
-  const { data: session, status } = useSession();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const { data: user = null, isLoading, error } = useQuery({
+    queryKey: AUTH_QUERY_KEY,
+    queryFn: getCurrentUser,
+    staleTime: 60_000,
+    retry: false,
+  });
 
-  // 인증 상태 확인 및 리다이렉트 처리
+  useEffect(
+    () =>
+      onAuthChange((event) => {
+        if (event === "SIGNED_OUT") queryClient.setQueryData(AUTH_QUERY_KEY, null);
+        else void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+      }),
+    [queryClient],
+  );
+
   useEffect(() => {
-    // session이 없거나 로딩 중이면 처리하지 않음
-    if (status === "loading" || !session) {
-      return;
-    }
+    if ((error as DomainError | null)?.code !== "AUTH_SESSION_REVOKED") return;
+    void signOut().then(() => router.push("/login"));
+  }, [error, router]);
 
-    // 타입 안전하게 확장된 Session으로 변환
-    const sessionWithBackend = session as unknown as ExtendedSession;
-    const sessionAccess = sessionWithBackend.backendAccessToken;
-    const sessionRefresh = sessionWithBackend.backendRefreshToken;
-    const sessionUser = sessionWithBackend.backendUser;
-
-    // NextAuth 세션이 있고 백엔드 정보가 있으면 사용
-    if (sessionAccess && sessionRefresh && sessionUser) {
-      // refreshToken만 localStorage에 저장
-      localStorage.setItem("refreshToken", sessionRefresh);
-      // sessionUser를 AuthResponseDtoUser 타입으로 변환
-      const userData: AuthResponseDtoUser = {
-        id: sessionUser.id,
-        username: sessionUser.username,
-        role: (sessionUser.role as AuthResponseDtoUserRole) || AuthResponseDtoUserRole.USER,
-        profileImage: (sessionUser.profileImage as AuthResponseDtoUser['profileImage']) ?? null,
-      };
-      // 나머지는 sessionStorage와 전역 상태로 관리
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("user", JSON.stringify(userData));
-        sessionStorage.setItem("accessToken", sessionAccess);
-      }
-      setAccessToken(sessionAccess);
-      setAccessTokenAtom(sessionAccess);
-      setUser(userData);
-      return;
-    }
-
-    const refreshToken = localStorage.getItem("refreshToken");
-
-    if (!refreshToken) {
-      router.push("/login");
-      return;
-    }
-
-    // 클라이언트에서만 sessionStorage에서 사용자 정보 복원 (hydration mismatch 방지)
-    if (typeof window !== "undefined") {
-      const storedUser = sessionStorage.getItem("user");
-      const storedAccessToken = sessionStorage.getItem("accessToken");
-
-      // sessionStorage에서 사용자 정보 복원
-      if (storedUser) {
-        try {
-          const parsedUser = JSON.parse(storedUser) as AuthResponseDtoUser;
-          setUser(parsedUser);
-        } catch (e) {
-          console.error("Failed to parse user from sessionStorage", e);
-        }
-      }
-
-      // sessionStorage에서 액세스 토큰 복원
-      if (storedAccessToken) {
-        setAccessToken(storedAccessToken);
-        setAccessTokenAtom(storedAccessToken);
-      }
-    }
-    // refreshToken이 있으면 API 호출 시 자동으로 갱신됨
-  }, [session, status, setUser, setAccessTokenAtom, router]);
-
-  return { user };
+  return { user, isLoading };
 };
 
 export default useAuth;

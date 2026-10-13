@@ -1,21 +1,14 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
 import { ReactQueryProvider } from "@/components/react-query-provider";
 import { Toaster } from "./ui/sonner";
 
-/**
- * 애플리케이션 전역에 필요한 Provider들을 관리하는 컴포넌트입니다.
- * ReactQueryProvider: React Query 상태 관리
- * SessionProvider: NextAuth 세션 관리
- */
+// 앱 전역 Provider. 인증 세션은 Supabase 쿠키 + useAuth(React Query)로 관리한다.
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ReactQueryProvider>
-      <SessionProvider>
-        <Toaster />
-        {children}
-      </SessionProvider>
+      <Toaster />
+      {children}
     </ReactQueryProvider>
   );
 }

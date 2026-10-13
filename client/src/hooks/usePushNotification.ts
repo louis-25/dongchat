@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useSession } from "next-auth/react";
+import useAuth from "@/hooks/useAuth";
 import { BASE_URL } from "@/config";
 import { getAccessToken } from "@/lib/api-client";
 
@@ -33,7 +33,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
  * 푸시 알림 구독 훅
  */
 export function usePushNotification() {
-  const { data: session } = useSession();
+  const { user: session } = useAuth();
   const [isSupported, setIsSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
