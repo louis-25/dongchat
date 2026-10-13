@@ -1,5 +1,5 @@
 begin;
-select plan(21);
+select plan(22);
 
 select tests.create_user('alice@test.com', '{"username":"alice"}');
 select tests.create_user('bob@test.com', '{"username":"bob"}');
@@ -28,6 +28,13 @@ select tests.login_as(tests.uid('eve@test.com'));
 select throws_ok(format($$ insert into public.messages (room_id, content) values (%s, 'intrude') $$, tests.room_id('dm')), '42501', null, '비멤버 전송 불가');
 select is((select count(*)::int from public.messages where room_id = tests.room_id('dm')), 0, '비멤버는 메시지 0개');
 reset role;
+
+-- 정지된 사용자는 멤버여도 전송 불가
+insert into private.user_access (user_id, banned_until) values (tests.uid('bob@test.com'), now() + interval '1 day');
+select tests.login_as(tests.uid('bob@test.com'));
+select throws_ok(format($$ insert into public.messages (room_id, content) values (%s, 'banned') $$, tests.room_id('dm')), '42501', null, '정지된 사용자는 메시지 전송 불가');
+reset role;
+delete from private.user_access where user_id = tests.uid('bob@test.com');
 
 -- 9~11: 관리자 열람만 (Review Focus 4)
 select tests.login_as(tests.uid('dave@test.com'));

@@ -1,5 +1,5 @@
 begin;
-select plan(13);
+select plan(17);
 
 select tests.create_user('dave@test.com', '{"username":"dave"}');
 select tests.create_user('alice@test.com', '{"username":"alice"}');
@@ -11,6 +11,7 @@ select tests.login_as(tests.uid('alice@test.com'));
 select throws_ok($$ select public.admin_list_users() $$, 'P0001', 'ADMIN_FORBIDDEN', '비관리자 목록 조회 불가');
 select throws_ok(format('select public.admin_ban(%L, now() + interval ''1 day'')', tests.uid('bob@test.com')), 'P0001', 'ADMIN_FORBIDDEN', '비관리자 정지 불가');
 select throws_ok(format('select public.admin_force_logout(%L)', tests.uid('bob@test.com')), 'P0001', 'ADMIN_FORBIDDEN', '비관리자 강제 로그아웃 불가');
+select throws_ok($$ select public.admin_list_rooms() $$, 'P0001', 'ADMIN_FORBIDDEN', '비관리자 방 목록 불가');
 select public.create_room('grp', true, array['bob']);
 reset role;
 
@@ -30,6 +31,15 @@ select lives_ok(format('select public.admin_force_logout(%L)', tests.uid('alice@
 reset role;
 select tests.login_as(tests.uid('bob@test.com'));
 select is(private.is_active_session(), false, '정지된 사용자 비활성');
+reset role;
+select tests.login_as(tests.uid('alice@test.com'));
+select is(private.is_active_session(), false, '강제 로그아웃된 사용자 비활성');
+reset role;
+select tests.login_as(tests.uid('dave@test.com'));
+select lives_ok(format('select public.admin_unban(%L)', tests.uid('bob@test.com')), '정지 해제');
+reset role;
+select tests.login_as(tests.uid('bob@test.com'));
+select is(private.is_active_session(), true, '해제 후 활성');
 reset role;
 
 select * from finish();
