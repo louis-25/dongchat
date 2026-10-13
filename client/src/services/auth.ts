@@ -29,8 +29,15 @@ export async function signUp(input: {
 }
 
 export async function signIn(input: { email: string; password: string }): Promise<void> {
-  const { error } = await createClient().auth.signInWithPassword(input);
+  const supabase = createClient();
+  const { error } = await supabase.auth.signInWithPassword(input);
   if (error) throw toDomainError(error);
+  // 정지·강제 로그아웃은 Auth가 아닌 DB(is_active_session)에서 판정하므로 로그인 직후 확인한다.
+  const { error: meError } = await supabase.rpc("get_me");
+  if (meError) {
+    await signOut();
+    throw toDomainError(meError);
+  }
 }
 
 export async function signInWithKakao(): Promise<void> {
@@ -41,8 +48,9 @@ export async function signInWithKakao(): Promise<void> {
   if (error) throw toDomainError(error);
 }
 
-export async function signOut(): Promise<void> {
-  await createClient().auth.signOut();
+// 기본은 이 기기만 로그아웃. auth-js 기본값(global)은 다른 기기의 정상 세션까지 끊는다.
+export async function signOut(scope: "local" | "global" = "local"): Promise<void> {
+  await createClient().auth.signOut({ scope });
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {

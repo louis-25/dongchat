@@ -67,4 +67,14 @@ await again.auth.signOut();
 me = await again.rpc("get_me");
 assert.ok(me.error, "로그아웃 후 get_me 불가");
 
+// 한 기기의 로그아웃이 다른 기기 세션을 끊지 않아야 한다(services/auth.signOut과 같은 호출).
+const devA = fresh();
+const devB = fresh();
+await devA.auth.signInWithPassword({ email, password: "password123" });
+await devB.auth.signInWithPassword({ email, password: "password123" });
+await devA.auth.signOut({ scope: "local" });
+// 서버 세션 삭제가 반영되도록 토큰 갱신을 강제한다.
+r = await devB.auth.refreshSession();
+assert.equal(r.error, null, "다른 기기 세션은 유지되어야 함: " + r.error?.message);
+
 console.log("verify-auth: all checks passed");

@@ -146,7 +146,7 @@ const handleError = async (error: AxiosError): Promise<never> => {
       if (typeof window !== "undefined") {
         sessionStorage.removeItem("accessToken");
         sessionStorage.removeItem("user");
-        window.location.href = "/login";
+        // 인증은 Supabase 세션이 담당한다. 여기서 /login으로 보내면 proxy가 되돌려 무한 리로드된다(3단계에서 파일 삭제).
       }
       return Promise.reject(createApiError(error));
     }
@@ -183,7 +183,6 @@ const handleError = async (error: AxiosError): Promise<never> => {
       if (typeof window !== "undefined") {
         sessionStorage.removeItem("accessToken");
         sessionStorage.removeItem("user");
-        window.location.href = "/login";
       }
       return Promise.reject(refreshError);
     }
