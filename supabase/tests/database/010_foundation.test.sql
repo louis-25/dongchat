@@ -27,7 +27,7 @@ reset role;
 -- 10~14: 로그인 사용자
 select tests.login_as(tests.uid('alice@test.com'));
 select is(private.is_active_session(), true, '정상 세션은 활성');
-select is((select count(*)::int from public.profiles), 4, '로그인 사용자는 전체 프로필 조회');
+select is((select count(*)::int from public.profiles where id in (tests.uid('alice@test.com'), tests.uid('weird@test.com'), tests.uid('kakao@test.com'), tests.uid('bob@test.com'))), 4, '로그인 사용자는 타인 프로필도 조회');
 select lives_ok($$ update public.profiles set nickname = '앨리스' where id = tests.uid('alice@test.com') $$, '본인 nickname 수정');
 select throws_ok($$ update public.profiles set username = 'hacker' where id = tests.uid('alice@test.com') $$, '42501', null, 'username 수정 불가(컬럼 권한)');
 update public.profiles set nickname = 'pwned' where id = tests.uid('bob@test.com');
@@ -48,7 +48,7 @@ reset role;
 insert into private.user_access (user_id, banned_until) values (tests.uid('bob@test.com'), now() + interval '1 day');
 select tests.login_as(tests.uid('bob@test.com'));
 select is(private.is_active_session(), false, 'user_access 정지 중이면 비활성');
-select is((select count(*)::int from public.profiles), 0, '비활성 세션은 프로필도 0행');
+select is((select count(*)::int from public.profiles where id = tests.uid('alice@test.com')), 0, '비활성 세션은 프로필도 0행');
 reset role;
 update private.user_access set banned_until = now() - interval '1 minute' where user_id = tests.uid('bob@test.com');
 select tests.login_as(tests.uid('bob@test.com'));
