@@ -47,7 +47,7 @@ create trigger user_access_set_updated_at before update on private.user_access
 revoke all on table private.user_roles, private.user_access from public, anon, authenticated;
 
 -- ============ 세션·관리자 헬퍼 ============
--- 활성 세션: JWT session_id가 auth.sessions에 있고, 정지/강제 로그아웃 대상이 아님
+-- 활성 세션: JWT session_id가 auth.sessions에 있고, 정지 중이 아니며, 강제 로그아웃 이후 생성된 세션
 create or replace function private.is_active_session() returns boolean
 language sql stable security definer set search_path = ''
 as $$
@@ -60,8 +60,8 @@ as $$
       and s.user_id = auth.uid()
       and (u.banned_until is null or u.banned_until <= now())
       and (a.banned_until is null or a.banned_until <= now())
-      and (a.sessions_revoked_at is null
-           or to_timestamp((auth.jwt() ->> 'iat')::bigint) > a.sessions_revoked_at)
+      -- 세션 생성 시각으로 판단한다. 토큰 갱신은 같은 세션에 새 iat를 발급하므로 iat 기준이면 강제 로그아웃이 무력화된다.
+      and (a.sessions_revoked_at is null or s.created_at > a.sessions_revoked_at)
   );
 $$;
 

@@ -1,5 +1,5 @@
 begin;
-select plan(24);
+select plan(25);
 
 -- 사용자 준비 (postgres 권한)
 select tests.create_user('alice@test.com', '{"username":"  Alice "}');
@@ -59,7 +59,12 @@ select tests.login_as(tests.uid('bob@test.com'), now() - interval '1 minute');
 select is(private.is_active_session(), false, '강제 로그아웃 이전 발급 토큰은 비활성');
 reset role;
 select tests.login_as(tests.uid('bob@test.com'), now() + interval '1 minute');
-select is(private.is_active_session(), true, '강제 로그아웃 이후 발급 토큰은 활성');
+select is(private.is_active_session(), false, '같은 세션은 토큰 갱신(iat 증가) 후에도 비활성');
+reset role;
+insert into auth.sessions (id, user_id, created_at, updated_at)
+values ('11111111-1111-1111-1111-111111111111', tests.uid('bob@test.com'), now() + interval '1 second', now() + interval '1 second');
+select tests.login_as(tests.uid('bob@test.com'), now() + interval '1 minute', '11111111-1111-1111-1111-111111111111');
+select is(private.is_active_session(), true, '강제 로그아웃 이후 새로 로그인한 세션은 활성');
 reset role;
 
 -- 23~24: 세션 삭제(Studio) / 대시보드 Ban

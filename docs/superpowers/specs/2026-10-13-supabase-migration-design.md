@@ -143,7 +143,7 @@ public.push_subscriptions (
 
 | 함수 | 반환 true 조건 |
 |---|---|
-| `private.is_active_session()` | ① `auth.jwt()->>'session_id'`가 `auth.sessions`에 존재 ② `private.user_access.banned_until`이 미래 아님 ③ JWT `iat` > `sessions_revoked_at`(없으면 통과) ④ `auth.users.banned_until`이 미래 아님 |
+| `private.is_active_session()` | ① `auth.jwt()->>'session_id'`가 `auth.sessions`에 존재 ② `private.user_access.banned_until`이 미래 아님 ③ 세션 생성 시각(`auth.sessions.created_at`) > `sessions_revoked_at`(없으면 통과). 토큰 갱신은 같은 세션에 새 `iat`를 주므로 `iat` 기준은 강제 로그아웃을 무력화한다 ④ `auth.users.banned_until`이 미래 아님 |
 | `private.is_room_member(p_room_id bigint)` | `is_active_session()` and 본인이 해당 방 참여자 |
 | `private.is_admin()` | `is_active_session()` and `private.user_roles`에 본인 ADMIN |
 
@@ -296,7 +296,7 @@ using (
 | Studio/UI 조작 | 데이터 차단 | 클라 반응 |
 |---|---|---|
 | `private.user_access.banned_until` 설정 / `admin_ban` | 즉시(`is_active_session`) | `force_logout` → 즉시 로그아웃 |
-| `sessions_revoked_at = now()` / `admin_force_logout` | 즉시 | 동일 |
+| `sessions_revoked_at = now()` / `admin_force_logout` | 즉시(이전에 생성된 세션 전부, 토큰 갱신해도 유지) | 동일 |
 | `chat_room_participants` 행 삭제 / `kick_member` / `leave_room` | 즉시(해당 방) | `member_removed` |
 | `auth.sessions` 행 삭제, 기본 Ban user | 즉시 | 트리거 가능 시 즉시 `force_logout`, 불가 시 다음 토큰 갱신 실패(≤10분)로 `SIGNED_OUT` |
 

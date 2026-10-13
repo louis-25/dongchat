@@ -36,9 +36,11 @@ language sql stable security definer set search_path = ''
 as $$ select id from public.chat_rooms where name = p_name order by id desc limit 1 $$;
 
 -- 호출 전 반드시 `reset role;` (authenticated 상태에서는 role 전환 불가)
+drop function if exists tests.login_as(uuid, timestamptz);
 create or replace function tests.login_as(
   p_user uuid,
-  p_iat timestamptz default now() - interval '1 minute'
+  p_iat timestamptz default now() - interval '1 minute',
+  p_session uuid default null
 ) returns void
 language plpgsql
 as $$
@@ -46,7 +48,7 @@ begin
   perform set_config('request.jwt.claims', jsonb_build_object(
     'sub', p_user,
     'role', 'authenticated',
-    'session_id', tests.session_of(p_user),
+    'session_id', coalesce(p_session, tests.session_of(p_user)),
     'iat', extract(epoch from p_iat)::bigint
   )::text, true);
   perform set_config('role', 'authenticated', true);
