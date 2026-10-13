@@ -1599,7 +1599,7 @@ git commit -m "feat(db): Realtime 수신 정책(토픽↔멤버십)과 이벤트
 
 **Interfaces:**
 - Produces:
-  - 로컬 계정(비밀번호 모두 `password123`): `admin@dongchat.local`(username `admin`, ADMIN), `alice@dongchat.local`(`alice`), `bob@dongchat.local`(`bob`)
+  - 로컬 계정(비밀번호 모두 `password123`): `admin@dongchat.local`(username `admin`, ADMIN), `alice@dongchat.local`(`alice_dev`), `bob@dongchat.local`(`bob_dev`)
   - `client/src/lib/supabase/database.types.ts` — `Database` 타입(2단계 services 전용)
 
 - [ ] **Step 1: 시드 작성** — `supabase/seed.sql`
@@ -1700,6 +1700,6 @@ git commit -m "feat(db): 로컬 시드(admin/alice/bob), advisors 점검, DB 타
 | postgres의 `auth.sessions`/`auth.users` SELECT | 둘 다 가능 | Task 1 Step 4 |
 | `auth.sessions` 트리거 생성 가능 | 가능 → Task 8 Step 3b 수행 | psql begin/rollback 프로브 |
 | `realtime.messages` 정책 생성 가능 | 가능 | psql begin/rollback 프로브 |
-| 정책 내 헬퍼의 `authenticated` EXECUTE 필요 | | Task 2 테스트로 확인(현재 GRANT 유지) |
-| 실제 Auth 가입 → profiles 생성 | | Task 2 Step 5 |
-| advisors 의도된 예외 | | Task 9 Step 3 |
+| 정책 내 헬퍼의 `authenticated` EXECUTE 필요 | GRANT 유지 상태로 전 테스트 통과(회수 실험은 안 함) | Task 2~8 |
+| 실제 Auth 가입 → profiles 생성 | `Probe_1` → `probe_1` 생성 확인 | Task 2 Step 5 |
+| advisors 의도된 예외 | `--level warn` 결과 0건(예외 기록 불필요) | Task 9 Step 3 |
