@@ -55,6 +55,15 @@ $$;
 revoke execute on function private.is_room_member(bigint) from public, anon;
 grant execute on function private.is_room_member(bigint) to authenticated;
 
+-- 답장 대상이 같은 방 메시지인지. 정책에서 messages를 다시 조회하면 RLS 무한 재귀가 나므로 definer 헬퍼로 분리.
+create or replace function private.is_message_in_room(p_message_id bigint, p_room_id bigint) returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select exists (select 1 from public.messages m where m.id = p_message_id and m.room_id = p_room_id);
+$$;
+revoke execute on function private.is_message_in_room(bigint, bigint) from public, anon;
+grant execute on function private.is_message_in_room(bigint, bigint) to authenticated;
+
 -- ============ 정책 ============
 create policy chat_rooms_select on public.chat_rooms for select to authenticated
   using ((select private.is_room_member(id)) or (select private.is_admin()));
@@ -66,10 +75,7 @@ create policy messages_insert on public.messages for insert to authenticated
   with check (
     sender_id = (select auth.uid())
     and (select private.is_room_member(room_id))
-    and (
-      reply_to_id is null
-      or exists (select 1 from public.messages r where r.id = reply_to_id and r.room_id = messages.room_id)
-    )
+    and (reply_to_id is null or (select private.is_message_in_room(reply_to_id, room_id)))
   );
 
 -- ============ 참여자 삭제 후처리 (RPC·Studio 공통) ============
