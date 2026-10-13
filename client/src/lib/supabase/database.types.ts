@@ -264,6 +264,7 @@ export type Database = {
       };
       delete_message: { Args: { p_id: number }; Returns: undefined };
       edit_message: { Args: { p_content: string; p_id: number }; Returns: undefined };
+      get_me: { Args: Record<PropertyKey, never>; Returns: Json };
       is_username_available: { Args: { p_username: string }; Returns: boolean };
       kick_member: { Args: { p_room_id: number; p_user_id: string }; Returns: undefined };
       leave_room: { Args: { p_room_id: number }; Returns: undefined };

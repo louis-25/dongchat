@@ -192,6 +192,7 @@ public.push_subscriptions (
 | `edit_message(p_id bigint, p_content text)` | 작성자 본인, 미삭제, 1~2000자 | content, edited_at 갱신 |
 | `delete_message(p_id bigint)` | 작성자 본인, 미삭제 | deleted_at=now(), **content=''** |
 | `mark_read(p_room_id bigint) → bigint` | 참여자 본인 | `greatest(기존, 방 최신 id)`, 변경 없으면 UPDATE 안 함 |
+| `get_me() → jsonb` | 활성 세션 | `{id, username, nickname, avatarUrl, isAdmin}` — 클라가 관리자 여부를 알 수 있는 유일한 경로 |
 | `is_username_available(p_username text) → boolean` | 형식 검사 | `anon`에도 EXECUTE 허용(가입 전 확인). 존재 여부 외 정보 노출 없음 |
 | `admin_list_users(p_page, p_limit ≤100, p_sort, p_order) → jsonb` | `is_admin()`, sort ∈ {created_at, username, updated_at} | `{items[{id, username, nickname, email, createdAt, isAdmin, bannedUntil}], total, page, limit}` |
 | `admin_list_rooms(p_page, p_limit ≤100) → jsonb` | `is_admin()` | 방, 멤버 수, 방장 |
@@ -216,7 +217,7 @@ RPC는 `raise exception '<CODE>' using hint = '<사용자 메시지>'`. services
 ---
 
 ## 6. NestJS 이식 체크리스트
-§4 헬퍼 3개 + §5.4 RPC 14개 + §5.3 트리거 + §8.1 이벤트 계약. NestJS 복귀 시 동일 Postgres에서 함수를 그대로 호출하거나 서비스 코드로 이식하고, `services/` 내부를 fetch/socket.io로 교체한다. 이벤트 이름·payload(§8.1)는 socket.io에서도 동일하게 유지한다.
+§4 헬퍼 3개 + §5.4 RPC 15개 + §5.3 트리거 + §8.1 이벤트 계약. NestJS 복귀 시 동일 Postgres에서 함수를 그대로 호출하거나 서비스 코드로 이식하고, `services/` 내부를 fetch/socket.io로 교체한다. 이벤트 이름·payload(§8.1)는 socket.io에서도 동일하게 유지한다.
 
 ---
 
