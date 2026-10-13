@@ -31,6 +31,10 @@ create or replace function tests.session_of(p_user uuid) returns uuid
 language sql stable security definer set search_path = ''
 as $$ select id from auth.sessions where user_id = p_user order by created_at limit 1 $$;
 
+create or replace function tests.room_id(p_name text) returns bigint
+language sql stable security definer set search_path = ''
+as $$ select id from public.chat_rooms where name = p_name order by id desc limit 1 $$;
+
 -- 호출 전 반드시 `reset role;` (authenticated 상태에서는 role 전환 불가)
 create or replace function tests.login_as(
   p_user uuid,
@@ -49,7 +53,7 @@ begin
 end;
 $$;
 
-grant execute on function tests.uid(text), tests.session_of(uuid) to authenticated;
+grant execute on function tests.uid(text), tests.session_of(uuid), tests.room_id(text) to authenticated;
 
 select plan(1);
 select pass('test helpers installed');
