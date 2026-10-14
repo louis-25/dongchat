@@ -1,70 +1,43 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useChat } from "@/components/chat-provider";
 import useAuth from "@/hooks/useAuth";
-import { toast } from "sonner";
-import { usePathname } from "next/navigation";
+import { useRooms } from "@/hooks/useRooms";
+import { displayName, roomTitle } from "@/types/domain";
 
-interface IncomingMessage {
-  roomId?: number;
-  sender: string;
-  message?: string;
-  content?: string;
-  createdAt?: string;
-}
-
-/**
- * 인앱 알림 훅
- * 현재 열려있는 채팅방이 아닌 경우에만 알림 표시
- */
+// 지금 보고 있지 않은 방(또는 탭이 가려진 상태)의 새 메시지를 토스트로 알린다.
 export function useInAppNotification() {
-  const { socket } = useChat();
+  const { onRoomEvent, isViewing, setPickedRoomId } = useChat();
   const { user } = useAuth();
-  const pathname = usePathname();
-  const currentRoomIdRef = useRef<number | null>(null);
-
-  // 현재 경로에서 roomId 추출
-  useEffect(() => {
-    const match = pathname?.match(/\/chat\/(\d+)/);
-    currentRoomIdRef.current = match ? Number(match[1]) : null;
-  }, [pathname]);
+  const { data: rooms = [] } = useRooms();
+  const router = useRouter();
+  const roomsRef = useRef(rooms);
 
   useEffect(() => {
-    if (!socket || !user) return;
+    roomsRef.current = rooms;
+  }, [rooms]);
 
-    const handleMessage = (payload: IncomingMessage) => {
-      // 메시지가 없거나 발신자가 본인이면 무시
-      if (!payload.message && !payload.content) return;
-      if (payload.sender === user.username) return;
-
-      const messageRoomId = payload.roomId;
-      const currentRoomId = currentRoomIdRef.current;
-
-      // 현재 열려있는 채팅방이 아니거나, 다른 탭/창에 있을 때만 알림 표시
-      if (messageRoomId !== currentRoomId || document.hidden) {
-        const messageText = payload.content || payload.message || "";
-        
-        toast.info(`${payload.sender}: ${messageText}`, {
-          description: messageRoomId ? `채팅방 #${messageRoomId}` : undefined,
-          action: messageRoomId
-            ? {
-                label: "열기",
-                onClick: () => {
-                  window.location.href = `/chat/${messageRoomId}`;
-                },
-              }
-            : undefined,
-          duration: 5000,
-        });
-      }
-    };
-
-    socket.on("message", handleMessage);
-
-    return () => {
-      socket.off("message", handleMessage);
-    };
-  }, [socket, user]);
+  useEffect(() => {
+    if (!user) return;
+    return onRoomEvent((e) => {
+      if (e.type !== "message" || e.message.senderId === user.id) return;
+      if (isViewing(e.roomId) && document.visibilityState === "visible") return;
+      const room = roomsRef.current.find((r) => r.id === e.roomId);
+      const sender = room?.participants.find((p) => p.user.id === e.message.senderId)?.user;
+      toast.info(`${sender ? displayName(sender) : "새 메시지"}: ${e.message.content}`, {
+        description: room ? roomTitle(room, user.id) : undefined,
+        action: {
+          label: "열기",
+          onClick: () => {
+            setPickedRoomId(e.roomId);
+            router.push("/chat/rooms");
+          },
+        },
+        duration: 5000,
+      });
+    });
+  }, [user, onRoomEvent, isViewing, setPickedRoomId, router]);
 }
-

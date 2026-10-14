@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLayoutEffect, useRef } from "react";
+import { CardContent } from "@/components/ui/card";
+import { scrollAction, type MessageView } from "@/lib/chat-state";
 import { MessageItem } from "./MessageItem";
-import type { ChatMessage } from "../types";
 
 type MessageListProps = {
-  messages: ChatMessage[];
-  currentUserId: number | null;
-  selectedRoomId: number | null;
-  onReply: (message: ChatMessage) => void;
+  messages: MessageView[];
+  hasRoom: boolean;
+  onReply: (message: MessageView) => void;
   onEdit: (messageId: number, content: string) => void;
   onDelete: (messageId: number) => void;
   onLoadOlder: () => void;
@@ -17,11 +16,13 @@ type MessageListProps = {
   loadingOlder: boolean;
 };
 
-// Design Ref: §5.1 — 메시지 목록 + 무한 스크롤(FR-08) + 항목 상호작용
+const NEAR_BOTTOM_PX = 80;
+const LOAD_OLDER_PX = 40;
+
+// 방이 바뀌면 부모가 key로 다시 마운트한다(스크롤 기준 초기화).
 export const MessageList = ({
   messages,
-  currentUserId,
-  selectedRoomId,
+  hasRoom,
   onReply,
   onEdit,
   onDelete,
@@ -30,72 +31,47 @@ export const MessageList = ({
   loadingOlder,
 }: MessageListProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const prevScrollHeight = useRef(0);
-  const prevLen = useRef(0);
+  // 직전 렌더의 목록 끝 id·스크롤 높이·맨 아래 근처 여부
+  const last = useRef({ firstId: null as number | null, lastId: null as number | null, height: 0, nearBottom: true });
 
-  // 상단 근처 도달 시 과거 메시지 로드 (스크롤 위치 보존)
+  const isNearBottom = (el: HTMLDivElement) => el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX;
+
   const handleScroll = () => {
     const el = scrollRef.current;
-    if (!el || loadingOlder || !hasMore) return;
-    if (el.scrollTop < 40) {
-      prevScrollHeight.current = el.scrollHeight;
-      onLoadOlder();
-    }
+    if (!el) return;
+    last.current.nearBottom = isNearBottom(el);
+    if (el.scrollTop < LOAD_OLDER_PX && hasMore && !loadingOlder) onLoadOlder();
   };
 
-  // 메시지 증가 시: 신규 수신은 하단으로, 과거 로드는 위치 보존
-  useEffect(() => {
+  // 그리기 전에 위치를 맞춰 깜빡임·점프를 없앤다.
+  useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const grew = messages.length - prevLen.current;
-    if (grew > 0 && prevScrollHeight.current > 0) {
-      // 과거 메시지 prepend → 기존 위치 유지
-      el.scrollTop = el.scrollHeight - prevScrollHeight.current;
-      prevScrollHeight.current = 0;
-    } else {
-      // 신규 메시지/초기 로드 → 하단으로
-      el.scrollTop = el.scrollHeight;
-    }
-    prevLen.current = messages.length;
+    const next = { firstId: messages[0]?.id ?? null, lastId: messages[messages.length - 1]?.id ?? null };
+    const action = scrollAction(last.current, next, {
+      mineAppended: messages[messages.length - 1]?.isMine ?? false,
+      nearBottom: last.current.nearBottom,
+    });
+    if (action === "bottom") el.scrollTop = el.scrollHeight;
+    else if (action === "keep-offset") el.scrollTop += el.scrollHeight - last.current.height;
+    last.current = { ...next, height: el.scrollHeight, nearBottom: isNearBottom(el) };
   }, [messages]);
 
   return (
-    <>
-      <CardHeader>
-        <CardTitle>채팅</CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col overflow-hidden">
-        <div
-          ref={scrollRef}
-          onScroll={handleScroll}
-          className="flex-1 overflow-y-auto mb-4 space-y-2 p-2 border rounded-md bg-white"
-        >
-          {loadingOlder && (
-            <div className="text-center text-xs text-gray-400">불러오는 중…</div>
-          )}
-          {!hasMore && messages.length > 0 && (
-            <div className="text-center text-xs text-gray-300">
-              대화의 시작입니다.
-            </div>
-          )}
-          {messages.map((msg) => (
-            <MessageItem
-              key={msg.id}
-              message={msg}
-              isMine={msg.senderId !== null && msg.senderId === currentUserId}
-              onReply={onReply}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          ))}
-          {selectedRoomId && messages.length === 0 && (
-            <div className="text-sm text-gray-500">메시지가 없습니다.</div>
-          )}
-          {!selectedRoomId && (
-            <div className="text-sm text-gray-500">채팅방을 선택하세요.</div>
-          )}
-        </div>
-      </CardContent>
-    </>
+    <CardContent className="flex-1 flex flex-col overflow-hidden pt-4">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto mb-4 space-y-2 p-2 border rounded-md bg-white"
+      >
+        {loadingOlder && <div className="text-center text-xs text-gray-400">불러오는 중…</div>}
+        {!hasMore && messages.length > 0 && <div className="text-center text-xs text-gray-300">대화의 시작입니다.</div>}
+        {messages.map((msg) => (
+          <MessageItem key={msg.id} message={msg} onReply={onReply} onEdit={onEdit} onDelete={onDelete} />
+        ))}
+        {hasRoom && messages.length === 0 && <div className="text-sm text-gray-500">메시지가 없습니다.</div>}
+        {!hasRoom && <div className="text-sm text-gray-500">채팅방을 선택하세요.</div>}
+      </div>
+    </CardContent>
   );
 };

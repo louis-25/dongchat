@@ -2,238 +2,231 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useChat } from "@/components/chat-provider";
 import useAuth from "@/hooks/useAuth";
 import useToast from "@/hooks/useToast";
-import type { ChatMessage, IncomingMessage } from "../types";
-import { fetchOlderMessages, normalizeMessage } from "./useMessagePagination";
+import { getErrorMessage } from "@/lib/error-handler";
+import {
+  applyDeleted,
+  applyEdited,
+  bumpRead,
+  mergeMessages,
+  mergeSnapshot,
+  seedReadState,
+  toViews,
+  type ReadState,
+} from "@/lib/chat-state";
+import { deleteMessage, editMessage, fetchMessages, markRead, sendMessage } from "@/services/messages";
+import { listParticipants } from "@/services/rooms";
+import {
+  MESSAGE_PAGE_SIZE,
+  type ChatMessage,
+  type DomainError,
+  type Participant,
+  type Profile,
+  type Room,
+} from "@/types/domain";
 
-type ReadState = Record<number, number>; // userId -> lastReadMessageId
+type RoomState = {
+  messages: ChatMessage[];
+  replyTargets: ChatMessage[];
+  profiles: Record<string, Profile>;
+  participants: Participant[] | null; // 스냅샷 시점 참여자(안 읽은 수의 기준). null = 스냅샷 전
+  readState: ReadState; // 스냅샷 전에 온 read_update도 버리지 않고 모은다
+  hasMore: boolean;
+};
+const EMPTY: RoomState = {
+  messages: [],
+  replyTargets: [],
+  profiles: {},
+  participants: null,
+  readState: {},
+  hasMore: false,
+};
 
-/**
- * 채팅 메시지 실시간 상태 관리.
- * Design Ref: §5.3 — 읽음(FR-02/03)/수정(FR-04)/삭제(FR-05)/답장(FR-07)/무한스크롤(FR-08)
- */
-export const useChatMessages = (
-  selectedRoomId: number | null,
-  participantIds: number[] = []
-) => {
-  const { socket } = useChat();
+const withProfiles = (prev: Record<string, Profile>, list: Profile[]) =>
+  list.reduce((acc, p) => ({ ...acc, [p.id]: p }), prev);
+
+const message = (e: unknown) => getErrorMessage(e as DomainError);
+
+// 현재 방의 메시지·읽음 상태. 방별로 보관해 방을 오가도 다시 받기 전까지 이전 내용을 보여 준다.
+export const useChatMessages = (room: Room | null) => {
   const { user } = useAuth();
+  const { onRoomEvent, isViewing } = useChat();
   const { error } = useToast();
+  const roomId = room?.id ?? null;
 
-  const [messagesByRoom, setMessagesByRoom] = useState<
-    Record<number, ChatMessage[]>
-  >({});
-  // 방별 참여자 읽음 상태 (read_update로 갱신 → unreadCount 재계산)
-  const [readStateByRoom, setReadStateByRoom] = useState<
-    Record<number, ReadState>
-  >({});
-  const [hasMore, setHasMore] = useState(true);
+  // 읽음 처리는 그 방이 지금 열려 있고 탭이 보일 때만(§8.3). 늦게 도착한 이전 방의 응답·강퇴 직후는 건너뛴다.
+  // 실패(권한 상실 등)는 방 목록 갱신이 처리하므로 무시한다.
+  const markReadIfOpen = useCallback(
+    (id: number) => {
+      if (isViewing(id) && document.visibilityState === "visible") markRead(id).catch(() => undefined);
+    },
+    [isViewing],
+  );
+  const [byRoom, setByRoom] = useState<Record<number, RoomState>>({});
   const [loadingOlder, setLoadingOlder] = useState(false);
 
-  // Plan SC: 안 읽은 인원 수 = 발신자 제외 참여자 중 미열람 수 (Design Ref: §3.3)
-  const computeUnread = useCallback(
-    (msg: ChatMessage, readState: ReadState): number =>
-      participantIds.filter(
-        (uid) =>
-          uid !== msg.senderId &&
-          (readState[uid] === undefined || readState[uid] < msg.id)
-      ).length,
-    [participantIds]
+  const update = useCallback(
+    (id: number, fn: (s: RoomState) => RoomState) => setByRoom((prev) => ({ ...prev, [id]: fn(prev[id] ?? EMPTY) })),
+    [],
   );
 
-  const recomputeRoom = useCallback(
-    (msgs: ChatMessage[], readState: ReadState): ChatMessage[] =>
-      participantIds.length > 0
-        ? msgs.map((m) => ({ ...m, unreadCount: computeUnread(m, readState) }))
-        : msgs,
-    [participantIds, computeUnread]
+  // 스냅샷: 최신 30개 + 참여자 읽음 위치를 받아 병합한다. 방 입장과 채널 (재)구독마다 호출.
+  const sync = useCallback(
+    async (id: number) => {
+      try {
+        const [page, participants] = await Promise.all([fetchMessages(id), listParticipants(id)]);
+        update(id, (s) => {
+          const { messages, replaced } = mergeSnapshot(s.messages, page.messages);
+          return {
+            messages,
+            replyTargets: mergeMessages(s.replyTargets, page.replyTargets),
+            profiles: withProfiles(s.profiles, [...page.profiles, ...participants.map((p) => p.user)]),
+            participants,
+            readState: seedReadState(participants, s.readState),
+            // 첫 스냅샷(그 전에 Realtime 메시지가 먼저 왔어도)이나 교체면 페이지 크기로 판단
+            hasMore: s.participants === null || replaced ? page.messages.length === MESSAGE_PAGE_SIZE : s.hasMore,
+          };
+        });
+        markReadIfOpen(id);
+      } catch (e) {
+        error(`메시지를 불러오지 못했습니다: ${message(e)}`);
+      }
+    },
+    [update, error, markReadIfOpen],
   );
 
-  // 방 입장: 읽음 신호 전송
+  // 입장 시 스냅샷(채널이 이미 SUBSCRIBED여도 받도록). setState는 응답 후 비동기로 일어난다.
   useEffect(() => {
-    if (!socket || !user?.id || !selectedRoomId) return;
-    socket.emit("join_room", { roomId: selectedRoomId });
-    setHasMore(true);
-  }, [socket, user?.id, selectedRoomId]);
+    if (roomId !== null) void sync(roomId);
+  }, [roomId, sync]);
 
-  // 소켓 이벤트 핸들링
+  // 이 방의 Realtime 이벤트
   useEffect(() => {
-    if (!socket) return;
-
-    const upsert = (roomKey: number, incoming: ChatMessage) => {
-      setMessagesByRoom((prev) => {
-        const list = prev[roomKey] || [];
-        if (list.some((m) => m.id === incoming.id)) return prev;
-        return { ...prev, [roomKey]: [...list, incoming] };
-      });
-    };
-
-    const handleMessage = (payload: IncomingMessage) => {
-      if (payload.roomId === undefined || payload.roomId === null) return;
-      const roomKey = Number(payload.roomId);
-      upsert(roomKey, normalizeMessage(payload));
-      // 현재 보고 있는 방의 새 메시지는 즉시 읽음 처리 (FR-02)
-      if (roomKey === selectedRoomId && user?.id) {
-        socket.emit("message_read", { roomId: roomKey });
+    if (roomId === null) return;
+    return onRoomEvent((e) => {
+      if (e.roomId !== roomId) return;
+      switch (e.type) {
+        case "subscribed":
+          void sync(roomId);
+          break;
+        case "message":
+          update(roomId, (s) => ({ ...s, messages: mergeMessages(s.messages, [e.message]) }));
+          if (e.message.senderId !== user?.id) markReadIfOpen(roomId);
+          break;
+        case "message_edited":
+          update(roomId, (s) => ({
+            ...s,
+            messages: applyEdited(s.messages, e),
+            replyTargets: applyEdited(s.replyTargets, e),
+          }));
+          break;
+        case "message_deleted": {
+          const at = new Date().toISOString();
+          update(roomId, (s) => ({
+            ...s,
+            messages: applyDeleted(s.messages, e, at),
+            replyTargets: applyDeleted(s.replyTargets, e, at),
+          }));
+          break;
+        }
+        case "read_update":
+          update(roomId, (s) => ({ ...s, readState: bumpRead(s.readState, e.userId, e.lastReadMessageId) }));
+          break;
+        case "member_removed":
+          // 나간 사람은 안 읽은 수 기준에서 바로 뺀다(목록 refetch를 기다리지 않음)
+          update(roomId, (s) =>
+            s.participants ? { ...s, participants: s.participants.filter((p) => p.user.id !== e.userId) } : s,
+          );
+          break;
       }
-    };
+    });
+  }, [roomId, onRoomEvent, sync, update, user?.id, markReadIfOpen]);
 
-    const handleInitial = (payload: {
-      roomId: number;
-      messages: IncomingMessage[];
-    }) => {
-      if (payload?.roomId === undefined || payload?.roomId === null) return;
-      const roomKey = Number(payload.roomId);
-      const formatted = (payload.messages || []).map(normalizeMessage);
-      setMessagesByRoom((prev) => ({ ...prev, [roomKey]: formatted }));
-    };
+  // 다른 탭·창에서 돌아오면 읽음 처리
+  useEffect(() => {
+    if (roomId === null) return;
+    const onVisible = () => markReadIfOpen(roomId);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [roomId, markReadIfOpen]);
 
-    const handleEdited = (payload: {
-      id: number;
-      roomId: number;
-      content: string;
-      editedAt: string;
-    }) => {
-      setMessagesByRoom((prev) => {
-        const list = prev[payload.roomId];
-        if (!list) return prev;
-        return {
-          ...prev,
-          [payload.roomId]: list.map((m) =>
-            m.id === payload.id
-              ? { ...m, message: payload.content, editedAt: payload.editedAt }
-              : m
-          ),
-        };
-      });
-    };
-
-    const handleDeleted = (payload: { id: number; roomId: number }) => {
-      setMessagesByRoom((prev) => {
-        const list = prev[payload.roomId];
-        if (!list) return prev;
-        return {
-          ...prev,
-          [payload.roomId]: list.map((m) =>
-            m.id === payload.id
-              ? { ...m, message: "", deletedAt: new Date().toISOString() }
-              : m
-          ),
-        };
-      });
-    };
-
-    const handleReadUpdate = (payload: {
-      roomId: number;
-      userId: number;
-      lastReadMessageId: number;
-    }) => {
-      setReadStateByRoom((prev) => {
-        const roomState = { ...(prev[payload.roomId] || {}) };
-        roomState[payload.userId] = payload.lastReadMessageId;
-        return { ...prev, [payload.roomId]: roomState };
-      });
-    };
-
-    const handleError = (payload: { code?: string; message?: string }) => {
-      error(payload?.message || "요청을 처리할 수 없습니다.");
-    };
-
-    socket.on("message", handleMessage);
-    socket.on("initial_messages", handleInitial);
-    socket.on("message_edited", handleEdited);
-    socket.on("message_deleted", handleDeleted);
-    socket.on("read_update", handleReadUpdate);
-    socket.on("message_error", handleError);
-
-    return () => {
-      socket.off("message", handleMessage);
-      socket.off("initial_messages", handleInitial);
-      socket.off("message_edited", handleEdited);
-      socket.off("message_deleted", handleDeleted);
-      socket.off("read_update", handleReadUpdate);
-      socket.off("message_error", handleError);
-    };
-  }, [socket, selectedRoomId, user?.id, error]);
-
-  const sendMessage = useCallback(
-    (message: string, replyToId?: number) => {
-      if (!selectedRoomId) {
-        error("채팅방을 먼저 선택하세요.");
-        return;
+  const send = useCallback(
+    async (content: string, replyToId?: number) => {
+      if (roomId === null) return;
+      try {
+        const sent = await sendMessage(roomId, content, replyToId);
+        update(roomId, (s) => ({ ...s, messages: mergeMessages(s.messages, [sent]) })); // 에코보다 먼저 표시
+      } catch (e) {
+        error(`전송 실패: ${message(e)}`);
       }
-      if (!socket || !user?.username) {
-        error("메시지를 보낼 수 없습니다. 연결 상태를 확인하세요.");
-        return;
-      }
-      if (!message.trim()) return;
-      socket.emit("message", {
-        roomId: selectedRoomId,
-        content: message.trim(),
-        ...(replyToId ? { replyToId } : {}),
-      });
     },
-    [selectedRoomId, socket, user?.username, error]
+    [roomId, update, error],
   );
 
-  const editMessage = useCallback(
-    (messageId: number, content: string) => {
-      if (!socket || !content.trim()) return;
-      socket.emit("message_edit", { messageId, content: content.trim() });
+  const edit = useCallback(
+    async (id: number, content: string) => {
+      try {
+        await editMessage(id, content); // 반영은 message_edited 이벤트로
+      } catch (e) {
+        error(`수정 실패: ${message(e)}`);
+      }
     },
-    [socket]
+    [error],
   );
 
-  const deleteMessage = useCallback(
-    (messageId: number) => {
-      if (!socket) return;
-      socket.emit("message_delete", { messageId });
+  const remove = useCallback(
+    async (id: number) => {
+      try {
+        await deleteMessage(id); // 반영은 message_deleted 이벤트로
+      } catch (e) {
+        error(`삭제 실패: ${message(e)}`);
+      }
     },
-    [socket]
+    [error],
   );
 
-  // 과거 메시지 로드 (위로 스크롤, FR-08)
+  const current = roomId === null ? EMPTY : (byRoom[roomId] ?? EMPTY);
+
   const loadOlder = useCallback(async () => {
-    if (!selectedRoomId || loadingOlder || !hasMore) return;
-    const current = messagesByRoom[selectedRoomId] || [];
-    const oldestId = current.length > 0 ? current[0].id : undefined;
+    const oldest = current.messages[0]?.id;
+    if (roomId === null || loadingOlder || !current.hasMore || oldest === undefined) return;
     setLoadingOlder(true);
     try {
-      const older = await fetchOlderMessages(selectedRoomId, oldestId, 30);
-      if (older.length < 30) setHasMore(false);
-      if (older.length > 0) {
-        setMessagesByRoom((prev) => {
-          const list = prev[selectedRoomId] || [];
-          const existing = new Set(list.map((m) => m.id));
-          const merged = [
-            ...older.filter((m) => !existing.has(m.id)),
-            ...list,
-          ];
-          return { ...prev, [selectedRoomId]: merged };
-        });
-      }
-    } catch {
-      error("이전 메시지를 불러오지 못했습니다.");
+      const page = await fetchMessages(roomId, oldest);
+      update(roomId, (s) => ({
+        ...s,
+        messages: mergeMessages(s.messages, page.messages),
+        replyTargets: mergeMessages(s.replyTargets, page.replyTargets),
+        profiles: withProfiles(s.profiles, page.profiles),
+        hasMore: page.messages.length === MESSAGE_PAGE_SIZE,
+      }));
+    } catch (e) {
+      error(`이전 메시지를 불러오지 못했습니다: ${message(e)}`);
     } finally {
       setLoadingOlder(false);
     }
-  }, [selectedRoomId, loadingOlder, hasMore, messagesByRoom, error]);
+  }, [roomId, loadingOlder, current, update, error]);
 
-  const currentMessages = useMemo(() => {
-    if (selectedRoomId === null) return [];
-    const msgs = messagesByRoom[selectedRoomId] || [];
-    const readState = readStateByRoom[selectedRoomId] || {};
-    return recomputeRoom(msgs, readState);
-  }, [selectedRoomId, messagesByRoom, readStateByRoom, recomputeRoom]);
+  const messages = useMemo(
+    () =>
+      user && room
+        ? toViews(current.messages, {
+            me: user.id,
+            participants: current.participants ?? room.participants,
+            profiles: current.profiles,
+            replyTargets: current.replyTargets,
+            readState: current.participants ? current.readState : null, // 스냅샷 전 숫자 숨김
+          })
+        : [],
+    [current, room, user],
+  );
 
   return {
-    currentMessages,
-    sendMessage,
-    editMessage,
-    deleteMessage,
+    messages,
+    sendMessage: send,
+    editMessage: edit,
+    deleteMessage: remove,
     loadOlder,
-    hasMore,
+    hasMore: current.hasMore,
     loadingOlder,
-    // ponytail: 사용자 id가 uuid(string)로 바뀌었다. 채팅은 4단계에서 재작성하므로 그때까지 본인 메시지 판별 비활성.
-    currentUserId: null as number | null,
   };
 };

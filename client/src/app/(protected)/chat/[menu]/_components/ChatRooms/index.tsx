@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { useChat } from "@/components/chat-provider";
 import useAuth from "@/hooks/useAuth";
+import type { MessageView } from "@/lib/chat-state";
 import CreateRoomModal from "./CreateRoomModal";
 import { RoomList } from "./components/RoomList";
 import { RoomHeader } from "./components/RoomHeader";
@@ -10,33 +12,32 @@ import { MessageList } from "./components/MessageList";
 import { MessageInput } from "./components/MessageInput";
 import { useChatRooms } from "./hooks/useChatRooms";
 import { useChatMessages } from "./hooks/useChatMessages";
-import type { ChatMessage, CreateRoomPayload } from "./types";
-
-// 4단계에서 메시지 계층을 Supabase로 교체하며 참여자 uuid 기반 읽음 계산으로 바꾼다. 그 전까지 빈 배열.
-// 모듈 상수여야 한다: 렌더마다 새 배열이면 useChatMessages의 의존성이 매번 바뀐다.
-const NO_PARTICIPANTS: number[] = [];
+import type { CreateRoomPayload } from "./types";
 
 const ChatRoomsTab = () => {
   const { user } = useAuth();
+  const { setViewingRoom } = useChat();
   const { rooms, selectedRoom, selectedRoomId, setSelectedRoomId, createRoom, leaveRoom, kickMember, isMutating } =
     useChatRooms();
-
-  const {
-    currentMessages,
-    sendMessage,
-    editMessage,
-    deleteMessage,
-    loadOlder,
-    hasMore,
-    loadingOlder,
-    currentUserId,
-  } = useChatMessages(selectedRoomId, NO_PARTICIPANTS);
+  const { messages, sendMessage, editMessage, deleteMessage, loadOlder, hasMore, loadingOlder } =
+    useChatMessages(selectedRoom);
 
   const [showModal, setShowModal] = useState(false);
-  const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
+  const [replyTarget, setReplyTarget] = useState<MessageView | null>(null);
 
-  const handleSend = (message: string) => {
-    sendMessage(message, replyTarget?.id);
+  // 인앱 알림이 "지금 보고 있는 방"을 알 수 있도록(탭을 떠나면 해제)
+  useEffect(() => {
+    setViewingRoom(selectedRoomId);
+    return () => setViewingRoom(null);
+  }, [selectedRoomId, setViewingRoom]);
+
+  const handleSelectRoom = (roomId: number) => {
+    setSelectedRoomId(roomId);
+    setReplyTarget(null);
+  };
+
+  const handleSend = (content: string) => {
+    void sendMessage(content, replyTarget?.id);
     setReplyTarget(null);
   };
 
@@ -52,7 +53,7 @@ const ChatRoomsTab = () => {
           rooms={rooms}
           currentUserId={user?.id ?? ""}
           selectedRoomId={selectedRoomId}
-          onSelectRoom={setSelectedRoomId}
+          onSelectRoom={handleSelectRoom}
           onCreateRoom={() => setShowModal(true)}
         />
         <Card className="md:col-span-2 h-[80vh] flex flex-col">
@@ -66,9 +67,9 @@ const ChatRoomsTab = () => {
             />
           )}
           <MessageList
-            messages={currentMessages}
-            currentUserId={currentUserId}
-            selectedRoomId={selectedRoomId}
+            key={selectedRoomId ?? "none"}
+            messages={messages}
+            hasRoom={selectedRoom !== null}
             onReply={setReplyTarget}
             onEdit={editMessage}
             onDelete={deleteMessage}
@@ -79,7 +80,7 @@ const ChatRoomsTab = () => {
           <div className="p-4 border-t">
             <MessageInput
               onSendMessage={handleSend}
-              disabled={!selectedRoomId}
+              disabled={!selectedRoom}
               replyTarget={replyTarget}
               onCancelReply={() => setReplyTarget(null)}
             />

@@ -4,34 +4,26 @@ import { useState } from "react";
 import { Pencil, Trash2, Reply, X, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import type { ChatMessage } from "../types";
+import type { MessageView } from "@/lib/chat-state";
 
 type MessageItemProps = {
-  message: ChatMessage;
-  isMine: boolean;
-  onReply: (message: ChatMessage) => void;
+  message: MessageView;
+  onReply: (message: MessageView) => void;
   onEdit: (messageId: number, content: string) => void;
   onDelete: (messageId: number) => void;
 };
 
-// Design Ref: §5.1 — 단일 메시지 + 읽음수/수정/삭제/답장 표시
-export const MessageItem = ({
-  message,
-  isMine,
-  onReply,
-  onEdit,
-  onDelete,
-}: MessageItemProps) => {
+// 단일 메시지 + 안 읽은 인원 수/수정/삭제/답장
+export const MessageItem = ({ message, onReply, onEdit, onDelete }: MessageItemProps) => {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(message.message);
+  const [draft, setDraft] = useState(message.content);
 
+  const { isMine } = message;
   const isDeleted = message.deletedAt !== null;
-  const time = message.createdAt
-    ? new Date(message.createdAt).toLocaleTimeString()
-    : "";
+  const time = new Date(message.createdAt).toLocaleTimeString();
 
   const submitEdit = () => {
-    if (draft.trim() && draft.trim() !== message.message) {
+    if (draft.trim() && draft.trim() !== message.content) {
       onEdit(message.id, draft.trim());
     }
     setEditing(false);
@@ -40,21 +32,19 @@ export const MessageItem = ({
   return (
     <div className={`group flex flex-col ${isMine ? "items-end" : "items-start"}`}>
       <span className="text-xs text-gray-500">
-        {message.sender}
-        {time ? ` • ${time}` : ""}
+        {message.senderName}
+        {` • ${time}`}
         {message.editedAt && !isDeleted ? " • 수정됨" : ""}
       </span>
 
-      {/* 답장 미리보기 (FR-07) */}
       {message.replyTo && !isDeleted && (
         <div className="mb-1 max-w-[80%] border-l-2 border-gray-300 pl-2 text-xs text-gray-500">
-          <span className="font-medium">{message.replyTo.sender}</span>{" "}
-          {message.replyTo.message || "(삭제된 메시지)"}
+          <span className="font-medium">{message.replyTo.senderName}</span>{" "}
+          {message.replyTo.deleted ? "(삭제된 메시지)" : message.replyTo.content}
         </div>
       )}
 
       <div className="flex items-end gap-1">
-        {/* 본인 메시지 액션: 좌측 (FR-04/05) */}
         {isMine && !isDeleted && !editing && (
           <div className="hidden items-center gap-1 group-hover:flex">
             <button
@@ -62,7 +52,7 @@ export const MessageItem = ({
               aria-label="수정"
               className="text-gray-400 hover:text-gray-600"
               onClick={() => {
-                setDraft(message.message);
+                setDraft(message.content);
                 setEditing(true);
               }}
             >
@@ -97,31 +87,20 @@ export const MessageItem = ({
             <Button type="button" size="sm" onClick={submitEdit} aria-label="저장">
               <Check size={14} />
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => setEditing(false)}
-              aria-label="취소"
-            >
+            <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)} aria-label="취소">
               <X size={14} />
             </Button>
           </div>
         ) : (
           <div
             className={`max-w-full rounded-lg p-2 ${
-              isDeleted
-                ? "bg-gray-100 italic text-gray-400"
-                : isMine
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-200 text-black"
+              isDeleted ? "bg-gray-100 italic text-gray-400" : isMine ? "bg-blue-500 text-white" : "bg-gray-200 text-black"
             }`}
           >
-            {isDeleted ? "삭제된 메시지입니다" : message.message}
+            {isDeleted ? "삭제된 메시지입니다" : message.content}
           </div>
         )}
 
-        {/* 답장 버튼: 타인 메시지 우측 (FR-07) */}
         {!isMine && !isDeleted && (
           <button
             type="button"
@@ -134,11 +113,9 @@ export const MessageItem = ({
         )}
       </div>
 
-      {/* 안 읽은 인원 수 (FR-03): 본인 메시지 + unread > 0 */}
-      {isMine && !isDeleted && message.unreadCount > 0 && (
-        <span className="mt-0.5 text-xs font-medium text-yellow-600">
-          {message.unreadCount}
-        </span>
+      {/* 안 읽은 인원 수: 본인 메시지, 스냅샷 이후 값이 있을 때만 */}
+      {isMine && !isDeleted && message.unreadCount !== null && message.unreadCount > 0 && (
+        <span className="mt-0.5 text-xs font-medium text-yellow-600">{message.unreadCount}</span>
       )}
     </div>
   );

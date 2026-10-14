@@ -1,18 +1,18 @@
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useChat } from "@/components/chat-provider";
 import useToast from "@/hooks/useToast";
+import { ROOMS_QUERY_KEY, useRooms } from "@/hooks/useRooms";
 import { getErrorMessage } from "@/lib/error-handler";
-import { createRoom, kickMember, leaveRoom, listRooms } from "@/services/rooms";
+import { createRoom, kickMember, leaveRoom } from "@/services/rooms";
 import type { CreateRoomPayload } from "../types";
-
-export const ROOMS_QUERY_KEY = ["rooms"] as const;
 
 export const useChatRooms = () => {
   const { success, error } = useToast();
   const queryClient = useQueryClient();
-  const [pickedRoomId, setSelectedRoomId] = useState<number | null>(null);
+  // 선택한 방은 provider에 둔다(친구 탭을 다녀와도, 알림 [열기]로도 유지·변경).
+  const { pickedRoomId, setPickedRoomId: setSelectedRoomId } = useChat();
 
-  const { data: rooms = [], isLoading } = useQuery({ queryKey: ROOMS_QUERY_KEY, queryFn: listRooms });
+  const { data: rooms = [], isLoading } = useRooms();
 
   // 선택은 파생값: 고른 방이 목록에서 사라지면(나가기·강퇴) 첫 방, 방이 없으면 null.
   const selectedRoomId = rooms.some((r) => r.id === pickedRoomId) ? pickedRoomId : (rooms[0]?.id ?? null);
