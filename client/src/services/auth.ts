@@ -62,6 +62,16 @@ export async function getCurrentUserId(): Promise<string> {
   return session.user.id;
 }
 
+// 현재 세션 id(JWT session_id). 다른 기기 세션 삭제 통지(force_logout.sessionId)와 비교하는 용도라 서명 검증은 하지 않는다.
+export async function getCurrentSessionId(): Promise<string | null> {
+  const {
+    data: { session },
+  } = await createClient().auth.getSession();
+  if (!session) return null;
+  const payload = session.access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+  return (JSON.parse(atob(payload)) as { session_id?: string }).session_id ?? null;
+}
+
 export async function getCurrentUser(): Promise<AuthUser | null> {
   const supabase = createClient();
   const {
