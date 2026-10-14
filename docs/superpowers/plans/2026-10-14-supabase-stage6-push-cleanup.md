@@ -84,24 +84,29 @@ client/
 
 ```sql
 begin;
-select plan(11);
+select plan(14);
 
 select tests.create_user('pu_alice@test.com', '{"username":"pu_alice"}');
 select tests.create_user('pu_bob@test.com', '{"username":"pu_bob"}');
 select tests.create_user('pu_carol@test.com', '{"username":"pu_carol"}');
 select tests.create_user('pu_dave@test.com', '{"username":"pu_dave"}');
+select tests.create_user('pu_erin@test.com', '{"username":"pu_erin"}');
 
 -- 구독: bob 2기기, carol 1, alice(발신자) 1
 select tests.login_as(tests.uid('pu_bob@test.com'));
 select lives_ok($$ select public.register_push_subscription('https://push.test/bob1', 'k', 'a') $$, '본인 구독 등록');
+select throws_ok($$ select public.register_push_subscription('javascript:alert(1)', 'k', 'a') $$, 'P0001', 'VALIDATION_FAILED', '형식이 아닌 endpoint 거부');
 select public.register_push_subscription('https://push.test/bob2', 'k', 'a');
 reset role;
 select tests.login_as(tests.uid('pu_carol@test.com'));
 select public.register_push_subscription('https://push.test/carol', 'k', 'a');
 reset role;
+select tests.login_as(tests.uid('pu_erin@test.com'));
+select public.register_push_subscription('https://push.test/erin', 'k', 'a');
+reset role;
 select tests.login_as(tests.uid('pu_alice@test.com'));
 select public.register_push_subscription('https://push.test/alice', 'k', 'a');
-select public.create_room('pu_room', true, array['pu_bob', 'pu_carol']);
+select public.create_room('pu_room', true, array['pu_bob', 'pu_carol', 'pu_erin']);
 insert into public.messages (room_id, content) values (tests.room_id('pu_room'), '푸시');
 select throws_ok(
   format('select * from public.push_targets(%s)', (select max(id) from public.messages)),
@@ -111,17 +116,30 @@ reset role;
 -- 1·2·3: 대상 = 참여자 − 발신자, 기기별 구독, 제목·본문
 select is(
   (select array_agg(endpoint order by endpoint) from public.push_targets((select max(id) from public.messages))),
-  array['https://push.test/bob1', 'https://push.test/bob2', 'https://push.test/carol'],
+  array['https://push.test/bob1', 'https://push.test/bob2', 'https://push.test/carol', 'https://push.test/erin'],
   '발신자 제외, 여러 기기 모두');
 select is((select distinct title from public.push_targets((select max(id) from public.messages))), 'pu_room', '제목 = 방 이름');
 select is((select distinct body from public.push_targets((select max(id) from public.messages))), '푸시', '본문 = 내용');
 
--- 4: 정지 사용자 제외(대시보드 Ban 포함)
+-- 4·5: 정지 사용자 제외 — 대시보드 Ban(auth.users)과 앱 정지(private.user_access) 둘 다
 update auth.users set banned_until = now() + interval '1 day' where id = tests.uid('pu_carol@test.com');
 select is(
   (select array_agg(endpoint order by endpoint) from public.push_targets((select max(id) from public.messages))),
+  array['https://push.test/bob1', 'https://push.test/bob2', 'https://push.test/erin'],
+  '대시보드 Ban 사용자 제외');
+insert into private.user_access (user_id, banned_until) values (tests.uid('pu_erin@test.com'), now() + interval '1 day');
+select is(
+  (select array_agg(endpoint order by endpoint) from public.push_targets((select max(id) from public.messages))),
   array['https://push.test/bob1', 'https://push.test/bob2'],
-  '정지 사용자 제외');
+  '앱 정지 사용자 제외');
+
+-- service_role(Edge Function)은 대상 조회·만료 구독 삭제가 가능해야 한다
+set local role service_role;
+select lives_ok(
+  format('select * from public.push_targets(%s); delete from public.push_subscriptions where endpoint = %L',
+         (select max(id) from public.messages), 'https://push.test/none'),
+  'service_role: push_targets 실행·구독 삭제 권한');
+reset role;
 
 -- 5: 삭제된 메시지는 보내지 않음
 update public.messages set deleted_at = now(), content = '' where id = (select max(id) from public.messages);
@@ -134,7 +152,8 @@ reset role;
 select is((select user_id from public.push_subscriptions where endpoint = 'https://push.test/bob1'), tests.uid('pu_dave@test.com'), '같은 endpoint는 등록한 사람에게 이전');
 select is((select p256dh from public.push_subscriptions where endpoint = 'https://push.test/bob1'), 'k2', '키 갱신');
 
--- 8·9: 웹훅 트리거 — Vault 값이 있을 때만 요청 큐에 쌓인다
+-- 웹훅 트리거 — Vault 값이 있을 때만 요청 큐에 쌓인다.
+-- seed의 로컬 값을 먼저 지우고(vault.secrets.name은 unique) 테스트 값을 만든다 → 트리거가 읽는 값은 하나뿐(롤백으로 복원).
 delete from vault.secrets where name in ('push_webhook_url', 'push_webhook_secret');
 select tests.login_as(tests.uid('pu_alice@test.com'));
 insert into public.messages (room_id, content) values (tests.room_id('pu_room'), '설정 전');
@@ -158,6 +177,8 @@ rollback;
 ```
 
 (`net.http_request_queue.body`는 bytea, `headers`는 jsonb — 로컬 pg_net에서 확인.)
+
+(assertion 14개: 등록·형식 거부·일반 사용자 호출 거부 3, 대상 배열·제목·본문 3, 정지 2원천 2, service_role 1, 삭제 메시지 1, 소유권 이전 2, 웹훅 2.)
 
 - [ ] **Step 2: 실패 확인**
 
@@ -192,6 +213,8 @@ as $$
 $$;
 revoke execute on function public.push_targets(bigint) from public, anon, authenticated;
 grant execute on function public.push_targets(bigint) to service_role;
+-- Edge Function이 410/404 구독을 지운다(기본 권한에 기대지 않고 명시)
+grant select, delete on table public.push_subscriptions to service_role;
 
 -- 구독 등록. endpoint는 그 브라우저만 아는 값이므로 제시한 사람이 그 브라우저의 현재 사용자다 →
 -- 다른 사용자 소유였다면 넘겨받는다(공용 브라우저에서 이전 사용자 메시지가 뜨지 않게).
@@ -200,8 +223,10 @@ language plpgsql security definer set search_path = ''
 as $$
 begin
   perform private.require_active_session();
-  if coalesce(p_endpoint, '') = '' or char_length(p_endpoint) > 2000
-     or coalesce(p_p256dh, '') = '' or coalesce(p_auth, '') = '' then
+  -- endpoint는 http(s) URL(운영 발송은 Edge Function이 https만 허용), 키는 base64url
+  if coalesce(p_endpoint, '') !~ '^https?://[^\s]+$' or char_length(p_endpoint) > 2000
+     or coalesce(p_p256dh, '') !~ '^[A-Za-z0-9_-]{1,200}$'
+     or coalesce(p_auth, '') !~ '^[A-Za-z0-9_-]{1,200}$' then
     raise exception 'VALIDATION_FAILED' using hint = '푸시 구독 정보가 올바르지 않습니다.';
   end if;
   insert into public.push_subscriptions (user_id, endpoint, p256dh, auth)
@@ -248,7 +273,7 @@ Run: `npx -y supabase@2.120.0 migration up`
 - [ ] **Step 4: 통과 확인**
 
 Run: `npx -y supabase@2.120.0 test db 2>&1 | tail -2`
-Expected: `Files=12, Tests=151 ... Result: PASS`.
+Expected: `Files=12, Tests=154 ... Result: PASS`.
 
 - [ ] **Step 5: 로컬 Vault 값** — `supabase/seed.sql` 끝에 추가하고, 지금 DB에도 한 번 적용
 
@@ -300,6 +325,7 @@ import { createClient } from "@supabase/supabase-js";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import http from "node:http";
+import { once } from "node:events";
 
 const URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
 const KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -340,6 +366,7 @@ const server = http
     });
   })
   .listen(PORT);
+await once(server, "listening"); // 포트 충돌이면 여기서 EADDRINUSE로 실패
 const waitFor = async (match, label, ms = 15000) => {
   for (let t = 0; t < ms; t += 200) {
     const hit = received.find(match);
@@ -413,14 +440,13 @@ try {
   await subscribe(u1, `/ok/${stamp}`, dev2);
   assert.equal((await ok(u2.client.from("push_subscriptions").select("id"))).length, 0, "이전 사용자 구독은 넘어감");
 
-  // 정리
-  for (const u of [u1, u2, u3]) await u.client.rpc("leave_room", { p_room_id: roomId });
-  for (const u of [u1, u2]) await u.client.from("push_subscriptions").delete().neq("id", 0);
+  // 정리(실패는 드러낸다)
+  for (const u of [u1, u2, u3]) await ok(u.client.rpc("leave_room", { p_room_id: roomId }));
+  await ok(u1.client.from("push_subscriptions").delete().like("endpoint", `%${stamp}`));
   console.log("verify-push: OK");
 } finally {
-  server.close();
+  await new Promise((resolve) => server.close(resolve));
 }
-process.exit(0);
 ```
 
 - [ ] **Step 2: 실패 확인**
@@ -476,52 +502,68 @@ import webpush from "npm:web-push@3.6.7";
 
 type Target = { endpoint: string; p256dh: string; auth: string; title: string; body: string; room_id: number };
 
-const SECRET = Deno.env.get("PUSH_WEBHOOK_SECRET");
-const ALLOW_HTTP = Deno.env.get("PUSH_ALLOW_HTTP") === "true"; // 로컬 검증 전용
+const env = (name: string) => Deno.env.get(name) ?? "";
+const SECRET = env("PUSH_WEBHOOK_SECRET");
+const ALLOW_HTTP = env("PUSH_ALLOW_HTTP") === "true"; // 로컬 검증 전용
 const vapidDetails = {
-  subject: Deno.env.get("VAPID_SUBJECT") ?? "mailto:admin@dongchat.local",
-  publicKey: Deno.env.get("VAPID_PUBLIC_KEY") ?? "",
-  privateKey: Deno.env.get("VAPID_PRIVATE_KEY") ?? "",
+  subject: env("VAPID_SUBJECT") || "mailto:admin@dongchat.local",
+  publicKey: env("VAPID_PUBLIC_KEY"),
+  privateKey: env("VAPID_PRIVATE_KEY"),
 };
-const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
-  auth: { persistSession: false },
-});
+const MISSING = ["PUSH_WEBHOOK_SECRET", "VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"].filter(
+  (name) => !env(name),
+);
+const admin = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
 
-// 등록된 구독 주소로만 요청을 보내므로, 운영에서는 https만 허용해 임의 내부 주소 호출(SSRF)을 막는다.
-const allowedEndpoint = (endpoint: string) => endpoint.startsWith("https://") || (ALLOW_HTTP && endpoint.startsWith("http://"));
+// 운영은 https만 허용해 임의 내부 주소 호출(SSRF)을 막는다. 파싱 실패도 거부.
+const allowedEndpoint = (endpoint: string) => {
+  try {
+    const { protocol } = new URL(endpoint);
+    return protocol === "https:" || (ALLOW_HTTP && protocol === "http:");
+  } catch {
+    return false;
+  }
+};
 
+// 대상 하나의 실패(잘못된 키·네트워크)가 나머지 발송을 막지 않도록 전부 이 안에서 처리하고 상태 코드만 돌려준다(0 = 미발송).
 async function send(t: Target): Promise<number> {
   if (!allowedEndpoint(t.endpoint)) return 0;
-  const payload = JSON.stringify({
-    title: t.title,
-    body: t.body,
-    data: { roomId: t.room_id, url: `/chat/rooms?room=${t.room_id}` },
-  });
-  // sendNotification은 Node https를 써서 Deno에서 불안정 → 요청만 만들고 fetch로 보낸다(스파이크로 확인).
-  const req = webpush.generateRequestDetails({ endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth } }, payload, {
-    vapidDetails,
-    TTL: 60,
-  });
   try {
+    const payload = JSON.stringify({
+      title: t.title,
+      body: t.body,
+      data: { roomId: t.room_id, url: `/chat/rooms?room=${t.room_id}` },
+    });
+    // sendNotification은 Node https를 써서 Deno에서 불안정 → 요청만 만들고 fetch로 보낸다(스파이크로 확인).
+    const req = webpush.generateRequestDetails({ endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth } }, payload, {
+      vapidDetails,
+      TTL: 60,
+    });
     const res = await fetch(req.endpoint, { method: req.method, headers: req.headers, body: req.body });
     if (res.status === 404 || res.status === 410) {
       await admin.from("push_subscriptions").delete().eq("endpoint", t.endpoint); // 만료된 구독 정리
     }
     return res.status;
   } catch {
-    return 0; // 일시 오류는 무시(다음 메시지에서 다시 시도)
+    return 0;
   }
 }
 
 Deno.serve(async (req) => {
-  if (!SECRET || req.headers.get("x-webhook-secret") !== SECRET) {
+  if (MISSING.length > 0) return new Response(`missing config: ${MISSING.join(", ")}`, { status: 500 });
+  if (req.method !== "POST" || req.headers.get("x-webhook-secret") !== SECRET) {
     return new Response("unauthorized", { status: 401 });
   }
-  const { messageId } = await req.json();
+  const body = await req.json().catch(() => null);
+  const messageId = body?.messageId;
+  if (!Number.isSafeInteger(messageId) || messageId <= 0) return new Response("bad request", { status: 400 });
+
   const { data, error } = await admin.rpc("push_targets", { p_message_id: messageId });
   if (error) return new Response(error.message, { status: 500 });
-  const statuses = await Promise.all((data as Target[]).map(send));
-  return Response.json({ sent: statuses.length, statuses });
+  const targets = Array.isArray(data) ? (data as Target[]) : [];
+  // ponytail: 동시 발송 수 제한 없음 — 한 방 구독이 수백 개가 되면 배치로 나눌 것.
+  const statuses = await Promise.all(targets.map(send));
+  return Response.json({ attempted: statuses.length, delivered: statuses.filter((s) => s >= 200 && s < 300).length });
 });
 ```
 
@@ -639,7 +681,7 @@ export async function signOut(scope: "local" | "global" = "local"): Promise<void
 ```ts
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import useAuth from "@/hooks/useAuth";
 import { registerPushSubscription, removePushSubscription } from "@/services/push";
 
@@ -650,13 +692,14 @@ const urlBase64ToUint8Array = (base64: string): Uint8Array<ArrayBuffer> => {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 };
 
-const isPushSupported = () =>
-  typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window;
+const isPushSupported = () => "serviceWorker" in navigator && "PushManager" in window;
+const noSubscribe = () => () => {};
 
 /** 웹 푸시 구독 훅. 구독 정보는 Supabase(services/push)에 저장하고, 발송은 서버가 한다. */
 export function usePushNotification() {
   const { user } = useAuth();
-  const [isSupported] = useState(isPushSupported);
+  // 서버 렌더·hydration 때는 false, 브라우저에서만 실제 값(불일치 없음, effect 안 setState 없음)
+  const isSupported = useSyncExternalStore(noSubscribe, isPushSupported, () => false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -722,7 +765,7 @@ export function usePushNotification() {
 }
 ```
 
-(이 훅을 쓰는 버튼 컴포넌트의 반환값 사용법은 기존과 같다. `isSupported`는 렌더 시 1회 계산 — 이전 effect 안 setState를 없앴다.)
+(이 훅을 쓰는 버튼 컴포넌트의 반환값 사용법은 기존과 같다.)
 
 - [ ] **Step 6: 알림 클릭으로 방 열기** — `ChatRooms/index.tsx`
 
@@ -748,13 +791,12 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // 이미 열린 앱 창이 있으면 그 창을 알림의 방으로 이동시키고 포커스
-      for (const client of clientList) {
-        if ('focus' in client) {
-          return client.navigate(url).then((c) => (c || client).focus());
-        }
-      }
-      return clients.openWindow ? clients.openWindow(url) : undefined;
+      // 이미 열린 앱 창이 있으면 그 창을 알림의 방으로 이동시키고 포커스(이동이 막히면 포커스만), 없으면 새 창
+      const target = new URL(url, self.location.origin).href;
+      const client = clientList.find((c) => c.url === target) || clientList[0];
+      if (!client) return clients.openWindow ? clients.openWindow(target) : undefined;
+      const go = client.url === target ? Promise.resolve(client) : client.navigate(target).catch(() => client);
+      return go.then((c) => (c || client).focus());
     })
   );
 });
@@ -779,13 +821,17 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 4: 이전 백엔드·의존성 제거
 
 **Files:**
+- Modify: `client/next.config.ts` (NestJS rewrite·`@/config` import 제거)
+- Delete: `client/scripts/verify-message-ux.mjs`(socket.io 기반), `client/scripts/fix-query-key.mjs`(Orval 전제)
 - Delete: `server/`, `docker-compose.yml`, `test-login.json`, `test-register.json`, `PUSH_NOTIFICATION_SETUP.md`, `client/orval.config.ts`, `client/src/lib/api-client.ts`, `client/src/lib/api/`, `client/src/lib/models/`, `client/src/config/`, `client/src/services/app/`, `client/src/services/users/`, `client/src/services/push/` (Orval 디렉터리 — Task 3의 `services/push.ts` 파일과 다름)
 - Modify: `client/package.json`, `client/pnpm-lock.yaml`, `client/.env.local.example`
 
 - [ ] **Step 1: 남은 참조 확인(삭제 전)**
 
-Run: `grep -rln -E "lib/api-client|lib/api/|lib/models/|@/config|services/(app|users|push)/|socket\.io|axios|orval" client/src client/scripts --include=*.ts --include=*.tsx --include=*.mjs | grep -v -E "^client/src/(lib/api-client.ts|lib/api/|lib/models/|config/|services/(app|users|push)/)"`
-Expected: 출력 없음. 출력이 있으면 그 파일을 먼저 Supabase 서비스로 옮긴다(Ruling 기록).
+Run: `grep -rln -E "lib/api-client|lib/api/|lib/models/|@/config|services/(app|users|push)/|socket\.io|axios|orval|localhost:4000" client --include=*.ts --include=*.tsx --include=*.mjs --include=*.js --include=*.json --exclude-dir=node_modules --exclude-dir=.next | grep -v -E "^client/src/(lib/api-client.ts|lib/api/|lib/models/|config/|services/(app|users|push)/)"`
+Expected: `client/next.config.ts`, `client/scripts/verify-message-ux.mjs`, `client/scripts/fix-query-key.mjs`, `client/package.json`(의존성) 만. 다른 파일이 나오면 그 파일을 먼저 Supabase 서비스로 옮긴다(Ruling 기록).
+
+`client/next.config.ts`에서 `@/config` import와 `/api/messages/*` → NestJS rewrite 블록을 지운다(Supabase로 옮긴 뒤 쓰는 곳 없음). 남는 설정이 없으면 `const nextConfig: NextConfig = {};`만 남긴다.
 
 - [ ] **Step 2: 로컬 비밀 보존 확인** — Task 2 Step 3에서 VAPID를 옮겼는지 다시 확인(삭제 후에는 복구 불가).
 
@@ -795,7 +841,7 @@ Expected: `2`.
 - [ ] **Step 3: 삭제** (저장소 루트)
 
 ```bash
-git rm -rq server docker-compose.yml test-login.json test-register.json PUSH_NOTIFICATION_SETUP.md client/orval.config.ts client/src/lib/api-client.ts client/src/lib/api client/src/lib/models client/src/config client/src/services/app client/src/services/users client/src/services/push
+git rm -rq server docker-compose.yml test-login.json test-register.json PUSH_NOTIFICATION_SETUP.md client/orval.config.ts client/scripts/verify-message-ux.mjs client/scripts/fix-query-key.mjs client/src/lib/api-client.ts client/src/lib/api client/src/lib/models client/src/config client/src/services/app client/src/services/users client/src/services/push
 rm -rf server
 ```
 
@@ -817,7 +863,7 @@ pnpm remove axios socket.io-client orval openapi-typescript-codegen
 
 - [ ] **Step 5: 확인**
 
-Run: `pnpm exec tsc --noEmit; pnpm lint; pnpm test 2>&1 | grep -E "^ℹ (pass|fail)"; pnpm build 2>&1 | tail -3; grep -rn -E "axios|socket\.io|orval|NEXT_PUBLIC_API_URL|localhost:4000" src scripts .env.local.example package.json`
+Run: `pnpm exec tsc --noEmit; pnpm lint; pnpm test 2>&1 | grep -E "^ℹ (pass|fail)"; pnpm build 2>&1 | tail -3; grep -rn -E "axios|socket\.io|orval|NEXT_PUBLIC_API_URL|localhost:4000|@/config" src scripts next.config.ts .env.local.example package.json`
 Expected: tsc 출력 없음, lint 에러 0(경고 ≤ 5), 32 pass, build 성공, grep 결과 없음.
 
 - [ ] **Step 6: 커밋**
@@ -945,9 +991,10 @@ select vault.create_secret('<PUSH_WEBHOOK_SECRET 값>', 'push_webhook_secret');
 2. 알림 허용 후 다른 계정이 보낸 메시지가 푸시로 오는지, 알림 클릭 시 그 방이 열리는지
 3. 관리자 `/admin/users`에서 정지·강제 로그아웃이 대상 화면에 즉시 반영되는지
 
-## 무료 플랜 한도와 위험
-- **7일 무활동 시 프로젝트 일시 정지**(대시보드에서 재개). 실사용 중에는 문제없지만 데모용이면 주의.
-- DB 500MB, 파일 1GB, 월 Edge Function 호출 50만, Realtime 월 200만 메시지(수신자 수만큼 계산)·동시 연결 200.
+## 무료 플랜 한도와 위험 (배포 전 공식 페이지에서 다시 확인: https://supabase.com/pricing , https://vercel.com/pricing — 이 문서 작성 2026-10-14)
+- **Supabase Free: 7일 무활동 시 프로젝트 일시 정지**(대시보드에서 재개), 활성 Free 프로젝트 2개까지. 데모용이면 주의.
+- **Vercel Hobby: 개인·비상업 용도 한정.** 상업 서비스로 운영하려면 Pro가 필요하다.
+- DB 용량·Edge Function 호출 수·Realtime 메시지 수(수신자 수만큼 계산)·동시 연결 수에 월 한도가 있다 — 위 가격 페이지의 현재 값을 기준으로 판단한다.
 - 방마다 Realtime 채널을 연다 — 사용자당 참여 방이 수백 개가 되면 user 채널 단일 구독으로 바꿔야 한다(스펙 §8.4).
 - 백업: Free는 자동 백업 없음 → 중요해지면 `supabase db dump`를 주기적으로.
 
@@ -1030,10 +1077,12 @@ Expected: `DEPLOYMENT.md`의 "NestJS로 되돌리려면" 절과 그 안의 `sock
 - [ ] **Step 3: 문서 명령 검증** — `DEV_SETUP.md`의 "검증" 블록을 그대로 실행한다.
 Expected: tsc·lint·test 통과, `pnpm verify` 마지막 줄 `verify-push: OK`, pgTAP `Result: PASS`.
 
+- [ ] **Step 3b: 스펙의 푸시 URL 계약 갱신** — `docs/superpowers/specs/2026-10-13-supabase-migration-design.md` §10 payload의 `url: '/chat/<roomId>'`를 `url: '/chat/rooms?room=<roomId>'`(채팅 탭 + 방 선택, 6단계 확정)로 바꾼다. 파일의 줄바꿈 형식(CRLF/LF 혼재)을 보존하도록 바이트 단위로 치환한다.
+
 - [ ] **Step 4: 커밋**
 
 ```bash
-git add README.md DEV_SETUP.md DEPLOYMENT.md AGENTS.md client/AGENTS.md
+git add README.md DEV_SETUP.md DEPLOYMENT.md AGENTS.md client/AGENTS.md docs/superpowers/specs/2026-10-13-supabase-migration-design.md
 git commit -m "docs: Supabase 기준 개발·배포 가이드와 에이전트 지침으로 교체
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
@@ -1046,7 +1095,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Files:** 없음(문제 발견 시 해당 Task 수정 후 재검증·커밋)
 
 - [ ] **Step 1: 자동 검증 전체** — `client/`에서 `pnpm exec tsc --noEmit; pnpm lint; pnpm test; pnpm build`, `SUPABASE_PUBLISHABLE_KEY=… PUSH_WEBHOOK_SECRET=local-dev-push-secret pnpm verify`, 루트에서 `npx -y supabase@2.120.0 test db`(alice·bob 테스트 방 정리 후).
-Expected: 32 pass, build 성공, verify 5종 OK, pgTAP 151.
+Expected: 32 pass, build 성공, verify 5종 OK, pgTAP 154.
 
 - [ ] **Step 2: 회귀 브라우저 확인** — `pnpm dev` 재시작(삭제된 모듈 캐시 정리) 후, 4단계 채팅 체크리스트(27)와 5단계 관리자 체크리스트(31)를 같은 자동화로 다시 실행(세션 scratch의 playwright-core 스크립트). 추가로:
   1. 채팅 탭 상단에 ";" 문자가 보이지 않는다.
@@ -1056,6 +1105,25 @@ Expected: 32 pass, build 성공, verify 5종 OK, pgTAP 151.
 - [ ] **Step 4: 마무리** — 테스트 데이터 정리, dev 서버 유지.
 
 ---
+
+## 계획 리뷰 반영 (Codex, `docs/superpowers/reviews/2026-10-14-stage6-plan-review-codex.md`)
+
+| # | 지적 | 반영 |
+|---|---|---|
+| C1 | `next.config.ts`가 삭제할 `@/config`(NestJS rewrite) import → 빌드 실패 | 수용 — Task 4 Step 1에 수정 추가, grep 범위 확대 |
+| C2 | socket.io·Orval 전제 스크립트 잔존 | 수용 — `verify-message-ux.mjs`, `fix-query-key.mjs` 삭제 |
+| C3 | `useState(isPushSupported)` SSR/hydration 불일치 | 수용 — `useSyncExternalStore`(서버 스냅샷 false) |
+| C4 | pgTAP Vault 값이 seed와 충돌 | 기각 — 테스트가 생성 전에 두 name을 지우고 `vault.secrets.name`은 unique라 결정적(주석으로 명시) |
+| I1 | service_role 권한 명시·검증 없음 | 수용 — 마이그레이션에 GRANT, pgTAP `set local role service_role` |
+| I2 | 앱 정지(private) 원천 미검증 | 수용 — erin 픽스처 + assertion |
+| I3·I5 | 입력 검증 약함, 한 행 실패가 전체 중단 | 수용 — SQL 정규식 검증, `new URL()` 파싱, 대상별 try 안에서 요청 생성 |
+| I4 | 환경 변수 누락·잘못된 본문 처리 | 수용 — 누락 시 500(목록 표시), POST·양의 정수 아니면 400/401, `Array.isArray` |
+| I6 | 강제 로그아웃 시 DB 구독 잔존 | 기각 — `removeThisBrowserPush`가 DB 삭제 실패와 무관하게 브라우저 구독을 해제 → endpoint 소멸 → 다음 발송 410 → 행 삭제. 브라우저가 닫혀 있던 경우는 그 사용자 본인 기기 |
+| I7 | SW `navigate` 실패 시 포커스 미보장 | 수용 — 절대 URL, 같은 URL 창 우선, navigate 실패 시 포커스, 없으면 openWindow |
+| I8 | verify-push 준비·정리 불안정 | 수용 — `once(listening)`, `server.close` 대기, `process.exit` 제거, 정리 실패 노출 |
+| I9 | 스펙 §10 URL과 불일치 | 수용 — Task 5 Step 3b 스펙 갱신 |
+| I10 | 무료 한도 수치 고정·Vercel 비상업 제한 누락 | 수용 — 공식 페이지 링크·작성일, Hobby 비상업·Free 2개 프로젝트 명시 |
+| Minor | 동시 발송 제한, 메시지당 Vault 조회 비용, 픽스처 확대 | 보류 — 함수에 ponytail 주석, 규모가 커지면 배치·outbox |
 
 ## Self-Review 결과
 
