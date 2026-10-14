@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import useAuth, { AUTH_QUERY_KEY } from "@/hooks/useAuth";
 import { ROOMS_QUERY_KEY, useRooms } from "@/hooks/useRooms";
 import { getErrorMessage } from "@/lib/error-handler";
+import { createThrottle } from "@/lib/throttle";
 import { getCurrentSessionId, signOut } from "@/services/auth";
 import { subscribeRoom, subscribeUser } from "@/services/realtime";
 import type { Room, RoomEvent } from "@/types/domain";
@@ -95,6 +96,8 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   // 본인 채널: 방 초대·제외는 목록 갱신, 강제 로그아웃은 즉시 로그아웃(§9).
   useEffect(() => {
     if (!userId) return;
+    // 재연결 재시도마다 확인 요청이 쌓이지 않게 10초에 한 번만(첫 확인은 항상 실행)
+    const allowResync = createThrottle(10_000);
     return subscribeUser(userId, async (e) => {
       if (e.type !== "force_logout") {
         if (e.type === "member_removed") dropRoom(e.roomId); // 방 채널 권한이 사라져 room 이벤트는 못 받을 수 있다
@@ -107,6 +110,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       toast.error(getErrorMessage({ code: "AUTH_SESSION_REVOKED" }), { id: "auth-session-revoked" });
       await signOut(); // SIGNED_OUT → useAuth가 캐시를 비우고 /login으로
     }, () => {
+      if (!allowResync()) return;
       // 구독 전(로그인 직후·재연결)에 보낸 통지는 받지 못하고, 그사이 무효화된 세션은 가입 자체가 거부된다.
       // 어느 쪽이든 세션 상태(get_me)와 방 목록을 다시 확인(§8.3) → 무효면 AUTH_SESSION_REVOKED로 useAuth가 로그아웃.
       void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
