@@ -71,3 +71,45 @@ export type UserEvent =
   | { type: "member_added"; roomId: number; userId: string }
   | { type: "member_removed"; roomId: number; userId: string }
   | { type: "force_logout"; reason: string; sessionId?: string };
+
+// ---- 관리자 ----
+export type Page<T> = { items: T[]; total: number; page: number; limit: number };
+
+// admin_list_users jsonb 항목
+export type AdminUser = {
+  id: string;
+  username: string;
+  nickname: string | null;
+  email: string | null;
+  createdAt: string;
+  isAdmin: boolean;
+  bannedUntil: string | null; // 지난 시각이면 정상(해제 전 만료)
+};
+
+// admin_list_rooms jsonb 항목
+export type AdminRoom = {
+  id: number;
+  name: string | null;
+  isGroup: boolean;
+  createdBy: string | null; // 방장
+  ownerUsername: string | null;
+  memberCount: number;
+  createdAt: string;
+};
+
+export type UserSort = "created_at" | "username";
+export type SortOrder = "asc" | "desc";
+export type BanDuration = "1d" | "7d" | "30d" | "permanent";
+
+// 영구 정지는 먼 미래 시각으로 표현한다(DB는 banned_until > now()로만 판정).
+export const PERMANENT_BAN = "9999-12-31T00:00:00.000Z";
+const BAN_DAYS: Record<Exclude<BanDuration, "permanent">, number> = { "1d": 1, "7d": 7, "30d": 30 };
+
+export const banUntil = (d: BanDuration, now: Date = new Date()): Date =>
+  d === "permanent" ? new Date(PERMANENT_BAN) : new Date(now.getTime() + BAN_DAYS[d] * 86_400_000);
+
+export const isBanned = (bannedUntil: string | null, now: Date = new Date()): boolean =>
+  bannedUntil !== null && new Date(bannedUntil).getTime() > now.getTime();
+
+export const isPermanentBan = (bannedUntil: string | null): boolean =>
+  bannedUntil !== null && new Date(bannedUntil).getUTCFullYear() >= 9999;

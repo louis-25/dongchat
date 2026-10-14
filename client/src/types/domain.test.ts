@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { displayName, roomTitle } from "./domain.ts";
+import { banUntil, displayName, isBanned, isPermanentBan, roomTitle } from "./domain.ts";
 import type { Profile, Room } from "./domain.ts";
 
 const p = (id: string, username: string, nickname: string | null = null): Profile => ({
@@ -31,4 +31,22 @@ test("이름 없는 방은 나를 뺀 참여자 표시명, 혼자 남으면 안�
   };
   assert.equal(roomTitle(room, "me"), "정동현");
   assert.equal(roomTitle({ ...room, participants: [member(p("me", "me_user"))] }, "me"), "대화 상대 없음");
+});
+
+test("정지 종료 시각: 기간은 지금부터, 영구는 9999년", () => {
+  const now = new Date("2026-10-14T00:00:00.000Z");
+  assert.equal(banUntil("1d", now).toISOString(), "2026-10-15T00:00:00.000Z");
+  assert.equal(banUntil("7d", now).toISOString(), "2026-10-21T00:00:00.000Z");
+  assert.equal(banUntil("30d", now).toISOString(), "2026-11-13T00:00:00.000Z");
+  assert.equal(banUntil("permanent", now).toISOString(), "9999-12-31T00:00:00.000Z");
+});
+
+test("정지 상태: 미래 시각만 정지, 지난 시각·null은 정상, 9999년은 영구 (Review Focus 4)", () => {
+  const now = new Date("2026-10-14T00:00:00.000Z");
+  assert.equal(isBanned("2026-10-15T00:00:00+00:00", now), true);
+  assert.equal(isBanned("2026-10-13T00:00:00+00:00", now), false);
+  assert.equal(isBanned(null, now), false);
+  assert.equal(isPermanentBan("9999-12-31T00:00:00+00:00"), true);
+  assert.equal(isPermanentBan("2026-10-15T00:00:00+00:00"), false);
+  assert.equal(isPermanentBan(null), false);
 });
