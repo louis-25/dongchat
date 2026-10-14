@@ -29,3 +29,8 @@ begin
 end $$;
 
 insert into private.user_roles (user_id, role) values ('00000000-0000-0000-0000-00000000a001', 'ADMIN');
+
+-- 로컬 웹 푸시 웹훅(메시지 트리거 → Edge Function). 비밀은 supabase/.env의 PUSH_WEBHOOK_SECRET과 같아야 한다.
+-- 운영 값은 DEPLOYMENT.md의 "웹 푸시" 절차로 별도 설정한다.
+select vault.create_secret('http://kong:8000/functions/v1/send-push', 'push_webhook_url');
+select vault.create_secret('local-dev-push-secret', 'push_webhook_secret');
