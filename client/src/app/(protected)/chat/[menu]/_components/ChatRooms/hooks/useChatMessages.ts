@@ -10,6 +10,7 @@ import {
   mergeMessages,
   mergeSnapshot,
   seedReadState,
+  withoutRemoved,
   toViews,
   type ReadState,
 } from "@/lib/chat-state";
@@ -29,6 +30,7 @@ type RoomState = {
   replyTargets: ChatMessage[];
   profiles: Record<string, Profile>;
   participants: Participant[] | null; // 스냅샷 시점 참여자(안 읽은 수의 기준). null = 스냅샷 전
+  removed: string[]; // 이 방에서 나간 사용자(늦게 온 스냅샷이 되살리지 않도록)
   readState: ReadState; // 스냅샷 전에 온 read_update도 버리지 않고 모은다
   hasMore: boolean;
 };
@@ -37,6 +39,7 @@ const EMPTY: RoomState = {
   replyTargets: [],
   profiles: {},
   participants: null,
+  removed: [],
   readState: {},
   hasMore: false,
 };
@@ -80,7 +83,8 @@ export const useChatMessages = (room: Room | null) => {
             messages,
             replyTargets: mergeMessages(s.replyTargets, page.replyTargets),
             profiles: withProfiles(s.profiles, [...page.profiles, ...participants.map((p) => p.user)]),
-            participants,
+            participants: withoutRemoved(participants, s.removed),
+            removed: s.removed,
             readState: seedReadState(participants, s.readState),
             // 첫 스냅샷(그 전에 Realtime 메시지가 먼저 왔어도)이나 교체면 페이지 크기로 판단
             hasMore: s.participants === null || replaced ? page.messages.length === MESSAGE_PAGE_SIZE : s.hasMore,
@@ -133,9 +137,11 @@ export const useChatMessages = (room: Room | null) => {
           break;
         case "member_removed":
           // 나간 사람은 안 읽은 수 기준에서 바로 뺀다(목록 refetch를 기다리지 않음)
-          update(roomId, (s) =>
-            s.participants ? { ...s, participants: s.participants.filter((p) => p.user.id !== e.userId) } : s,
-          );
+          update(roomId, (s) => ({
+            ...s,
+            removed: [...s.removed, e.userId],
+            participants: s.participants && withoutRemoved(s.participants, [e.userId]),
+          }));
           break;
       }
     });

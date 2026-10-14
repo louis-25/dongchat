@@ -54,6 +54,11 @@ export const applyDeleted = (list: ChatMessage[], e: { id: number }, at: string)
 export const bumpRead = (state: ReadState, userId: string, id: number): ReadState =>
   (state[userId] ?? 0) >= id ? state : { ...state, [userId]: id };
 
+// 스냅샷 조회 중에 나간(강퇴된) 사람을 늦게 도착한 참여자 목록이 되살리지 않게 한다.
+// 기존 방에 다시 초대하는 기능이 없으므로 한 번 나간 id는 그 방에서 계속 제외해도 된다.
+export const withoutRemoved = (participants: Participant[], removed: string[]): Participant[] =>
+  participants.filter((p) => !removed.includes(p.user.id));
+
 // 스냅샷 반영. 한 번도 안 읽은 참여자(null)는 0으로 본다.
 export const seedReadState = (participants: Participant[], prev: ReadState | null): ReadState =>
   participants.reduce((acc, p) => bumpRead(acc, p.user.id, p.lastReadMessageId ?? 0), prev ?? {});

@@ -4,6 +4,7 @@ import {
   applyDeleted,
   applyEdited,
   bumpRead,
+  withoutRemoved,
   mergeMessages,
   mergeSnapshot,
   scrollAction,
@@ -143,5 +144,12 @@ test("스크롤: 첫 로드·과거 로드·새 메시지·변화 없음 (Review
     scrollAction({ firstId: 10, lastId: 20 }, { firstId: 10, lastId: 21 }, { mineAppended: true, nearBottom: false }),
     "bottom",
     "내가 보낸 메시지",
+  );
+});
+
+test("늦게 도착한 스냅샷 참여자도 이미 나간 사람은 다시 넣지 않는다", () => {
+  assert.deepEqual(
+    withoutRemoved([part(A, null), part(B, 3), part(C, null)], ["b"]).map((p) => p.user.id),
+    ["a", "c"],
   );
 });
