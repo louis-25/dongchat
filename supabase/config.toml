@@ -383,8 +383,16 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# [edge_runtime.secrets]
-# secret_key = "env(SECRET_VALUE)"
+[edge_runtime.secrets]
+VAPID_PUBLIC_KEY = "env(VAPID_PUBLIC_KEY)"
+VAPID_PRIVATE_KEY = "env(VAPID_PRIVATE_KEY)"
+VAPID_SUBJECT = "env(VAPID_SUBJECT)"
+PUSH_WEBHOOK_SECRET = "env(PUSH_WEBHOOK_SECRET)"
+PUSH_ALLOW_HTTP = "env(PUSH_ALLOW_HTTP)"
+
+# DB 트리거(pg_net)가 JWT 없이 x-webhook-secret으로 호출한다 → 함수가 직접 검증.
+[functions.send-push]
+verify_jwt = false
 
 [analytics]
 enabled = true
