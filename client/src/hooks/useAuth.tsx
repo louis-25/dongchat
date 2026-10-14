@@ -27,6 +27,8 @@ const useAuth = () => {
       onAuthChange((event) => {
         if (event === "SIGNED_OUT") {
           // 다른 탭 로그아웃·토큰 갱신 실패(세션 삭제·정지) 포함. useAuth는 보호 경로에서만 쓰인다.
+          // 이전 사용자의 친구·방 등 캐시를 모두 버린다(같은 탭에서 다른 사용자가 로그인할 수 있음).
+          queryClient.clear();
           queryClient.setQueryData(AUTH_QUERY_KEY, null);
           router.replace("/login");
         } else {

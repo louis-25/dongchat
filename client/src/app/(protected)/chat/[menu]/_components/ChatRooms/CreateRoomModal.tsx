@@ -183,6 +183,7 @@ const CreateRoomModal = ({ open, onClose, onSubmit }: CreateRoomModalProps) => {
                                   <CommandItem
                                     key={friend.value}
                                     value={friend.value}
+                                    keywords={[friend.label]}
                                     onSelect={() => {
                                       // 다중 선택을 위해 항상 toggle 처리
                                       handleFriendSelect(friend.value);

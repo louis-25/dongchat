@@ -25,6 +25,7 @@ const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
 
   const handleLogout = async () => {
     await signOut();
+    queryClient.clear(); // 이전 사용자 데이터가 다음 로그인에 보이지 않도록
     queryClient.setQueryData(AUTH_QUERY_KEY, null);
     setIsMenuOpen(false);
     goLogin();
