@@ -234,5 +234,7 @@ export const useChatMessages = (room: Room | null) => {
     loadOlder,
     hasMore: current.hasMore,
     loadingOlder,
+    // 화면의 멤버 목록용(스냅샷 이후엔 실시간 퇴장 반영)
+    participants: current.participants ?? room?.participants ?? [],
   };
 };

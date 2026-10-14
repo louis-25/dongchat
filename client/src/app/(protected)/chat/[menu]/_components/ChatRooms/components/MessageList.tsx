@@ -8,6 +8,7 @@ import { MessageItem } from "./MessageItem";
 type MessageListProps = {
   messages: MessageView[];
   hasRoom: boolean;
+  readOnly?: boolean;
   onReply: (message: MessageView) => void;
   onEdit: (messageId: number, content: string) => void;
   onDelete: (messageId: number) => void;
@@ -23,6 +24,7 @@ const LOAD_OLDER_PX = 40;
 export const MessageList = ({
   messages,
   hasRoom,
+  readOnly = false,
   onReply,
   onEdit,
   onDelete,
@@ -67,7 +69,14 @@ export const MessageList = ({
         {loadingOlder && <div className="text-center text-xs text-gray-400">불러오는 중…</div>}
         {!hasMore && messages.length > 0 && <div className="text-center text-xs text-gray-300">대화의 시작입니다.</div>}
         {messages.map((msg) => (
-          <MessageItem key={msg.id} message={msg} onReply={onReply} onEdit={onEdit} onDelete={onDelete} />
+          <MessageItem
+            key={msg.id}
+            message={msg}
+            readOnly={readOnly}
+            onReply={onReply}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
         ))}
         {hasRoom && messages.length === 0 && <div className="text-sm text-gray-500">메시지가 없습니다.</div>}
         {!hasRoom && <div className="text-sm text-gray-500">채팅방을 선택하세요.</div>}

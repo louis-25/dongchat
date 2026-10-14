@@ -8,17 +8,19 @@ import type { MessageView } from "@/lib/chat-state";
 
 type MessageItemProps = {
   message: MessageView;
+  readOnly?: boolean;
   onReply: (message: MessageView) => void;
   onEdit: (messageId: number, content: string) => void;
   onDelete: (messageId: number) => void;
 };
 
 // 단일 메시지 + 안 읽은 인원 수/수정/삭제/답장
-export const MessageItem = ({ message, onReply, onEdit, onDelete }: MessageItemProps) => {
+export const MessageItem = ({ message, readOnly = false, onReply, onEdit, onDelete }: MessageItemProps) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(message.content);
 
-  const { isMine } = message;
+  // 관리자 열람은 읽기 전용: 수정·삭제·답장·안 읽은 수를 숨긴다.
+  const isMine = message.isMine && !readOnly;
   const isDeleted = message.deletedAt !== null;
   const time = new Date(message.createdAt).toLocaleTimeString();
 
@@ -101,7 +103,7 @@ export const MessageItem = ({ message, onReply, onEdit, onDelete }: MessageItemP
           </div>
         )}
 
-        {!isMine && !isDeleted && (
+        {!readOnly && !isMine && !isDeleted && (
           <button
             type="button"
             aria-label="답장"

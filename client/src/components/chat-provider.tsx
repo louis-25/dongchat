@@ -21,6 +21,8 @@ type ChatContextValue = {
   // 지금 화면에 열려 있는 방(채팅 탭이 아니면 null). 알림 판단용이라 렌더하지 않는다.
   setViewingRoom: (id: number | null) => void;
   isViewing: (id: number) => boolean;
+  // 참여하지 않은 방도 room 채널을 구독한다(관리자 열람). 반환값으로 해제.
+  watchRoom: (roomId: number) => () => void;
 };
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -41,6 +43,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const roomSubs = useRef(new Map<number, () => void>());
   const viewingRoom = useRef<number | null>(null);
   const [pickedRoomId, setPickedRoomId] = useState<number | null>(null);
+  const [watched, setWatched] = useState<number[]>([]);
 
   const refreshRooms = useCallback(
     () => queryClient.invalidateQueries({ queryKey: ROOMS_QUERY_KEY }),
@@ -69,7 +72,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const subs = roomSubs.current;
     if (!userId) return;
-    const wanted = new Set(rooms.map((r) => r.id));
+    const wanted = new Set([...rooms.map((r) => r.id), ...watched]);
     for (const [id, unsubscribe] of subs) {
       if (!wanted.has(id)) {
         unsubscribe();
@@ -79,7 +82,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     for (const id of wanted) {
       if (!subs.has(id)) subs.set(id, subscribeRoom(id, emit));
     }
-  }, [rooms, userId, emit]);
+  }, [rooms, watched, userId, emit]);
 
   useEffect(() => {
     const subs = roomSubs.current;
@@ -116,10 +119,18 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     viewingRoom.current = id;
   }, []);
   const isViewing = useCallback((id: number) => viewingRoom.current === id, []);
+  const watchRoom = useCallback((roomId: number) => {
+    setWatched((prev) => [...prev, roomId]);
+    return () =>
+      setWatched((prev) => {
+        const i = prev.indexOf(roomId);
+        return i < 0 ? prev : [...prev.slice(0, i), ...prev.slice(i + 1)];
+      });
+  }, []);
 
   const value = useMemo(
-    () => ({ onRoomEvent, pickedRoomId, setPickedRoomId, setViewingRoom, isViewing }),
-    [onRoomEvent, pickedRoomId, setViewingRoom, isViewing],
+    () => ({ onRoomEvent, pickedRoomId, setPickedRoomId, setViewingRoom, isViewing, watchRoom }),
+    [onRoomEvent, pickedRoomId, setViewingRoom, isViewing, watchRoom],
   );
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };
