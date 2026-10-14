@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import useAuth from "@/hooks/useAuth";
+import useAuth, { AUTH_QUERY_KEY } from "@/hooks/useAuth";
 import { ROOMS_QUERY_KEY, useRooms } from "@/hooks/useRooms";
 import { getErrorMessage } from "@/lib/error-handler";
 import { getCurrentSessionId, signOut } from "@/services/auth";
@@ -106,8 +106,13 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       if (e.sessionId && e.sessionId !== (await getCurrentSessionId())) return;
       toast.error(getErrorMessage({ code: "AUTH_SESSION_REVOKED" }), { id: "auth-session-revoked" });
       await signOut(); // SIGNED_OUT → useAuth가 캐시를 비우고 /login으로
+    }, () => {
+      // 구독 전(로그인 직후·재연결)에 보낸 통지는 받지 못하고, 그사이 무효화된 세션은 가입 자체가 거부된다.
+      // 어느 쪽이든 세션 상태(get_me)와 방 목록을 다시 확인(§8.3) → 무효면 AUTH_SESSION_REVOKED로 useAuth가 로그아웃.
+      void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+      void refreshRooms();
     });
-  }, [userId, refreshRooms, dropRoom]);
+  }, [userId, refreshRooms, dropRoom, queryClient]);
 
   const onRoomEvent = useCallback((listener: RoomListener) => {
     listeners.current.add(listener);

@@ -16,6 +16,7 @@ function listen(
   events: readonly string[],
   onBroadcast: (event: string, payload: Record<string, unknown>) => void,
   onSubscribed?: () => void,
+  onJoinError?: () => void,
 ): () => void {
   const supabase = createClient();
   return gate(topic, () => {
@@ -26,6 +27,8 @@ function listen(
     // SUBSCRIBED는 최초 구독과 재연결(phoenix rejoin이 join 콜백을 재사용)마다 온다 → 호출자가 스냅샷을 다시 받는다(§8.3).
     channel.subscribe((status) => {
       if (status === "SUBSCRIBED") onSubscribed?.();
+      // 가입 거부(정지·강제 로그아웃으로 수신 권한 상실)나 시간 초과. realtime-js가 알아서 재시도한다.
+      else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") onJoinError?.();
     });
     return () => supabase.removeChannel(channel);
   });
@@ -45,6 +48,14 @@ export function subscribeRoom(roomId: number, onEvent: (e: RoomEvent) => void): 
   );
 }
 
-export function subscribeUser(userId: string, onEvent: (e: UserEvent) => void): () => void {
-  return listen(`user:${userId}`, USER_EVENTS, (event, payload) => onEvent({ type: event, ...payload } as UserEvent));
+// onResync: 구독 성공(최초·재연결)과 가입 거부 때 모두 호출. 구독 전에 놓친 통지(강제 로그아웃·방 초대)를
+// 상태 재확인으로 메운다. 세션이 이미 무효화됐다면 가입 자체가 거부되므로 실패도 재확인 신호다.
+export function subscribeUser(userId: string, onEvent: (e: UserEvent) => void, onResync?: () => void): () => void {
+  return listen(
+    `user:${userId}`,
+    USER_EVENTS,
+    (event, payload) => onEvent({ type: event, ...payload } as UserEvent),
+    onResync,
+    onResync,
+  );
 }
