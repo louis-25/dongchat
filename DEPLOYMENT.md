@@ -10,7 +10,7 @@
    ```
 3. 관리자 지정(Studio SQL): `insert into private.user_roles (user_id, role) select id, 'ADMIN' from auth.users where email = '<관리자 이메일>';` (가입 후)
 4. Authentication 설정
-   - Site URL: `https://<vercel 도메인>`, Redirect URLs: `https://<vercel 도메인>/auth/callback`
+   - Site URL: `https://dongchat-eta.vercel.app`, Redirect URLs: `https://dongchat-eta.vercel.app/auth/callback`
    - JWT 만료 600초(로컬 `config.toml`과 동일), 최소 비밀번호 6자
    - 카카오 provider: REST API 키/Secret 입력. 카카오 콘솔 Redirect URI에 `https://<ref>.supabase.co/auth/v1/callback` 추가
    - **실사용자 전 커스텀 SMTP 연결 필수**: 기본 SMTP는 시간당 2통. 연결 전에는 이메일 확인을 끈 상태로 운영한다.
