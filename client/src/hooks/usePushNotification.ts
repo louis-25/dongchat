@@ -26,6 +26,8 @@ export function usePushNotification() {
     if (!isSupported || !user) return;
     const registration = await navigator.serviceWorker.getRegistration();
     const subscription = await registration?.pushManager.getSubscription();
+    // 브라우저에 구독이 남아 있으면 지금 사용자로 다시 등록한다(강제 로그아웃·정지로 서버 행이 지워졌거나 다른 사용자 소유였던 경우 복구).
+    if (subscription) await registerPushSubscription(subscription).catch(() => undefined);
     setIsSubscribed(!!subscription);
   }, [isSupported, user]);
 

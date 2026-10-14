@@ -1,6 +1,7 @@
 // 새 메시지 웹 푸시(스펙 §10). DB 트리거(pg_net)가 x-webhook-secret과 함께 { messageId }를 보낸다.
 import { createClient } from "npm:@supabase/supabase-js@2.117.2";
 import webpush from "npm:web-push@3.6.7";
+import { isAllowedEndpoint } from "./endpoint.ts";
 
 type Target = { endpoint: string; p256dh: string; auth: string; title: string; body: string; room_id: number };
 
@@ -17,19 +18,9 @@ const MISSING = ["PUSH_WEBHOOK_SECRET", "VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY",
 );
 const admin = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
 
-// 운영은 https만 허용해 임의 내부 주소 호출(SSRF)을 막는다. 파싱 실패도 거부.
-const allowedEndpoint = (endpoint: string) => {
-  try {
-    const { protocol } = new URL(endpoint);
-    return protocol === "https:" || (ALLOW_HTTP && protocol === "http:");
-  } catch {
-    return false;
-  }
-};
-
 // 대상 하나의 실패(잘못된 키·네트워크)가 나머지 발송을 막지 않도록 전부 이 안에서 처리하고 상태 코드만 돌려준다(0 = 미발송).
 async function send(t: Target): Promise<number> {
-  if (!allowedEndpoint(t.endpoint)) return 0;
+  if (!isAllowedEndpoint(t.endpoint, ALLOW_HTTP)) return 0; // SSRF 방지(알려진 푸시 서비스만)
   try {
     const payload = JSON.stringify({
       title: t.title,
@@ -41,7 +32,14 @@ async function send(t: Target): Promise<number> {
       vapidDetails,
       TTL: 60,
     });
-    const res = await fetch(req.endpoint, { method: req.method, headers: req.headers, body: req.body });
+    // 응답 없는 endpoint가 함수를 붙잡지 않게 10초 제한, 리다이렉트로 다른 주소에 가지 않게 차단
+    const res = await fetch(req.endpoint, {
+      method: req.method,
+      headers: req.headers,
+      body: req.body,
+      redirect: "manual",
+      signal: AbortSignal.timeout(10_000),
+    });
     if (res.status === 404 || res.status === 410) {
       await admin.from("push_subscriptions").delete().eq("endpoint", t.endpoint); // 만료된 구독 정리
     }
