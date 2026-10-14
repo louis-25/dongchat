@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import useAuth from "@/hooks/useAuth";
 import CreateRoomModal from "./CreateRoomModal";
 import { RoomList } from "./components/RoomList";
+import { RoomHeader } from "./components/RoomHeader";
 import { MessageList } from "./components/MessageList";
 import { MessageInput } from "./components/MessageInput";
 import { useChatRooms } from "./hooks/useChatRooms";
@@ -17,7 +18,8 @@ const NO_PARTICIPANTS: number[] = [];
 
 const ChatRoomsTab = () => {
   const { user } = useAuth();
-  const { rooms, selectedRoomId, setSelectedRoomId, createRoom } = useChatRooms();
+  const { rooms, selectedRoom, selectedRoomId, setSelectedRoomId, createRoom, leaveRoom, kickMember, isMutating } =
+    useChatRooms();
 
   const {
     currentMessages,
@@ -54,6 +56,15 @@ const ChatRoomsTab = () => {
           onCreateRoom={() => setShowModal(true)}
         />
         <Card className="md:col-span-2 h-[80vh] flex flex-col">
+          {selectedRoom && user && (
+            <RoomHeader
+              room={selectedRoom}
+              currentUserId={user.id}
+              disabled={isMutating}
+              onLeave={() => leaveRoom(selectedRoom.id)}
+              onKick={(userId) => kickMember(selectedRoom.id, userId)}
+            />
+          )}
           <MessageList
             messages={currentMessages}
             currentUserId={currentUserId}
