@@ -40,3 +40,34 @@ export const roomTitle = (room: Room, me: string): string =>
     .map((p) => displayName(p.user))
     .join(", ") ||
     "대화 상대 없음");
+
+// 메시지 조회 한 번의 개수(최신 스냅샷·과거 페이지 공통)
+export const MESSAGE_PAGE_SIZE = 30;
+
+export type ChatMessage = {
+  id: number;
+  roomId: number;
+  senderId: string | null; // 탈퇴 사용자는 null
+  content: string; // 삭제되면 ""
+  replyToId: number | null;
+  editedAt: string | null;
+  deletedAt: string | null;
+  createdAt: string;
+};
+
+// messages: id 오름차순. profiles: 발신자(방을 나간 사람 이름 표시용). replyTargets: 페이지 밖 답장 대상.
+export type MessagePage = { messages: ChatMessage[]; profiles: Profile[]; replyTargets: ChatMessage[] };
+
+// Realtime 이벤트(스펙 §8.1). subscribed는 채널 구독 완료(최초·재연결) — 스냅샷 재조회 신호.
+export type RoomEvent =
+  | { type: "message"; roomId: number; message: ChatMessage }
+  | { type: "message_edited"; roomId: number; id: number; content: string; editedAt: string }
+  | { type: "message_deleted"; roomId: number; id: number }
+  | { type: "read_update"; roomId: number; userId: string; lastReadMessageId: number }
+  | { type: "member_removed"; roomId: number; userId: string }
+  | { type: "subscribed"; roomId: number };
+
+export type UserEvent =
+  | { type: "member_added"; roomId: number; userId: string }
+  | { type: "member_removed"; roomId: number; userId: string }
+  | { type: "force_logout"; reason: string; sessionId?: string };
