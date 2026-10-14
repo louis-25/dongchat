@@ -32,18 +32,6 @@ export type ComposerContext =
   | { mode: "edit"; target: ChatMessage }
   | null;
 
-export type ChatRoom = {
-  id: number;
-  name: string | null;
-  isGroup: boolean;
-  participants?: { user: { id: number; username: string } }[];
-};
-
-export type FriendEntry = {
-  id: number;
-  friend: { id: number; username: string };
-};
-
 export type CreateRoomPayload = {
   name?: string;
   participants: string[];

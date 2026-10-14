@@ -2,21 +2,17 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ChatRoom } from "../types";
+import { displayName, roomTitle, type Room } from "@/types/domain";
 
 type RoomListProps = {
-  rooms: ChatRoom[];
+  rooms: Room[];
+  currentUserId: string;
   selectedRoomId: number | null;
   onSelectRoom: (roomId: number) => void;
   onCreateRoom: () => void;
 };
 
-export const RoomList = ({
-  rooms,
-  selectedRoomId,
-  onSelectRoom,
-  onCreateRoom,
-}: RoomListProps) => {
+export const RoomList = ({ rooms, currentUserId, selectedRoomId, onSelectRoom, onCreateRoom }: RoomListProps) => {
   return (
     <Card className="md:col-span-1">
       <CardHeader>
@@ -34,33 +30,19 @@ export const RoomList = ({
               key={room.id}
               onClick={() => onSelectRoom(room.id)}
               className={`w-full text-left rounded px-2 py-2 border ${
-                selectedRoomId === room.id
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-200"
+                selectedRoomId === room.id ? "border-blue-500 bg-blue-50" : "border-gray-200"
               }`}
             >
               <div className="font-semibold">
-                {room.name ||
-                  (room.isGroup
-                    ? `그룹방 #${room.id}`
-                    : `1:1 방 #${room.id}`)}
+                {roomTitle(room, currentUserId)}
+                {room.isGroup && <span className="ml-1 text-xs font-normal text-gray-500">그룹</span>}
               </div>
-              <div className="text-xs text-gray-600">
-                {room.participants
-                  ?.map((p) => p.user?.username)
-                  .filter(Boolean)
-                  .join(", ")}
-              </div>
+              <div className="text-xs text-gray-600">{room.participants.map((p) => displayName(p.user)).join(", ")}</div>
             </button>
           ))}
-          {rooms.length === 0 && (
-            <div className="text-sm text-gray-500">
-              참여 중인 방이 없습니다.
-            </div>
-          )}
+          {rooms.length === 0 && <div className="text-sm text-gray-500">참여 중인 방이 없습니다.</div>}
         </div>
       </CardContent>
     </Card>
   );
 };
-

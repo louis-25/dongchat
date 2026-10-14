@@ -1,24 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
+import useAuth from "@/hooks/useAuth";
 import CreateRoomModal from "./CreateRoomModal";
 import { RoomList } from "./components/RoomList";
 import { MessageList } from "./components/MessageList";
 import { MessageInput } from "./components/MessageInput";
 import { useChatRooms } from "./hooks/useChatRooms";
 import { useChatMessages } from "./hooks/useChatMessages";
-import type { ChatMessage } from "./types";
+import type { ChatMessage, CreateRoomPayload } from "./types";
+
+// 4단계에서 메시지 계층을 Supabase로 교체하며 참여자 uuid 기반 읽음 계산으로 바꾼다. 그 전까지 빈 배열.
+// 모듈 상수여야 한다: 렌더마다 새 배열이면 useChatMessages의 의존성이 매번 바뀐다.
+const NO_PARTICIPANTS: number[] = [];
 
 const ChatRoomsTab = () => {
-  const { rooms, selectedRoomId, setSelectedRoomId, createRoom } =
-    useChatRooms();
-
-  // 선택된 방의 참여자 ID (안 읽은 인원 수 계산용, Design Ref: §3.3)
-  const participantIds = useMemo(() => {
-    const room = rooms.find((r) => r.id === selectedRoomId);
-    return (room?.participants ?? []).map((p) => p.user.id);
-  }, [rooms, selectedRoomId]);
+  const { user } = useAuth();
+  const { rooms, selectedRoomId, setSelectedRoomId, createRoom } = useChatRooms();
 
   const {
     currentMessages,
@@ -29,7 +28,7 @@ const ChatRoomsTab = () => {
     hasMore,
     loadingOlder,
     currentUserId,
-  } = useChatMessages(selectedRoomId, participantIds);
+  } = useChatMessages(selectedRoomId, NO_PARTICIPANTS);
 
   const [showModal, setShowModal] = useState(false);
   const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
@@ -39,27 +38,17 @@ const ChatRoomsTab = () => {
     setReplyTarget(null);
   };
 
-  const handleCreateRoom = async (payload: {
-    name?: string;
-    participants: string[];
-    isGroup: boolean;
-  }) => {
-    const success = await createRoom(payload);
-    if (success) {
-      setShowModal(false);
-    }
+  const handleCreateRoom = async (payload: CreateRoomPayload) => {
+    if (await createRoom(payload)) setShowModal(false);
   };
 
   return (
     <>
-      <CreateRoomModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        onSubmit={handleCreateRoom}
-      />
+      <CreateRoomModal open={showModal} onClose={() => setShowModal(false)} onSubmit={handleCreateRoom} />
       <div className="grid gap-4 md:grid-cols-3">
         <RoomList
           rooms={rooms}
+          currentUserId={user?.id ?? ""}
           selectedRoomId={selectedRoomId}
           onSelectRoom={setSelectedRoomId}
           onCreateRoom={() => setShowModal(true)}
