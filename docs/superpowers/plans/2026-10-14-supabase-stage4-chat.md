@@ -206,15 +206,16 @@ const core = (id: number, extra: Partial<Record<string, unknown>> = {}) => ({
   ...extra,
 });
 
-test("메시지 페이지: 최신순 행 → 오름차순, 발신자 프로필·답장 대상 수집", () => {
+test("메시지 페이지: 최신순 행 → 오름차순, 발신자 프로필·답장 대상 수집(중복 제거)", () => {
   const page = toMessagePage([
+    { ...core(5, { reply_to_id: 1, sender_id: "k" }), sender: kakao, reply: core(1) },
     { ...core(3, { reply_to_id: 1, sender_id: "k" }), sender: kakao, reply: core(1) },
     { ...core(2), sender: alice, reply: null },
     { ...core(4, { sender_id: null }), sender: null, reply: null },
   ] as never);
   assert.deepEqual(
     page.messages.map((m) => m.id),
-    [2, 3, 4],
+    [2, 3, 4, 5],
   );
   assert.deepEqual(page.messages[1], {
     id: 3,
@@ -388,11 +389,15 @@ export const toChatMessage = (r: MessageCoreRow): ChatMessage => ({
   createdAt: r.created_at,
 });
 
-// 최신순(desc)으로 조회한 행 → 오름차순 메시지 + 발신자 프로필 + 답장 대상
+const uniqueById = <T extends { id: string | number }>(list: T[]): T[] => [
+  ...new Map(list.map((x) => [x.id, x])).values(),
+];
+
+// 최신순(desc)으로 조회한 행 → 오름차순 메시지 + 발신자 프로필 + 답장 대상(각각 id로 중복 제거)
 export const toMessagePage = (rows: MessageRow[]): MessagePage => ({
   messages: rows.map(toChatMessage).sort((a, b) => a.id - b.id),
-  profiles: rows.flatMap((r) => (r.sender ? [toProfile(r.sender)] : [])),
-  replyTargets: rows.flatMap((r) => (r.reply ? [toChatMessage(r.reply)] : [])),
+  profiles: uniqueById(rows.flatMap((r) => (r.sender ? [toProfile(r.sender)] : []))),
+  replyTargets: uniqueById(rows.flatMap((r) => (r.reply ? [toChatMessage(r.reply)] : []))),
 });
 
 // 새 메시지 이벤트에는 수정·삭제 정보가 없다(INSERT 시점).
@@ -593,6 +598,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **Files:**
 - Create: `client/src/lib/chat-state.ts`
 - Create: `client/src/lib/chat-state.test.ts`
+- Create: `client/src/lib/topic-gate.ts`
+- Create: `client/src/lib/topic-gate.test.ts`
 
 **Interfaces:**
 - Consumes: Task 2 `ChatMessage`, `MESSAGE_PAGE_SIZE`; Task 1(3단계) `Participant`, `Profile`, `displayName`
@@ -604,6 +611,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - `bumpRead(state, userId, id): ReadState`, `seedReadState(participants, prev: ReadState | null): ReadState`
   - `toViews(messages, ctx: { me: string; participants: Participant[]; profiles: Record<string, Profile>; replyTargets: ChatMessage[]; readState: ReadState | null }): MessageView[]`
   - `type ListEdge = { firstId: number | null; lastId: number | null }`, `scrollAction(prev: ListEdge, next: ListEdge, opts: { mineAppended: boolean; nearBottom: boolean }): "bottom" | "keep-offset" | "none"`
+  - `lib/topic-gate.ts`: `type Close = () => Promise<unknown>`, `createTopicGate(): (key: string, open: () => Close) => () => void` — 같은 키는 이전 해제가 끝난 뒤에만 연다(Task 4 `realtime.ts`가 사용)
 
 이 파일은 Node 단위 테스트가 직접 import하므로 값 import는 확장자 포함 상대 경로(`../types/domain.ts`)를 쓴다(tsconfig `allowImportingTsExtensions: true`).
 
@@ -662,9 +670,16 @@ test("병합: id 중복 제거(새 값 우선), 오름차순", () => {
   );
 });
 
-test("스냅샷: 끊긴 사이 30개 넘게 쌓이면 최신 페이지로 교체, 아니면 병합 (Review Focus 3)", () => {
+test("스냅샷: 가득 찬 최신 페이지면 그보다 오래된 것만 버리고, 그사이 받은 더 새 메시지는 유지 (Review Focus 3)", () => {
   const latest = Array.from({ length: 30 }, (_, i) => msg(100 + i));
   assert.deepEqual(mergeSnapshot([msg(1), msg(2)], latest), { messages: latest, replaced: true });
+  const withNewer = mergeSnapshot([msg(1), msg(2), msg(130)], latest);
+  assert.equal(withNewer.replaced, true);
+  assert.deepEqual(
+    withNewer.messages.map((m) => m.id),
+    [...latest.map((m) => m.id), 130],
+    "스냅샷 응답 전에 Realtime으로 받은 130은 남는다",
+  );
   const partial = mergeSnapshot([msg(1), msg(2)], [msg(2), msg(3)]);
   assert.equal(partial.replaced, false);
   assert.deepEqual(
@@ -745,10 +760,61 @@ test("스크롤: 첫 로드·과거 로드·새 메시지·변화 없음 (Review
 });
 ```
 
+`client/src/lib/topic-gate.test.ts`
+
+```ts
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { createTopicGate } from "./topic-gate.ts";
+
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+test("같은 토픽은 이전 해제가 끝난 뒤에만 다시 연다(StrictMode 재마운트·빠른 재구독)", async () => {
+  const gate = createTopicGate();
+  const log: string[] = [];
+  let finishClose = () => {};
+  const opener = (tag: string) => () => {
+    log.push(`open ${tag}`);
+    return () => {
+      log.push(`close ${tag}`);
+      return new Promise<void>((resolve) => {
+        finishClose = resolve;
+      });
+    };
+  };
+
+  const off1 = gate("room:1", opener("a"));
+  await flush();
+  off1(); // 해제 시작(아직 끝나지 않음)
+  const off2 = gate("room:1", opener("b"));
+  await flush();
+  assert.deepEqual(log, ["open a", "close a"], "해제가 끝나기 전에는 열지 않는다");
+  finishClose();
+  await flush();
+  assert.deepEqual(log, ["open a", "close a", "open b"]);
+  off2();
+});
+
+test("열리기 전에 해제하면 아예 열지 않는다, 다른 토픽은 서로 기다리지 않는다", async () => {
+  const gate = createTopicGate();
+  const log: string[] = [];
+  const opener = (tag: string) => () => {
+    log.push(`open ${tag}`);
+    return async () => {
+      log.push(`close ${tag}`);
+    };
+  };
+  gate("room:2", opener("x"))();
+  gate("room:3", opener("y"));
+  await flush();
+  assert.deepEqual(log, ["open y"]);
+});
+```
+
 - [ ] **Step 2: 실패 확인**
 
 Run: `pnpm test 2>&1 | grep -E "^ℹ (tests|pass|fail)|Cannot find module"`
-Expected: FAIL — `Cannot find module '...src/lib/chat-state.ts'`. 나머지 16 통과.
+Expected: FAIL — `Cannot find module '...src/lib/chat-state.ts'`, `'...src/lib/topic-gate.ts'`. 나머지 16 통과.
 
 - [ ] **Step 3: 구현** — `client/src/lib/chat-state.ts`
 
@@ -775,13 +841,22 @@ export const mergeMessages = (base: ChatMessage[], incoming: ChatMessage[]): Cha
   return [...map.values()].sort(byId);
 };
 
-// 재동기화 스냅샷 병합. 최신 페이지가 가득 찼고 모두 기존 마지막보다 새로우면 사이가 끊긴 것 → 최신 페이지로 교체.
+// 재동기화 스냅샷 병합. 최신 페이지가 가득 찼으면 그보다 오래된 기존 메시지는 버린다(사이가 끊겼을 수 있음 →
+// 과거는 스크롤로 다시 받는다). 스냅샷 응답 전에 Realtime으로 받은 더 새 메시지는 유지한다.
 export const mergeSnapshot = (
   current: ChatMessage[],
   latest: ChatMessage[],
 ): { messages: ChatMessage[]; replaced: boolean } => {
-  const last = current[current.length - 1];
-  if (last && latest.length === MESSAGE_PAGE_SIZE && latest[0].id > last.id) return { messages: latest, replaced: true };
+  if (latest.length === MESSAGE_PAGE_SIZE) {
+    const floor = latest[0].id;
+    return {
+      messages: mergeMessages(
+        current.filter((m) => m.id >= floor),
+        latest,
+      ),
+      replaced: current.some((m) => m.id < floor),
+    };
+  }
   return { messages: mergeMessages(current, latest), replaced: false };
 };
 
@@ -852,10 +927,39 @@ export const scrollAction = (
 };
 ```
 
+`client/src/lib/topic-gate.ts`
+
+```ts
+// 같은 키(Realtime 토픽)는 이전 해제가 끝난 뒤에만 새로 연다.
+// realtime-js의 channel(topic)은 해제 중인 같은 토픽 채널을 그대로 돌려주므로, 기다리지 않으면
+// StrictMode 재마운트·나갔다 다시 들어온 방에서 새 구독이 조용히 사라진다.
+export type Close = () => Promise<unknown>;
+
+export const createTopicGate = () => {
+  const closing = new Map<string, Promise<unknown>>();
+  return (key: string, open: () => Close): (() => void) => {
+    let close: Close | null = null;
+    let cancelled = false;
+    void (closing.get(key) ?? Promise.resolve()).then(() => {
+      if (!cancelled) close = open();
+    });
+    return () => {
+      cancelled = true;
+      if (!close) return;
+      const done = close().catch(() => undefined);
+      closing.set(key, done);
+      void done.then(() => {
+        if (closing.get(key) === done) closing.delete(key);
+      });
+    };
+  };
+};
+```
+
 - [ ] **Step 4: 통과 확인**
 
 Run: `pnpm test 2>&1 | grep -E "^ℹ (tests|pass|fail)"`
-Expected: tests 23, pass 23, fail 0.
+Expected: tests 26, pass 26, fail 0.
 
 - [ ] **Step 5: 타입·린트 확인과 커밋**
 
@@ -863,8 +967,8 @@ Run: `pnpm exec tsc --noEmit; pnpm lint`
 Expected: tsc 출력 없음, lint 에러 0(경고 ≤ 6).
 
 ```bash
-git add client/src/lib/chat-state.ts client/src/lib/chat-state.test.ts
-git commit -m "feat(chat): 채팅 상태 순수 함수 — 병합·스냅샷·읽음·안 읽은 수·스크롤(단위 테스트)
+git add client/src/lib/chat-state.ts client/src/lib/chat-state.test.ts client/src/lib/topic-gate.ts client/src/lib/topic-gate.test.ts
+git commit -m "feat(chat): 채팅 상태 순수 함수와 토픽 게이트 — 병합·스냅샷·읽음·스크롤·재구독 경합(단위 테스트)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -880,7 +984,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify: `client/src/services/auth.ts` (`getCurrentSessionId` 추가)
 
 **Interfaces:**
-- Consumes: Task 2 `MESSAGE_SELECT`, `MESSAGE_COLUMNS`, `PARTICIPANT_SELECT`, `MessageRow`, `MessageCoreRow`, `ParticipantRow`, `MessagePayload`, `toMessagePage`, `toChatMessage`, `toParticipant`, `fromMessagePayload`, `normalizeMessageContent`, `RoomEvent`, `UserEvent`, `MESSAGE_PAGE_SIZE`
+- Consumes: Task 3 `createTopicGate`; Task 2 `MESSAGE_SELECT`, `MESSAGE_COLUMNS`, `PARTICIPANT_SELECT`, `MessageRow`, `MessageCoreRow`, `ParticipantRow`, `MessagePayload`, `toMessagePage`, `toChatMessage`, `toParticipant`, `fromMessagePayload`, `normalizeMessageContent`, `RoomEvent`, `UserEvent`, `MESSAGE_PAGE_SIZE`
 - Produces:
   - `messages.ts`: `fetchMessages(roomId: number, before?: number): Promise<MessagePage>`, `sendMessage(roomId: number, content: string, replyToId?: number): Promise<ChatMessage>`, `editMessage(id: number, content: string): Promise<void>`, `deleteMessage(id: number): Promise<void>`, `markRead(roomId: number): Promise<number | null>`
   - `realtime.ts`: `subscribeRoom(roomId: number, onEvent: (e: RoomEvent) => void): () => void`, `subscribeUser(userId: string, onEvent: (e: UserEvent) => void): () => void`
@@ -955,6 +1059,7 @@ export async function markRead(roomId: number): Promise<number | null> {
 
 ```ts
 import { createClient } from "@/lib/supabase/client";
+import { createTopicGate } from "@/lib/topic-gate";
 import type { RoomEvent, UserEvent } from "@/types/domain";
 import { fromMessagePayload, type MessagePayload } from "./mappers";
 
@@ -963,6 +1068,9 @@ import { fromMessagePayload, type MessagePayload } from "./mappers";
 const ROOM_EVENTS = ["message", "message_edited", "message_deleted", "read_update", "member_removed"] as const;
 const USER_EVENTS = ["member_added", "member_removed", "force_logout"] as const;
 
+// 같은 토픽 재구독은 이전 removeChannel이 끝난 뒤에(realtime-js가 해제 중인 채널을 돌려주는 문제)
+const gate = createTopicGate();
+
 function listen(
   topic: string,
   events: readonly string[],
@@ -970,17 +1078,17 @@ function listen(
   onSubscribed?: () => void,
 ): () => void {
   const supabase = createClient();
-  const channel = supabase.channel(topic, { config: { private: true } });
-  for (const event of events) {
-    channel.on("broadcast", { event }, ({ payload }) => onBroadcast(event, payload as Record<string, unknown>));
-  }
-  // SUBSCRIBED는 최초 구독과 재연결마다 온다 → 호출자가 스냅샷을 다시 받는다(§8.3 동기화 순서).
-  channel.subscribe((status) => {
-    if (status === "SUBSCRIBED") onSubscribed?.();
+  return gate(topic, () => {
+    const channel = supabase.channel(topic, { config: { private: true } });
+    for (const event of events) {
+      channel.on("broadcast", { event }, ({ payload }) => onBroadcast(event, payload as Record<string, unknown>));
+    }
+    // SUBSCRIBED는 최초 구독과 재연결(phoenix rejoin이 join 콜백을 재사용)마다 온다 → 호출자가 스냅샷을 다시 받는다(§8.3).
+    channel.subscribe((status) => {
+      if (status === "SUBSCRIBED") onSubscribed?.();
+    });
+    return () => supabase.removeChannel(channel);
   });
-  return () => {
-    void supabase.removeChannel(channel);
-  };
 }
 
 export function subscribeRoom(roomId: number, onEvent: (e: RoomEvent) => void): () => void {
@@ -1044,7 +1152,7 @@ export async function getCurrentSessionId(): Promise<string | null> {
 - [ ] **Step 5: 타입·린트·테스트·통합 확인**
 
 Run: `pnpm exec tsc --noEmit; pnpm lint; pnpm test 2>&1 | grep -E "^ℹ (pass|fail)"; SUPABASE_PUBLISHABLE_KEY=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH node scripts/verify-chat.mjs 2>&1 | tail -1`
-Expected: tsc 출력 없음, lint 에러 0(경고 ≤ 6), 23 pass, `verify-chat: OK`.
+Expected: tsc 출력 없음, lint 에러 0(경고 ≤ 6), 26 pass, `verify-chat: OK`.
 
 - [ ] **Step 6: 커밋**
 
@@ -1102,7 +1210,7 @@ import { ROOMS_QUERY_KEY, useRooms } from "@/hooks/useRooms";
 import { getErrorMessage } from "@/lib/error-handler";
 import { getCurrentSessionId, signOut } from "@/services/auth";
 import { subscribeRoom, subscribeUser } from "@/services/realtime";
-import type { RoomEvent } from "@/types/domain";
+import type { Room, RoomEvent } from "@/types/domain";
 
 type RoomListener = (e: RoomEvent) => void;
 
@@ -1141,13 +1249,22 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     [queryClient],
   );
 
+  // 내가 빠진 방은 응답을 기다리지 않고 캐시에서 바로 뺀다 → 선택 이동·채널 해제가 즉시 일어난다(§8.3).
+  const dropRoom = useCallback(
+    (roomId: number) => queryClient.setQueryData<Room[]>(ROOMS_QUERY_KEY, (prev) => prev?.filter((r) => r.id !== roomId)),
+    [queryClient],
+  );
+
   const emit = useCallback(
     (e: RoomEvent) => {
-      // 멤버 변동(강퇴·나가기·방장 승계)은 방 목록·참여자에 반영. 내가 강퇴되면 목록에서 빠져 채널도 해제된다.
-      if (e.type === "member_removed") void refreshRooms();
+      // 멤버 변동(강퇴·나가기·방장 승계)은 방 목록·참여자에 반영
+      if (e.type === "member_removed") {
+        if (e.userId === userId) dropRoom(e.roomId);
+        void refreshRooms();
+      }
       listeners.current.forEach((listener) => listener(e));
     },
-    [refreshRooms],
+    [refreshRooms, dropRoom, userId],
   );
 
   // 방 채널은 목록과의 차이만 구독/해제한다(같은 토픽을 해제 직후 다시 만들면 해제 중인 채널을 돌려받을 수 있음).
@@ -1179,15 +1296,17 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     if (!userId) return;
     return subscribeUser(userId, async (e) => {
       if (e.type !== "force_logout") {
+        if (e.type === "member_removed") dropRoom(e.roomId); // 방 채널 권한이 사라져 room 이벤트는 못 받을 수 있다
         void refreshRooms();
         return;
       }
-      // 다른 기기의 세션 삭제(그 기기 로그아웃)는 무시한다. 내 탭에서 로그아웃한 직후라면 세션이 없어 역시 무시.
+      // 다른 기기의 세션 삭제(그 기기 로그아웃)는 무시한다. 내 탭에서 로그아웃한 직후라면 세션이 없어 역시 무시
+      // (로컬 세션이 먼저 사라지는 경우는 이미 SIGNED_OUT으로 로그아웃된 상태다).
       if (e.sessionId && e.sessionId !== (await getCurrentSessionId())) return;
       toast.error(getErrorMessage({ code: "AUTH_SESSION_REVOKED" }), { id: "auth-session-revoked" });
       await signOut(); // SIGNED_OUT → useAuth가 캐시를 비우고 /login으로
     });
-  }, [userId, refreshRooms]);
+  }, [userId, refreshRooms, dropRoom]);
 
   const onRoomEvent = useCallback((listener: RoomListener) => {
     listeners.current.add(listener);
@@ -1304,33 +1423,52 @@ import {
 } from "@/lib/chat-state";
 import { deleteMessage, editMessage, fetchMessages, markRead, sendMessage } from "@/services/messages";
 import { listParticipants } from "@/services/rooms";
-import { MESSAGE_PAGE_SIZE, type ChatMessage, type DomainError, type Profile, type Room } from "@/types/domain";
+import {
+  MESSAGE_PAGE_SIZE,
+  type ChatMessage,
+  type DomainError,
+  type Participant,
+  type Profile,
+  type Room,
+} from "@/types/domain";
 
 type RoomState = {
   messages: ChatMessage[];
   replyTargets: ChatMessage[];
   profiles: Record<string, Profile>;
-  readState: ReadState | null; // null = 스냅샷 전(안 읽은 수 숨김)
+  participants: Participant[] | null; // 스냅샷 시점 참여자(안 읽은 수의 기준). null = 스냅샷 전
+  readState: ReadState; // 스냅샷 전에 온 read_update도 버리지 않고 모은다
   hasMore: boolean;
 };
-const EMPTY: RoomState = { messages: [], replyTargets: [], profiles: {}, readState: null, hasMore: false };
+const EMPTY: RoomState = {
+  messages: [],
+  replyTargets: [],
+  profiles: {},
+  participants: null,
+  readState: {},
+  hasMore: false,
+};
 
 const withProfiles = (prev: Record<string, Profile>, list: Profile[]) =>
   list.reduce((acc, p) => ({ ...acc, [p.id]: p }), prev);
-
-// 읽음 처리는 탭이 보일 때만(§8.3). 실패(강퇴 직후 등)는 방 목록 갱신이 처리하므로 무시한다.
-const markReadIfVisible = (roomId: number) => {
-  if (document.visibilityState === "visible") markRead(roomId).catch(() => undefined);
-};
 
 const message = (e: unknown) => getErrorMessage(e as DomainError);
 
 // 현재 방의 메시지·읽음 상태. 방별로 보관해 방을 오가도 다시 받기 전까지 이전 내용을 보여 준다.
 export const useChatMessages = (room: Room | null) => {
   const { user } = useAuth();
-  const { onRoomEvent } = useChat();
+  const { onRoomEvent, isViewing } = useChat();
   const { error } = useToast();
   const roomId = room?.id ?? null;
+
+  // 읽음 처리는 그 방이 지금 열려 있고 탭이 보일 때만(§8.3). 늦게 도착한 이전 방의 응답·강퇴 직후는 건너뛴다.
+  // 실패(권한 상실 등)는 방 목록 갱신이 처리하므로 무시한다.
+  const markReadIfOpen = useCallback(
+    (id: number) => {
+      if (isViewing(id) && document.visibilityState === "visible") markRead(id).catch(() => undefined);
+    },
+    [isViewing],
+  );
   const [byRoom, setByRoom] = useState<Record<number, RoomState>>({});
   const [loadingOlder, setLoadingOlder] = useState(false);
 
@@ -1350,16 +1488,18 @@ export const useChatMessages = (room: Room | null) => {
             messages,
             replyTargets: mergeMessages(s.replyTargets, page.replyTargets),
             profiles: withProfiles(s.profiles, [...page.profiles, ...participants.map((p) => p.user)]),
+            participants,
             readState: seedReadState(participants, s.readState),
-            hasMore: s.messages.length === 0 || replaced ? page.messages.length === MESSAGE_PAGE_SIZE : s.hasMore,
+            // 첫 스냅샷(그 전에 Realtime 메시지가 먼저 왔어도)이나 교체면 페이지 크기로 판단
+            hasMore: s.participants === null || replaced ? page.messages.length === MESSAGE_PAGE_SIZE : s.hasMore,
           };
         });
-        markReadIfVisible(id);
+        markReadIfOpen(id);
       } catch (e) {
         error(`메시지를 불러오지 못했습니다: ${message(e)}`);
       }
     },
-    [update, error],
+    [update, error, markReadIfOpen],
   );
 
   // 입장 시 스냅샷(채널이 이미 SUBSCRIBED여도 받도록). setState는 응답 후 비동기로 일어난다.
@@ -1378,7 +1518,7 @@ export const useChatMessages = (room: Room | null) => {
           break;
         case "message":
           update(roomId, (s) => ({ ...s, messages: mergeMessages(s.messages, [e.message]) }));
-          if (e.message.senderId !== user?.id) markReadIfVisible(roomId);
+          if (e.message.senderId !== user?.id) markReadIfOpen(roomId);
           break;
         case "message_edited":
           update(roomId, (s) => ({
@@ -1397,22 +1537,25 @@ export const useChatMessages = (room: Room | null) => {
           break;
         }
         case "read_update":
-          // 스냅샷 전 값은 버린다(스냅샷이 최신 위치를 준다)
+          update(roomId, (s) => ({ ...s, readState: bumpRead(s.readState, e.userId, e.lastReadMessageId) }));
+          break;
+        case "member_removed":
+          // 나간 사람은 안 읽은 수 기준에서 바로 뺀다(목록 refetch를 기다리지 않음)
           update(roomId, (s) =>
-            s.readState ? { ...s, readState: bumpRead(s.readState, e.userId, e.lastReadMessageId) } : s,
+            s.participants ? { ...s, participants: s.participants.filter((p) => p.user.id !== e.userId) } : s,
           );
           break;
       }
     });
-  }, [roomId, onRoomEvent, sync, update, user?.id]);
+  }, [roomId, onRoomEvent, sync, update, user?.id, markReadIfOpen]);
 
   // 다른 탭·창에서 돌아오면 읽음 처리
   useEffect(() => {
     if (roomId === null) return;
-    const onVisible = () => markReadIfVisible(roomId);
+    const onVisible = () => markReadIfOpen(roomId);
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [roomId]);
+  }, [roomId, markReadIfOpen]);
 
   const send = useCallback(
     async (content: string, replyToId?: number) => {
@@ -1476,10 +1619,10 @@ export const useChatMessages = (room: Room | null) => {
       user && room
         ? toViews(current.messages, {
             me: user.id,
-            participants: room.participants,
+            participants: current.participants ?? room.participants,
             profiles: current.profiles,
             replyTargets: current.replyTargets,
-            readState: current.readState,
+            readState: current.participants ? current.readState : null, // 스냅샷 전 숫자 숨김
           })
         : [],
     [current, room, user],
@@ -1841,7 +1984,7 @@ Expected: grep 결과 없음(남은 axios/Orval 정리는 5·6단계).
 - [ ] **Step 12: 타입·린트·테스트·빌드 확인** (`client/`)
 
 Run: `pnpm exec tsc --noEmit; pnpm lint; pnpm test 2>&1 | grep -E "^ℹ (pass|fail)"; pnpm build 2>&1 | tail -3`
-Expected: tsc 출력 없음, lint 에러 0(경고 ≤ 6), 23 pass, build 성공(Turbopack이 `lib/chat-state.ts`의 `../types/domain.ts` 확장자 import를 해석).
+Expected: tsc 출력 없음, lint 에러 0(경고 ≤ 6), 26 pass, build 성공(Turbopack이 `lib/chat-state.ts`의 `../types/domain.ts` 확장자 import를 해석).
 
 - [ ] **Step 13: 커밋**
 
@@ -1867,7 +2010,7 @@ SUPABASE_PUBLISHABLE_KEY=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH node scr
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH node scripts/verify-auth.mjs
 ```
 그리고 저장소 루트에서 `npx -y supabase@2.120.0 test db`.
-Expected: 전부 통과(test 23, pgTAP 137).
+Expected: 전부 통과(test 26, pgTAP 137).
 
 - [ ] **Step 2: 브라우저 확인** — `pnpm dev` 실행 중에, Chrome 확장 도구가 있으면 그것으로, 없으면 설치된 Chrome을 `playwright-core`(세션 scratch에 설치, 저장소에 추가하지 않음, `chromium.launch({ channel: "chrome" })`)로 **브라우저 컨텍스트 2개**(alice, bob)를 띄워 자동 실행한다. `page.on("dialog", d => d.accept())`. 시작 전 alice·bob이 함께 있는 방이 없도록 정리한다.
   1. bob은 채팅 탭에 있다. alice가 bob과 1:1 방 생성 → bob 화면 방 목록에 새로고침 없이 나타난다(Review Focus 5).
@@ -1878,11 +2021,28 @@ Expected: 전부 통과(test 23, pgTAP 137).
   6. SQL로 그 방에 alice 메시지 45개 삽입(`insert into public.messages (room_id, sender_id, content) select <roomId>, '<alice uuid>', 'seed ' || g from generate_series(1,45) g;`) 후 bob이 방을 다시 연다 → 맨 아래 최신. 맨 위로 스크롤 → 과거 로드 후 보던 메시지 위치 유지, 결국 "대화의 시작입니다.". 위쪽을 보는 중 alice가 전송 → bob 스크롤 그대로; bob이 전송 → 맨 아래(Review Focus 2).
   7. 공백만 입력 → 전송 안 됨; 2001자 → "전송 실패: 메시지는 1~2000자여야 합니다." 토스트(Review Focus 5).
   8. alice가 bob·admin과 그룹방 생성, bob이 그 방을 연 상태에서 alice가 bob 강퇴 → bob 화면에서 새로고침 없이 방이 사라지고 선택이 다른 방으로 바뀐다(Review Focus 4).
-  9. bob이 채팅 탭에 있는 동안 SQL `update private.user_access ... sessions_revoked_at = now()`(bob) → 새로고침 없이 "세션이 만료되었습니다" 토스트와 `/login`(Review Focus 4). 다른 컨텍스트에서 bob으로 로그인했다가 로그아웃해도 첫 bob 탭은 유지되는지(세션 삭제 무시) 함께 확인.
+  9. 재연결: bob이 방을 연 상태에서 `bobContext.setOffline(true)` 5초 → 그동안 alice가 2개 전송 → `setOffline(false)` → 15초 안에 bob 화면에 2개 모두 순서대로, 중복 없이 보인다(Review Focus 3). dev 모드(StrictMode 이중 마운트)에서 1~8이 통과하면 토픽 게이트도 실사용 검증된 것이다.
+  10. bob이 채팅 탭에 있는 동안 SQL `update private.user_access ... sessions_revoked_at = now()`(bob) → 새로고침 없이 "세션이 만료되었습니다" 토스트와 `/login`(Review Focus 4). 다른 컨텍스트에서 bob으로 로그인했다가 로그아웃해도 첫 bob 탭은 유지되는지(세션 삭제 무시) 함께 확인.
 
 - [ ] **Step 3: 마무리** — 테스트 데이터(seed 메시지·방)는 방 나가기로 정리. 발견한 문제는 해당 Task를 고치고 Step 1을 재통과시킨 뒤 커밋. dev 서버는 유지.
 
 ---
+
+## 계획 리뷰 반영 (Codex + Claude, `docs/superpowers/reviews/2026-10-14-stage4-plan-review-codex.md`)
+
+| # | 지적 | 반영 |
+|---|---|---|
+| C1 | 같은 토픽 해제 직후 재구독 유실(StrictMode·재참여) | 수용 — `lib/topic-gate.ts`(Task 3, 단위 테스트) + `realtime.ts`(Task 4) |
+| C2 | 스냅샷 교체가 응답 전 받은 새 메시지를 버림 | 수용 — `mergeSnapshot`은 더 오래된 것만 버림(Task 3 테스트) |
+| C3 | 안 읽은 수가 오래된 `room.participants` 기준 | 수용 — 스냅샷 참여자를 `RoomState.participants`에 보관, `member_removed`로 즉시 제외(Task 5) |
+| I4 | 늦은 sync 응답이 떠난 방을 읽음 처리 | 수용 — `isViewing(id)` 확인 후 `mark_read`(Task 5) |
+| I5 | 로컬 세션이 먼저 사라지면 자기 세션 삭제 통지를 무시 | 기각 — 로컬 세션이 사라졌다면 이미 SIGNED_OUT으로 로그아웃됨. 세션 id를 캐시하면 의도한 로그아웃에 "세션 만료" 토스트가 뜬다 |
+| I6 | 자기 `member_removed`가 refetch를 기다림 | 수용 — 캐시에서 즉시 제거(`dropRoom`, Task 5) |
+| I7 | 상단 과거 페이지 연쇄 자동 로드 | 기각 — keep-offset 후 scrollTop ≥ 새 페이지 높이(30개 ≫ 40px)라 다음 scroll 이벤트가 임계값 밖 |
+| M8 | 훅 수준 경합 테스트 부재 | 부분 수용 — 경합 로직(게이트·스냅샷)은 순수 함수 단위 테스트, 훅 테스트 인프라는 추가하지 않음. 브라우저 offline/online 확인 추가(Task 6-9) |
+| M9 | `mark_read` 결과를 로컬 readState에 반영 | 기각 — 안 읽은 수는 내 메시지에만 표시되고 발신자(나)를 제외하므로 화면 영향 없음 |
+| M10 | 페이지의 profiles·replyTargets 중복 | 수용 — `toMessagePage`에서 id로 제거(Task 2 테스트) |
+| (Claude) | 스냅샷 전에 온 `read_update`를 버려 오래된 숫자가 남음 | 수용 — readState는 항상 누적, 숫자 표시는 스냅샷 후(Task 5) |
 
 ## Self-Review 결과
 
