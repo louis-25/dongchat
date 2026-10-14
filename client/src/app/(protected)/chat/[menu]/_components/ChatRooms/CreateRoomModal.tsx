@@ -8,7 +8,8 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import FormInput from "@/components/common/RHF/FormInput";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useFriendsList } from "@/hooks/api/useFriends";
+import { useFriendsList } from "@/hooks/useFriends";
+import { displayName } from "@/types/domain";
 import {
   Popover,
   PopoverContent,
@@ -25,11 +26,10 @@ import {
 import { CheckIcon, ChevronsUpDownIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createRoomSchema, type CreateRoomFormValues } from "./schemas";
-import type { CreateRoomModalProps, FriendEntry } from "./types";
+import type { CreateRoomModalProps } from "./types";
 
 const CreateRoomModal = ({ open, onClose, onSubmit }: CreateRoomModalProps) => {
-  const { data: friends = [] as FriendEntry[], isLoading: friendsLoading } =
-    useFriendsList();
+  const { data: friends = [], isLoading: friendsLoading } = useFriendsList();
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const [popoverWidth, setPopoverWidth] = useState<number | undefined>(
@@ -103,10 +103,12 @@ const CreateRoomModal = ({ open, onClose, onSubmit }: CreateRoomModalProps) => {
     );
   };
 
+  // value(전송·검색) = username, label(표시) = 표시명
   const friendOptions = friends.map((f) => ({
-    value: f.friend.username,
-    label: f.friend.username,
+    value: f.user.username,
+    label: displayName(f.user),
   }));
+  const labelOf = (username: string) => friendOptions.find((o) => o.value === username)?.label ?? username;
 
   if (!open) return null;
 
@@ -216,7 +218,7 @@ const CreateRoomModal = ({ open, onClose, onSubmit }: CreateRoomModalProps) => {
                             key={username}
                             className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm"
                           >
-                            <span>{username}</span>
+                            <span>{labelOf(username)}</span>
                             <button
                               type="button"
                               onClick={() => removeParticipant(username)}
