@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import type { AuthUser, DomainError } from "@/types/domain";
 import { toDomainError } from "./errors";
+import { removeThisBrowserPush } from "./push";
 
 // 인증 경계. UI는 이 함수들만 사용한다. NestJS 복귀 시 이 파일 내부만 교체한다.
 export type AuthChangeEvent = "SIGNED_IN" | "SIGNED_OUT" | "TOKEN_REFRESHED" | "USER_UPDATED";
@@ -50,6 +51,7 @@ export async function signInWithKakao(): Promise<void> {
 
 // 기본은 이 기기만 로그아웃. auth-js 기본값(global)은 다른 기기의 정상 세션까지 끊는다.
 export async function signOut(scope: "local" | "global" = "local"): Promise<void> {
+  await removeThisBrowserPush().catch(() => undefined); // 세션이 살아 있을 때 먼저(구독 행 삭제는 RLS상 본인 세션 필요)
   await createClient().auth.signOut({ scope });
 }
 

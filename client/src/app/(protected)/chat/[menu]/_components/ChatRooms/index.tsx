@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { useChat } from "@/components/chat-provider";
 import useAuth from "@/hooks/useAuth";
 import type { MessageView } from "@/lib/chat-state";
+import { roomIdFromSearch } from "@/lib/push-url";
 import CreateRoomModal from "./CreateRoomModal";
 import { RoomList } from "./components/RoomList";
 import { RoomHeader } from "./components/RoomHeader";
@@ -16,7 +17,7 @@ import type { CreateRoomPayload } from "./types";
 
 const ChatRoomsTab = () => {
   const { user } = useAuth();
-  const { setViewingRoom } = useChat();
+  const { setViewingRoom, setPickedRoomId } = useChat();
   const { rooms, selectedRoom, selectedRoomId, setSelectedRoomId, createRoom, leaveRoom, kickMember, isMutating } =
     useChatRooms();
   const { messages, sendMessage, editMessage, deleteMessage, loadOlder, hasMore, loadingOlder } =
@@ -24,6 +25,12 @@ const ChatRoomsTab = () => {
 
   const [showModal, setShowModal] = useState(false);
   const [replyTarget, setReplyTarget] = useState<MessageView | null>(null);
+
+  // 푸시 알림 클릭(/chat/rooms?room=<id>)으로 들어오면 그 방을 고른다
+  useEffect(() => {
+    const roomId = roomIdFromSearch(window.location.search);
+    if (roomId !== null) setPickedRoomId(roomId);
+  }, [setPickedRoomId]);
 
   // 인앱 알림이 "지금 보고 있는 방"을 알 수 있도록(탭을 떠나면 해제)
   useEffect(() => {

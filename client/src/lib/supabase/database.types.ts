@@ -269,6 +269,21 @@ export type Database = {
       kick_member: { Args: { p_room_id: number; p_user_id: string }; Returns: undefined };
       leave_room: { Args: { p_room_id: number }; Returns: undefined };
       mark_read: { Args: { p_room_id: number }; Returns: number };
+      push_targets: {
+        Args: { p_message_id: number };
+        Returns: {
+          auth: string;
+          body: string;
+          endpoint: string;
+          p256dh: string;
+          room_id: number;
+          title: string;
+        }[];
+      };
+      register_push_subscription: {
+        Args: { p_auth: string; p_endpoint: string; p_p256dh: string };
+        Returns: undefined;
+      };
       respond_friend_request: { Args: { p_action: string; p_id: number }; Returns: undefined };
       send_friend_request: {
         Args: { p_username: string };

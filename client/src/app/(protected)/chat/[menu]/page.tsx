@@ -21,7 +21,7 @@ export default async function ChatMenuPage({ params }: PageProps) {
           <Link href="/chat/rooms">채팅</Link>
         </Button>
       </div>
-      <PushNotificationButton />;{menu === "friends" && <FriendsTab />}
+      <PushNotificationButton />{menu === "friends" && <FriendsTab />}
       {menu === "rooms" && <ChatRoomsTab />}
     </div>
   );

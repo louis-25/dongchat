@@ -66,31 +66,18 @@ self.addEventListener('push', (event) => {
 
 // Notification click event - 알림 클릭 시 처리
 self.addEventListener('notificationclick', (event) => {
-  console.log('[Service Worker] Notification clicked:', event);
-
   event.notification.close();
-
-  const data = event.notification.data;
-  const url = data?.url || '/';
+  const url = event.notification.data?.url || '/chat/rooms';
 
   event.waitUntil(
-    clients
-      .matchAll({
-        type: 'window',
-        includeUncontrolled: true,
-      })
-      .then((clientList) => {
-        // 이미 열려있는 창이 있으면 포커스
-        for (const client of clientList) {
-          if (client.url === url && 'focus' in client) {
-            return client.focus();
-          }
-        }
-        // 새 창 열기
-        if (clients.openWindow) {
-          return clients.openWindow(url);
-        }
-      })
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // 이미 열린 앱 창이 있으면 그 창을 알림의 방으로 이동시키고 포커스(이동이 막히면 포커스만), 없으면 새 창
+      const target = new URL(url, self.location.origin).href;
+      const client = clientList.find((c) => c.url === target) || clientList[0];
+      if (!client) return clients.openWindow ? clients.openWindow(target) : undefined;
+      const go = client.url === target ? Promise.resolve(client) : client.navigate(target).catch(() => client);
+      return go.then((c) => (c || client).focus());
+    })
   );
 });
 
