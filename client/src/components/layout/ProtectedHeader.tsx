@@ -8,7 +8,7 @@ import useRouter from "@/hooks/useRouter";
 import { AUTH_QUERY_KEY } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/services/auth";
-import type { AuthUser } from "@/types/domain";
+import { displayName as toDisplayName, type AuthUser } from "@/types/domain";
 
 type ProtectedHeaderProps = {
   user: AuthUser | null;
@@ -20,7 +20,7 @@ const ProtectedHeader = ({ user }: ProtectedHeaderProps) => {
   const { goLogin, router } = useRouter();
   const queryClient = useQueryClient();
 
-  const displayName = user ? (user.nickname ?? user.username) : "";
+  const displayName = user ? toDisplayName(user) : "";
   const initials = displayName ? displayName.charAt(0).toUpperCase() : "?";
 
   const handleLogout = async () => {
