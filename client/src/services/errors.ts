@@ -27,6 +27,7 @@ export function toDomainError(error: unknown): DomainError {
   // RPC: raise exception '<CODE>' using hint = '<사용자 메시지>' (SQLSTATE P0001)
   if (code === "P0001" && message) return { code: message, message: hint ?? message };
   if (code === "42501") return { code: "CHAT_FORBIDDEN", message: "접근 권한이 없습니다." };
-  if (code && AUTH_CODE_MAP[code]) return { code: AUTH_CODE_MAP[code], message: message ?? "" };
+  // Auth 원문(영어)은 버리고 화면 문구는 코드 매핑(lib/error-handler)에 맡긴다.
+  if (code && AUTH_CODE_MAP[code]) return { code: AUTH_CODE_MAP[code], message: "" };
   return { code: "UNKNOWN", message: message ?? "알 수 없는 오류가 발생했습니다." };
 }

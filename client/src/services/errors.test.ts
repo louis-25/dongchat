@@ -33,3 +33,10 @@ test("알 수 없는 입력은 UNKNOWN", () => {
   assert.deepEqual(toDomainError("boom"), { code: "UNKNOWN", message: "알 수 없는 오류가 발생했습니다." });
   assert.deepEqual(toDomainError(new Error("network down")), { code: "UNKNOWN", message: "network down" });
 });
+
+test("Auth 오류의 영어 원문은 버린다(화면 문구는 코드로 정한다)", () => {
+  assert.deepEqual(toDomainError({ code: "weak_password", message: "Password should be at least 6 characters." }), {
+    code: "VALIDATION_FAILED",
+    message: "",
+  });
+});

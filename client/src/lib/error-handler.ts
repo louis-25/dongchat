@@ -24,7 +24,8 @@ export const getErrorMessage = (error: { code?: string; message?: string } | nul
       case 'AUTH_FORBIDDEN':
         return '접근 권한이 없습니다.';
       case 'VALIDATION_FAILED':
-        return '입력값이 올바르지 않습니다.';
+        // RPC hint·클라 검증 문구가 있으면 그 사유를 보여 준다(Auth 원문은 services가 비워 둔다).
+        return error.message || '입력값이 올바르지 않습니다.';
       case 'CHAT_FORBIDDEN':
         return '해당 채팅에 접근할 권한이 없습니다.';
       case 'MESSAGE_NOT_FOUND':

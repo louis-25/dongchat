@@ -60,6 +60,13 @@ test("스냅샷: 가득 찬 최신 페이지면 그보다 오래된 것만 버�
     [...latest.map((m) => m.id), 130],
     "스냅샷 응답 전에 Realtime으로 받은 130은 남는다",
   );
+  const contiguous = mergeSnapshot(
+    Array.from({ length: 21 }, (_, i) => msg(90 + i)),
+    latest,
+  );
+  assert.equal(contiguous.replaced, false, "겹치면 끊긴 게 아니다 — 스크롤로 불러온 과거(90~99)를 버리지 않는다");
+  assert.deepEqual(contiguous.messages[0].id, 90);
+  assert.equal(contiguous.messages.length, 40);
   const partial = mergeSnapshot([msg(1), msg(2)], [msg(2), msg(3)]);
   assert.equal(partial.replaced, false);
   assert.deepEqual(

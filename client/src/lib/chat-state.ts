@@ -20,21 +20,26 @@ export const mergeMessages = (base: ChatMessage[], incoming: ChatMessage[]): Cha
   return [...map.values()].sort(byId);
 };
 
-// 재동기화 스냅샷 병합. 최신 페이지가 가득 찼으면 그보다 오래된 기존 메시지는 버린다(사이가 끊겼을 수 있음 →
-// 과거는 스크롤로 다시 받는다). 스냅샷 응답 전에 Realtime으로 받은 더 새 메시지는 유지한다.
+// 재동기화 스냅샷 병합. 가득 찬 최신 페이지가 기존 목록과 겹치지 않으면 사이가 끊긴 것 → 그보다 오래된 기존
+// 메시지는 버린다(과거는 스크롤로 다시 받는다). 겹치면 그대로 합친다(스크롤로 불러온 과거 유지).
+// 어느 쪽이든 스냅샷 응답 전에 Realtime으로 받은 더 새 메시지는 유지한다.
 export const mergeSnapshot = (
   current: ChatMessage[],
   latest: ChatMessage[],
 ): { messages: ChatMessage[]; replaced: boolean } => {
   if (latest.length === MESSAGE_PAGE_SIZE) {
     const floor = latest[0].id;
-    return {
-      messages: mergeMessages(
-        current.filter((m) => m.id >= floor),
-        latest,
-      ),
-      replaced: current.some((m) => m.id < floor),
-    };
+    const top = latest[latest.length - 1].id;
+    const overlaps = current.some((m) => m.id >= floor && m.id <= top);
+    if (!overlaps) {
+      return {
+        messages: mergeMessages(
+          current.filter((m) => m.id > top),
+          latest,
+        ),
+        replaced: current.some((m) => m.id < floor),
+      };
+    }
   }
   return { messages: mergeMessages(current, latest), replaced: false };
 };
