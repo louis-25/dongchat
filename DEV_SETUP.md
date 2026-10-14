@@ -1,63 +1,44 @@
-# 개발 환경 셋업 (집 ↔ 회사)
+# 로컬 개발 환경
 
-집과 회사를 오가며 개발할 때, 코드는 git으로 동기화되지만
-**환경설정(.env)과 DB 데이터는 동기화되지 않습니다.** 아래 절차를 따르세요.
+## 준비물
+- Node 24 (`.nvmrc`), pnpm, Docker Desktop
 
-## 새 머신 최초 1회 세팅
-
+## 최초 1회
 ```bash
-# 1. 클론
-git clone https://github.com/louis-25/dongchat.git
-cd dongchat
+git clone <repo> && cd dongchat
+cd client && pnpm install && cd ..
 
-# 2. Node 버전 맞추기 (nvm 사용 시)
-nvm use            # .nvmrc => 20
+# 비밀 파일(gitignore됨) 만들고 값 채우기
+cp supabase/.env.example supabase/.env          # 카카오 키, VAPID 키, 웹훅 비밀
+cp client/.env.local.example client/.env.local  # Supabase URL·publishable key, VAPID 공개키
 
-# 3. 의존성 설치
-cd server && pnpm install && cd ../client && pnpm install && cd ..
-
-# 4. 로컬 MySQL 띄우기 (Docker)
-docker compose up -d
-
-# 5. 환경설정 파일 만들기 (.example 복사 후 값 채우기)
-cp server/.env.example server/.env
-cp client/.env.local.example client/.env.local
-#    => 시크릿 값(NEXTAUTH_SECRET, VAPID_*, KAKAO_*)은 비밀번호 매니저나
-#       수동 복사로 채웁니다. 두 파일의 *NEXTAUTH_SECRET 값은 반드시 동일해야 합니다.
+# 로컬 Supabase(Postgres·Auth·Realtime·Edge Functions)
+npx -y supabase@2.120.0 start
+npx -y supabase@2.120.0 status -o env   # PUBLISHABLE_KEY를 client/.env.local에 넣는다
 ```
 
-## 매일 작업 시작할 때
+`supabase start`가 마이그레이션과 `supabase/seed.sql`(테스트 계정, 로컬 푸시 웹훅 Vault 값)을 적용한다.
+시드 계정: `admin@dongchat.local`(관리자), `alice@dongchat.local`, `bob@dongchat.local` — 비밀번호 `password123`.
 
+- VAPID 키: `npx -y web-push generate-vapid-keys` → 공개키는 두 env 파일에, 개인키는 `supabase/.env`에만.
+- 카카오: 개발자 콘솔에서 비즈 앱 전환 + 이메일 필수 동의, Redirect URI `http://localhost:54321/auth/v1/callback`.
+
+## 매일
 ```bash
-git pull
-pnpm install          # server, client 각각 (lockfile 변경 대비)
-docker compose up -d  # MySQL 시작
+npx -y supabase@2.120.0 start      # 이미 떠 있으면 생략
+cd client && pnpm dev               # http://localhost:3000
+```
+Studio: http://127.0.0.1:54323 (테이블·SQL·사용자). 메일(이메일 확인 사용 시): http://127.0.0.1:54324.
+
+## 검증
+```bash
+cd client
+pnpm exec tsc --noEmit && pnpm lint && pnpm test
+SUPABASE_PUBLISHABLE_KEY=<키> PUSH_WEBHOOK_SECRET=local-dev-push-secret pnpm verify   # 로컬 Supabase 대상 통합 검증
+cd .. && npx -y supabase@2.120.0 test db                                              # pgTAP
 ```
 
-## 작업 끝내고 자리 뜰 때 (★ 중요)
-
-```bash
-git add -A && git commit -m "wip: 작업 내용" && git push
-```
-> 커밋이 지저분해도 괜찮습니다. "안 잃어버리는 것"이 우선이고,
-> 정리는 나중에 `git rebase -i`로 하면 됩니다.
-
-## 실행
-
-```bash
-# 터미널 1
-cd server && pnpm start:dev      # http://localhost:4000  (Swagger: /api-docs)
-# 터미널 2
-cd client && pnpm dev            # http://localhost:3000
-```
-
-## 참고
-
-- **DB 포트는 3307입니다.** 머신에 이미 네이티브 MySQL(3306)이 있어도 충돌하지 않도록
-  Docker 컨테이너를 호스트 3307에 매핑했습니다. `server/.env`의 `DB_PORT=3307`을 유지하세요.
-  (네이티브 MySQL을 그대로 쓰려면 `DB_PORT=3306`으로 바꾸고 Docker는 안 띄우면 됩니다.)
-- **DB 데이터는 머신마다 따로입니다.** 집에서 만든 계정은 회사에 없습니다 (테스트 계정 재생성).
-  나중에 데이터 연속성이 필요하면 `server/.env`의 DB_* 값만 무료 클라우드 MySQL
-  (예: TiDB Cloud Serverless — MySQL 호환·무료)로 바꾸면 양쪽에서 같은 데이터를 씁니다.
-- `synchronize: true` 라서 엔티티 변경 시 스키마는 자동 반영됩니다(운영 전환 시 마이그레이션 권장).
-- DB를 깨끗이 초기화하려면: `docker compose down -v && docker compose up -d`
+## 알아 둘 것
+- DB 변경: `npx -y supabase@2.120.0 migration new <이름>` → SQL 작성 → `migration up`(데이터 유지) 또는 `db reset`(초기화+seed). 변경 후 `supabase gen types --local --lang typescript --schema public > client/src/lib/supabase/database.types.ts`.
+- Edge Function 코드 수정은 Windows에서 핫 리로드되지 않는다: `docker restart supabase_edge_runtime_dongchat`. 새 함수·`config.toml` 변경은 `supabase stop && supabase start`.
+- 강제 로그아웃·정지 수동 테스트: Studio SQL에서 `private.user_access`의 `sessions_revoked_at = now()` / `banned_until` 설정(관리자 화면 `/admin/users`로도 가능).

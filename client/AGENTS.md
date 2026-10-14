@@ -1,86 +1,42 @@
 # client/AGENTS.md — 프론트엔드 가이드
 
-dongchat 프론트엔드(Next.js)에서 코드를 작성·수정할 때 따라야 하는 규칙입니다.
-루트 [AGENTS.md](../AGENTS.md)의 스킬·context7 규칙이 그대로 적용되며, 이 문서는 그 위에 프로젝트 고유의 구조·컨벤션을 정의합니다.
+루트 [AGENTS.md](../AGENTS.md)의 규칙 위에 프론트엔드 고유 규칙을 정의합니다.
 
 ## 기술 스택
+- Next.js 16 (App Router, `proxy.ts`) / React 19 / TypeScript, pnpm
+- Supabase: `@supabase/supabase-js`, `@supabase/ssr`(쿠키 세션) — 버전 고정
+- TanStack React Query v5(서버 상태), shadcn/ui + Tailwind v4, react-hook-form + yup/zod, sonner
 
-- **Next.js 16** (App Router) / **React 19** / **TypeScript**
-- **pnpm** (패키지 매니저) — `npm`이 아닌 `pnpm` 사용
-- **TanStack React Query v5** + **Orval** (백엔드 OpenAPI에서 API 클라이언트·훅 자동 생성)
-- **Jotai** — 전역 클라이언트 상태
-- **NextAuth v5 (beta)** — Credentials + Kakao OAuth
-- **axios** — 커스텀 인스턴스 + 토큰 갱신 인터셉터
-- **socket.io-client** — 실시간 채팅
-- **shadcn/ui** (new-york 스타일) + **Tailwind CSS v4** + **Radix UI** + **lucide-react**
-- **react-hook-form** + **yup** / **zod** (폼·검증)
-- **sonner** (토스트), **web-push** (브라우저 푸시 알림)
-
-## 디렉터리 구조
+## 계층과 경계 (백엔드 교체 경계)
 
 ```
-src/
-  app/                       # App Router 라우트
-    (protected)/             # 인증 필요 라우트 그룹 (chat, admin)
-    (public)/(auth)/         # 비인증 라우트 (login, join)
-    api/auth/[...nextauth]/  # NextAuth 핸들러
-  components/
-    ui/                      # shadcn/ui 컴포넌트 (직접 수정 지양)
-    auth/ layout/ common/    # 도메인·공용 컴포넌트
-    *-provider.tsx           # 전역 Provider
-  hooks/                     # 공용 훅 (useAuth, useToast, usePushNotification …)
-  hooks/api/                 # Orval 훅을 감싼 의미 있는 별칭 훅
-  services/                  # ⚠️ Orval 자동 생성 — 직접 수정 금지
-  lib/api/models/            # ⚠️ Orval 자동 생성 타입 — 직접 수정 금지
-  lib/api-client.ts          # axios 커스텀 인스턴스 (Orval mutator)
-  lib/error-handler.ts       # 에러 code → 한글 메시지 매핑
-  store/                     # Jotai atom
-  config/                    # 환경 변수 정규화 (BASE_URL, joinUrl …)
+app/, components/   UI — Supabase를 모른다
+  hooks/            React Query 훅, ChatProvider(Realtime 구독 허브)
+    services/       순수 async 함수 + subscribe 함수, types/domain.ts 타입 반환 ★교체 경계
+    lib/supabase/   브라우저·서버 클라이언트
 ```
 
-기능별 화면은 **feature 폴더 패턴**을 따릅니다. 라우트 폴더 안 `_components/<Feature>/`에
-`components/`, `hooks/`, `schemas.ts`, `types.ts`, `index.tsx`를 둡니다
-(예: [chat/[menu]/_components/ChatRooms](src/app/(protected)/chat/[menu]/_components/ChatRooms)).
+- `@supabase/*`, `@/lib/supabase/*` import는 `src/services/**`, `src/lib/supabase/**`, `src/proxy.ts`, `src/app/auth/callback/**`에서만(ESLint로 강제).
+- `database.types.ts`는 services 내부 전용(`supabase gen types`로 재생성). services는 `types/domain.ts`로 변환해 반환하고, 에러는 `DomainError {code, message}`로 던진다(`services/errors.ts`).
+- PostgREST SELECT 문자열과 row→domain 매퍼는 `services/mappers.ts`(상대 경로·type-only import만 — Node 테스트·통합 스크립트가 직접 import).
+- 표시명은 `displayName()`(nickname ?? username). 사용자 알림은 `useToast`, 확인은 `confirm()`, `alert()` 금지.
 
-## API 통신 규칙
+## 실시간 규칙
+- `ChatProvider`(`(protected)` 레이아웃)가 참여 방마다 `room:<id>`, 본인 `user:<uuid>` 비공개 채널을 구독한다. 관리자 열람은 `watchRoom(id)`.
+- 채널 (재)구독(`SUBSCRIBED`)마다 스냅샷을 다시 받아 id로 병합한다. user 채널은 구독 성공·거부 때 세션(`get_me`)·방 목록을 재확인한다(10초 제한). 상태 규칙은 `lib/chat-state.ts`(순수 함수, 단위 테스트).
+- 같은 토픽 재구독은 `lib/topic-gate.ts`를 거친다(realtime-js가 해제 중인 채널을 돌려주는 문제).
 
-- **API 훅은 직접 작성하지 않습니다.** 백엔드 Swagger(`/api-docs-json`)에서 Orval로 생성합니다.
-  - 백엔드 변경 후: `pnpm generate:api` 실행 → `src/services/`, `src/lib/api/models/` 재생성
-  - 설정: [orval.config.ts](orval.config.ts) (react-query v5, `staleTime` 60s, mutator = `customInstance`)
-- 생성된 훅은 [hooks/api/](src/hooks/api/)에서 의미 있는 이름으로 re-export 해 사용합니다.
-- 모든 요청은 [lib/api-client.ts](src/lib/api-client.ts)의 axios 인스턴스를 거칩니다.
-  - 401 응답 시 `refreshToken`으로 자동 토큰 갱신 + 실패 요청 큐 재시도
-  - 에러는 `ApiError` 형태로 정규화 → [lib/error-handler.ts](src/lib/error-handler.ts)에서 `code` 기준 한글 메시지 변환
+## 웹 푸시
+- 구독 저장은 `services/push.ts`(`register_push_subscription` RPC — 같은 브라우저 endpoint는 등록한 사용자에게 이전). 로그아웃 시 이 브라우저 구독을 지운다.
+- 발송은 서버(메시지 트리거 → Edge Function `send-push`). 알림 URL은 `/chat/rooms?room=<id>`.
 
-## 인증·토큰 규칙
+## React 규칙
+- effect 본문에서 동기 setState 금지, 렌더 중 ref 읽기/쓰기 금지(React 19 hooks lint). 브라우저 전용 값은 `useSyncExternalStore`(서버 스냅샷)로.
+- 훅이 돌려주는 함수는 렌더마다 같아야 한다(의존성에 넣으면 effect가 반복된다 — `useToast` 사례).
 
-- **NextAuth(JWT 전략)** 세션에서 백엔드 토큰을 받아 클라이언트로 전달 ([auth.ts](src/auth.ts)).
-- 토큰 저장 위치를 반드시 지킬 것:
-  - `refreshToken` → **localStorage**
-  - `accessToken` → **sessionStorage** + 메모리(`setAccessToken`)
-  - 사용자 정보 → sessionStorage + Jotai `userAtom`
-- 세션·토큰 동기화는 [hooks/useAuth.tsx](src/hooks/useAuth.tsx)에서 처리. 새 인증 흐름은 여기에 맞춥니다.
-
-## 상태·실시간 규칙
-
-- 서버 상태는 React Query, 전역 클라이언트 상태는 Jotai atom([store/](src/store/))로 분리.
-- **Hydration mismatch 방지**: atom 초기값은 항상 `null`로 두고 실제 값은 `useEffect`(클라이언트)에서 주입.
-- 소켓은 [components/chat-provider.tsx](src/components/chat-provider.tsx)의 `ChatProvider`/`useChat`로만 접근.
-  cleanup에서 `disconnect()`하지 않습니다(탭 이동 시 재연결 끊김 방지) — `beforeunload`에서만 해제.
-
-## 컨벤션
-
-- import 경로는 `@/` alias 사용 ([components.json](components.json) 참조).
-- UI는 `src/components/ui`(shadcn) 위에 조합. 새 primitive가 필요하면 shadcn CLI로 추가.
-- 폼은 react-hook-form + resolver(yup/zod), 검증 스키마는 feature 폴더의 `schemas.ts`에 둡니다.
-- 사용자 알림은 `useToast`(sonner) 사용. `alert()` 금지.
-- 프로덕션 머지 전 `console.log` 디버그 로그는 제거하거나 의도된 것만 남깁니다(현재 다수 존재).
-
-## 자주 쓰는 명령
+## 명령
 
 ```bash
-pnpm dev            # 개발 서버
-pnpm build          # 프로덕션 빌드
-pnpm lint           # ESLint
-pnpm generate:api   # 백엔드 Swagger 기반 API 코드 재생성
+pnpm dev | pnpm build | pnpm lint | pnpm test     # test = node --test (src/**/*.test.ts)
+pnpm verify                                        # 로컬 Supabase 통합 검증(DEV_SETUP.md 참고)
 ```

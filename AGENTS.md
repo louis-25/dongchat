@@ -1,31 +1,22 @@
 # AGENTS.md
 
-이 문서는 이 저장소에서 코드를 작성·수정할 때 따라야 하는 규칙을 정의합니다.
+이 저장소에서 코드를 작성·수정할 때 따르는 규칙입니다.
 
-## 코드 작성 가이드
+## 구조
+- `client/` — Next.js 16 프론트엔드. 세부 규칙은 [client/AGENTS.md](client/AGENTS.md).
+- `supabase/` — 백엔드: `migrations/`(스키마·RLS·RPC·트리거), `tests/database/`(pgTAP), `functions/`(Edge Function), `seed.sql`.
+- 설계 기준 문서: `docs/superpowers/specs/2026-10-13-supabase-migration-design.md`.
 
-### 백엔드 (NestJS)
+## 백엔드 (Supabase)
+- DB 변경은 항상 마이그레이션으로: 테이블·함수 생성과 함께 명시적 GRANT/REVOKE, 모든 public 테이블 RLS.
+- 함수는 `security definer`이면 `set search_path = ''`와 스키마 한정 이름, `revoke execute from public, anon`.
+- 권한 판단은 DB(`private.is_active_session()`, `private.is_admin()`, RLS)가 한다. 클라 검사는 표시용.
+- RPC 에러는 `raise exception '<CODE>' using hint = '<사용자 메시지>'`. 코드는 스펙 §5.5.
+- 변경 후 `npx -y supabase@2.120.0 test db`와 `db advisors --local` 확인, 새 동작에는 pgTAP을 먼저 쓴다.
 
-백엔드 코드를 작성하거나 리뷰·리팩터링할 때는 **`/nestjs-best-practices`** 스킬을 참고합니다.
-
-- 모듈 구성, 의존성 주입(DI), 보안, 성능 패턴을 프로덕션 기준으로 적용
-- 적용 대상: `server/` 등 NestJS 기반 코드
-
-### 프론트엔드 (React / Next.js)
-
-프론트엔드 코드를 작성하거나 리뷰·리팩터링할 때는 아래 스킬을 참고합니다.
-
-- **`/vercel-react-best-practices`** — React/Next.js 성능 최적화, 데이터 패칭, 번들 최적화
-- **`/vercel-composition-patterns`** — 컴포넌트 합성 패턴(compound components, render props, context), React 19 API 변경 사항
-- **`/vercel-react-view-transitions`** — View Transition API 기반 페이지·요소 전환 애니메이션
-- **`/frontend-design`** — 의도적이고 차별화된 비주얼 디자인 방향, 타이포그래피
-
-적용 대상: `client/` 등 React/Next.js 기반 코드
+## 프론트엔드 (React / Next.js)
+- **`/vercel-react-best-practices`**, **`/vercel-composition-patterns`**, **`/vercel-react-view-transitions`**, **`/frontend-design`** 스킬을 참고한다. 적용 대상: `client/`.
 
 ## 라이브러리·프레임워크 코드 작성 규칙
-
-라이브러리나 프레임워크 관련 코드를 작성할 때는 **항상 context7 MCP를 참고**하여 최신 API 스펙에 기반한 답변과 코드를 제공합니다.
-
+라이브러리나 프레임워크 관련 코드를 작성할 때는 **항상 context7 MCP를 참고**하여 최신 API 스펙에 기반해 작성합니다.
 - 사용 도구: `mcp__plugin_context7_context7__resolve-library-id` → `mcp__plugin_context7_context7__get-library-docs`
-- 기억(memory)이나 추측에 의존하지 말고, 해당 라이브러리의 최신 문서를 조회한 뒤 코드 작성
-- 적용 시점: 외부 라이브러리/프레임워크의 API·설정·패턴을 사용할 때
