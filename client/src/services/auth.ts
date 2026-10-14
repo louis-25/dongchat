@@ -53,6 +53,15 @@ export async function signOut(scope: "local" | "global" = "local"): Promise<void
   await createClient().auth.signOut({ scope });
 }
 
+// 로컬 세션의 사용자 id(네트워크 요청 없음). 쿼리 필터용이며 권한 판단은 RLS·RPC가 한다.
+export async function getCurrentUserId(): Promise<string> {
+  const {
+    data: { session },
+  } = await createClient().auth.getSession();
+  if (!session) throw { code: "AUTH_UNAUTHORIZED", message: "인증이 필요합니다." } satisfies DomainError;
+  return session.user.id;
+}
+
 export async function getCurrentUser(): Promise<AuthUser | null> {
   const supabase = createClient();
   const {
