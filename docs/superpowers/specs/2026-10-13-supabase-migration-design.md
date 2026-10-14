@@ -175,6 +175,7 @@ public.push_subscriptions (
 |---|---|
 | `auth.users` AFTER INSERT → `public.handle_new_user()` | profiles 생성(§7.1). 예외를 최소화(가입 차단 방지) |
 | `messages` AFTER INSERT/UPDATE, `chat_room_participants` AFTER UPDATE OF last_read_message_id / AFTER DELETE | Realtime 송출(§8.1) |
+| `chat_room_participants` AFTER INSERT | `user:<uuid>`로 `member_added` 송출(새 방 초대 즉시 반영, 4단계 추가) |
 | `private.user_access` AFTER INSERT/UPDATE | `user:<uuid>`로 `force_logout` 송출 |
 | `auth.sessions` AFTER DELETE (가능 시) | `user:<uuid>`로 `force_logout {sessionId}` 송출. 불가하면 생략하고 토큰 갱신 실패로 처리(§9) |
 | `*.updated_at` BEFORE UPDATE | `updated_at = now()` |
@@ -253,6 +254,7 @@ RPC는 `raise exception '<CODE>' using hint = '<사용자 메시지>'`. services
 | `room:<id>` | `read_update` | participants UPDATE OF last_read_message_id | `{roomId, userId, lastReadMessageId}` |
 | `room:<id>` | `member_removed` | participants DELETE | `{roomId, userId}` |
 | `user:<uuid>` | `member_removed` | participants DELETE | `{roomId, userId}` |
+| `user:<uuid>` | `member_added` | participants INSERT | `{roomId, userId}` |
 | `user:<uuid>` | `force_logout` | user_access 변경 / sessions DELETE | `{reason, sessionId?}` |
 
 - `broadcast_changes()`는 payload 형식이 문서화되지 않아 사용하지 않음.
