@@ -36,6 +36,11 @@ const useAuth = () => {
     [queryClient, router],
   );
 
+  // 세션 없음 확정(로그아웃 후 뒤로가기 등 proxy를 거치지 않는 클라이언트 이동). 에러는 아래에서 처리.
+  useEffect(() => {
+    if (!isLoading && !error && user === null) router.replace("/login");
+  }, [isLoading, error, user, router]);
+
   useEffect(() => {
     if ((error as DomainError | null)?.code !== "AUTH_SESSION_REVOKED") return;
     toast.error(getErrorMessage(error as unknown as DomainError), { id: "auth-session-revoked" });
