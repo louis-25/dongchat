@@ -4,7 +4,7 @@
 
 **Goal:** 관리자 화면을 Supabase로 옮긴다. `/admin/users`(상태 배지, [정지][해제][강제 로그아웃], 페이지네이션·정렬)와 신규 `/admin/rooms`(전체 방 → 멤버 목록·[강퇴] + 메시지 읽기 전용 실시간 열람, 읽음 처리 없음)를 만든다.
 
-**Architecture:** DB(관리자 RPC·RLS·Realtime 수신 정책)는 1단계에서 완료돼 DB 변경은 없다. UI → React Query → `services/admin.ts`(RPC) → supabase-js. 방 열람은 4단계 채팅 계층을 재사용한다. `ChatProvider`를 `(protected)` 레이아웃으로 올리고 `watchRoom(id)`로 "참여하지 않은 방" 채널도 구독하게 하며, `useChatMessages`가 참여자 목록을 돌려주고 `MessageList`가 읽기 전용 모드를 지원한다. 관리자 화면은 `setViewingRoom`을 호출하지 않으므로 `mark_read`가 일어나지 않는다(§8.3 "관리자 비멤버 열람 시 호출 안 함").
+**Architecture:** DB(관리자 RPC·RLS·Realtime 수신 정책)는 1단계에서 완료됐다. 예외로 정지 상태를 `is_active_session`과 같게 두 원천(`private.user_access`, 대시보드 Ban = `auth.users.banned_until`)으로 보여 주고 해제하도록 관리자 RPC 2개를 고친다(Task 2, 계획 리뷰 C3). UI → React Query → `services/admin.ts`(RPC) → supabase-js. 방 열람은 4단계 채팅 계층을 재사용한다. `ChatProvider`를 `(protected)` 레이아웃으로 올리고 `watchRoom(id)`로 "참여하지 않은 방" 채널도 구독하게 하며, `useChatMessages`가 참여자 목록을 돌려주고 `MessageList`가 읽기 전용 모드를 지원한다. 관리자 화면은 `setViewingRoom`을 호출하지 않으므로 `mark_read`가 일어나지 않는다(§8.3 "관리자 비멤버 열람 시 호출 안 함").
 
 **Tech Stack:** Next.js 16.0.10, React 19.2, `@supabase/supabase-js@2.117.2`, React Query 5, shadcn/ui(Button·Card·Popover), Node 24 `node --test`, Supabase CLI 2.120.0.
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- pnpm, 명령은 `client/`에서. 새 의존성 없음. DB 마이그레이션 없음.
+- pnpm, 명령은 `client/`에서(마이그레이션·pgTAP은 저장소 루트). 새 의존성 없음. DB 변경은 Task 2의 관리자 RPC 교체 1건뿐.
 - `@supabase/*`, `@/lib/supabase/*` import는 `src/services/**`, `src/lib/supabase/**`, `src/proxy.ts`, `src/app/auth/callback/**`에서만.
 - 관리자 권한 판정은 DB(`private.is_admin()`, RPC `ADMIN_FORBIDDEN`)가 한다. 클라이언트 가드는 화면 노출 제어일 뿐이다. 관리자 여부는 `get_me().isAdmin`(= `useAuth().user.isAdmin`)만 쓴다.
 - 강퇴 규칙(§5.4): 그룹방만, 본인 불가(관리자·그룹방 방장). 정지 규칙: 본인 불가, 종료 시각은 미래. UI는 같은 규칙으로 버튼을 숨기고, DB 거부 시 RPC hint를 토스트로 보여 준다.
@@ -168,11 +168,108 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 2: 관리자 서비스와 계약 통합 검증
+### Task 2: 정지 상태 원천 통합(DB), 관리자 서비스와 계약 통합 검증
 
 **Files:**
+- Create: `supabase/tests/database/100_admin_ban_sources.test.sql`
+- Create: `supabase/migrations/<timestamp>_admin_ban_sources.sql` (CLI가 생성)
 - Create: `client/scripts/verify-admin.mjs`
 - Create: `client/src/services/admin.ts`
+
+`private.is_active_session()`은 `private.user_access.banned_until`과 `auth.users.banned_until`(대시보드 Ban) 둘 다 보지만, `admin_list_users`는 앞의 것만 반환하고 `admin_unban`도 앞의 것만 지운다. 대시보드로 정지한 사용자가 관리자 화면에서 "정상"으로 보이고 해제도 안 되는 문제를 먼저 고친다.
+
+- [ ] **Step 0a: 실패하는 pgTAP** — `supabase/tests/database/100_admin_ban_sources.test.sql`
+
+```sql
+begin;
+select plan(3);
+
+select tests.create_user('ab_admin@test.com', '{"username":"ab_admin"}');
+select tests.create_user('ab_bob@test.com', '{"username":"ab_bob"}');
+insert into private.user_roles (user_id, role) values (tests.uid('ab_admin@test.com'), 'ADMIN');
+-- 대시보드 Ban(Auth)만 걸린 상태
+update auth.users set banned_until = now() + interval '1 day' where id = tests.uid('ab_bob@test.com');
+
+select tests.login_as(tests.uid('ab_admin@test.com'));
+select ok(
+  (select (x ->> 'bannedUntil') is not null
+   from jsonb_array_elements(public.admin_list_users(1, 100) -> 'items') x
+   where x ->> 'id' = tests.uid('ab_bob@test.com')::text),
+  '대시보드(Auth) 정지도 목록에 정지로 보인다');
+select lives_ok(format('select public.admin_unban(%L)', tests.uid('ab_bob@test.com')), '해제');
+reset role;
+select is((select banned_until from auth.users where id = tests.uid('ab_bob@test.com')), null, '해제는 Auth 정지도 지운다');
+
+select * from finish();
+rollback;
+```
+
+Run(저장소 루트): `npx -y supabase@2.120.0 test db 2>&1 | tail -4`
+Expected: FAIL — `100_admin_ban_sources.test.sql` 1·3번 실패. 나머지 137 통과.
+
+- [ ] **Step 0b: 마이그레이션** — `npx -y supabase@2.120.0 migration new admin_ban_sources` → 출력된 파일에 작성:
+
+```sql
+-- 정지 상태는 is_active_session과 같게 두 원천(private.user_access, auth.users = 대시보드 Ban) 중 늦은 값으로 보여 주고,
+-- 해제는 둘 다 지운다. (greatest는 null을 무시한다)
+create or replace function public.admin_list_users(
+  p_page int default 1, p_limit int default 20, p_sort text default 'created_at', p_order text default 'desc'
+) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_limit int := least(greatest(coalesce(p_limit, 20), 1), 100);
+  v_page int := greatest(coalesce(p_page, 1), 1);
+  v_sort text := case when p_sort in ('created_at', 'username', 'updated_at') then p_sort else 'created_at' end;
+  v_order text := case when lower(coalesce(p_order, '')) = 'asc' then 'asc' else 'desc' end;
+  v_items jsonb;
+  v_total bigint;
+begin
+  perform private.require_admin();
+  select count(*) into v_total from public.profiles;
+  execute format($q$
+    select coalesce(jsonb_agg(t), '[]'::jsonb) from (
+      select p.id, p.username, p.nickname, u.email,
+             p.created_at as "createdAt",
+             exists (select 1 from private.user_roles r where r.user_id = p.id) as "isAdmin",
+             greatest(a.banned_until, u.banned_until) as "bannedUntil"
+      from public.profiles p
+      join auth.users u on u.id = p.id
+      left join private.user_access a on a.user_id = p.id
+      order by p.%I %s, p.id
+      limit %s offset %s
+    ) t $q$, v_sort, v_order, v_limit, (v_page - 1) * v_limit)
+  into v_items;
+  return jsonb_build_object('items', v_items, 'total', v_total, 'page', v_page, 'limit', v_limit);
+end;
+$$;
+
+create or replace function public.admin_unban(p_user_id uuid) returns void
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  perform private.require_admin();
+  update private.user_access set banned_until = null, reason = null where user_id = p_user_id;
+  update auth.users set banned_until = null where id = p_user_id;
+end;
+$$;
+```
+
+Run: `npx -y supabase@2.120.0 migration up` → `Applying migration <ts>_admin_ban_sources.sql...`
+
+- [ ] **Step 0c: 통과 확인**
+
+Run: `npx -y supabase@2.120.0 test db 2>&1 | tail -2`
+Expected: `Files=11, Tests=140 ... Result: PASS`. (`create or replace`는 기존 GRANT/REVOKE를 유지한다.)
+
+- [ ] **Step 0d: 커밋**
+
+```bash
+git add supabase/migrations/*_admin_ban_sources.sql supabase/tests/database/100_admin_ban_sources.test.sql
+git commit -m "fix(admin): 관리자 목록·해제가 대시보드(Auth) 정지도 반영(pgTAP)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
 
 **Interfaces:**
 - Consumes: Task 1 타입; 1단계 RPC `admin_list_users(p_page, p_limit, p_sort, p_order) → jsonb`, `admin_list_rooms(p_page, p_limit) → jsonb`, `admin_ban(p_user_id, p_until, p_reason?)`, `admin_unban(p_user_id)`, `admin_force_logout(p_user_id)`; 4단계 `MESSAGE_SELECT`, `PARTICIPANT_SELECT`, `toMessagePage`, `toParticipant`
@@ -314,11 +411,15 @@ await ok(admin.client.rpc("admin_ban", { p_user_id: u2.id, p_until: "9999-12-31T
 assert.equal(isBanned((await find(u2.id)).bannedUntil), true, "정지 반영");
 await ok(admin.client.rpc("admin_unban", { p_user_id: u2.id }));
 assert.equal((await find(u2.id)).bannedUntil, null, "해제 반영");
+
+// 정리(강제 로그아웃 전에): 1:1은 둘 다 나가고, 그룹방은 관리자가 마지막 멤버를 강퇴 → 방 삭제
+await ok(u2.client.rpc("leave_room", { p_room_id: oneToOne }));
+await ok(u1.client.rpc("leave_room", { p_room_id: oneToOne }));
+await ok(admin.client.rpc("kick_member", { p_room_id: group, p_user_id: u1.id }));
+assert.ok(!(await ok(admin.client.rpc("admin_list_rooms", { p_page: 1, p_limit: 100 }))).items.some((r) => r.id === group), "마지막 멤버 강퇴 시 방 삭제");
+
 await ok(admin.client.rpc("admin_force_logout", { p_user_id: u1.id }));
 assert.equal((await ok(u1.client.from("profiles").select("id"))).length, 0, "강제 로그아웃된 토큰은 데이터 0행");
-
-// 정리: 남은 방은 u2가 나간다(u1은 강제 로그아웃 상태)
-await ok(u2.client.rpc("leave_room", { p_room_id: oneToOne }));
 
 console.log("verify-admin: OK");
 process.exit(0);
@@ -866,12 +967,23 @@ const noop = () => {};
 // 관리자 방 열람: 멤버(그룹방 강퇴) + 메시지 읽기 전용 실시간. setViewingRoom을 호출하지 않으므로 mark_read 없음(§8.3).
 export const RoomDetail = ({ room }: { room: AdminRoom }) => {
   const { user } = useAuth();
-  const { watchRoom } = useChat();
+  const { watchRoom, onRoomEvent } = useChat();
   const { success, error } = useToast();
   const queryClient = useQueryClient();
 
   // 참여하지 않은 방도 Realtime으로 받는다
   useEffect(() => watchRoom(room.id), [room.id, watchRoom]);
+
+  // 다른 사람의 퇴장·강퇴로 멤버 수가 바뀌거나 방이 삭제되면 목록을 갱신한다(삭제되면 선택이 풀린다).
+  useEffect(
+    () =>
+      onRoomEvent((e) => {
+        if (e.roomId === room.id && e.type === "member_removed") {
+          void queryClient.invalidateQueries({ queryKey: ADMIN_ROOMS_QUERY_KEY });
+        }
+      }),
+    [room.id, onRoomEvent, queryClient],
+  );
 
   const chatRoom = useMemo<Room>(
     () => ({ id: room.id, name: room.name, isGroup: room.isGroup, ownerId: room.createdBy, participants: [] }),
@@ -1050,7 +1162,7 @@ SUPABASE_PUBLISHABLE_KEY=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH node scr
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH node scripts/verify-auth.mjs
 ```
 그리고 저장소 루트에서 `npx -y supabase@2.120.0 test db`(alice·bob 테스트 방은 먼저 정리 — 030 테스트가 전역 삭제 메시지 수에 민감).
-Expected: 전부 통과(test 30, pgTAP 137).
+Expected: 전부 통과(test 30, pgTAP 140).
 
 - [ ] **Step 2: 브라우저 확인** — `pnpm dev` 실행 중, Chrome 확장 도구가 있으면 그것으로, 없으면 설치된 Chrome을 `playwright-core`(세션 scratch)로 컨텍스트 3개(admin, alice, bob) 띄워 자동 실행. `page.on("dialog", d => d.accept())`. 시작 전 alice·bob 방 정리, bob의 `user_access` 행 삭제(이전 단계 강제 로그아웃 흔적).
   1. alice로 `/admin/users` 직접 접속 → 관리자 화면이 보이지 않고 `/chat/friends`로 이동(Review Focus 1).
@@ -1059,12 +1171,26 @@ Expected: 전부 통과(test 30, pgTAP 137).
   4. admin이 bob [강제 로그아웃] → bob 탭 `/login`. bob 재로그인 가능.
   5. alice가 bob과 1:1 방 생성 후 "안녕" 전송(bob은 친구 탭). admin `/admin/rooms` → 그 방 선택 → "안녕" 보임, 멤버 2명, 1:1이라 [강퇴] 없음, 답장·수정·삭제 버튼 없음. alice 화면 "안녕" 아래 `1` 유지(관리자 열람은 읽음 아님, Review Focus 3).
   6. admin이 방을 보는 중 alice가 "두번째" 전송 → admin 화면에 새로고침 없이 표시. alice가 수정·삭제 → admin 화면 반영.
-  7. alice가 bob과 그룹방 생성 → admin이 그 방 선택 → bob [강퇴] → admin 멤버 목록에서 bob이 바로 사라지고, bob 채팅 탭에서 방이 사라진다(Review Focus 4).
+  7. alice가 bob과 그룹방 생성 → admin이 그 방 선택 → bob [강퇴] → admin 멤버 목록에서 bob이 바로 사라지고, bob 채팅 탭에서 방이 사라진다(Review Focus 4). 이어서 alice가 그 방을 [나가기] → admin 화면에서 새로고침 없이 방이 목록에서 사라지고 "왼쪽에서 채팅방을 선택하세요."(Review Focus 5).
+  9. 대시보드 Ban: SQL `update auth.users set banned_until = now() + interval '1 day' where email='bob@dongchat.local'` → admin 목록 새로고침 시 bob "정지" 배지 → [해제] → `auth.users.banned_until` null, bob 로그인 가능.
   8. 영구 정지: admin이 bob [정지] → "영구" → 배지 "정지 · 영구" → [해제]로 복구.
 
 - [ ] **Step 3: 마무리** — 테스트 데이터 정리(방은 참여자 나가기 또는 SQL 삭제, bob `user_access` 정리). 발견한 문제는 해당 Task를 고치고 Step 1 재통과 후 커밋.
 
 ---
+
+## 계획 리뷰 반영 (Codex, `docs/superpowers/reviews/2026-10-14-stage5-plan-review-codex.md`)
+
+| # | 지적 | 반영 |
+|---|---|---|
+| C1 | 같은 방 중복 watch 해제가 남은 구독까지 제거 | 기각 — 해제는 `indexOf`로 한 항목만 지우는 함수형 업데이트라 배열이 곧 참조 수다([42,42]→[42]→[]). StrictMode도 최종 [42] |
+| C2 | 다른 사람 퇴장·방 삭제 시 관리자 방 목록 미갱신 | 수용 — RoomDetail이 `member_removed`에 목록 invalidate(Task 4 Step 5), 브라우저 7번에 확인 추가 |
+| C3 | 목록·해제가 대시보드(Auth) Ban을 반영 안 함 | 수용 — RPC 2개 교체 + pgTAP(Task 2 Step 0a~0d), 브라우저 9번 |
+| I4 | Provider 이동으로 인증 확정 전 방 조회 | 기각 — 보호 경로는 proxy가 세션을 보장, 채팅 레이아웃에서도 같은 동작이었다 |
+| I5 | 가드 로딩 중 빈 화면 | 기각 — 짧은 로딩 중 빈 화면은 허용, `user === null`은 useAuth가 /login으로 보낸다 |
+| I6 | verify-admin 정리 불완전 | 수용 — 강제 로그아웃 전에 방 정리, 그룹방은 마지막 멤버 강퇴로 삭제 확인 |
+| I7 | 삭제로 페이지 범위 초과 시 빈 페이지 | 보류(minor) — 드문 경우, effect setState 없이 해결하려면 쿼리 구조 변경 필요 |
+| M8~M10 | 훅 테스트·시간대 정책·lint 주의 | 보류(minor) — lint는 각 Task 게이트에서 확인 |
 
 ## Self-Review 결과
 
