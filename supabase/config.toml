@@ -419,7 +419,7 @@ enabled = true
 client_id = "env(SUPABASE_AUTH_EXTERNAL_KAKAO_CLIENT_ID)"
 # DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
 secret = "env(SUPABASE_AUTH_EXTERNAL_KAKAO_SECRET)"
-redirect_uri = ""
+redirect_uri = "http://localhost:54321/auth/v1/callback"
 url = ""
 skip_nonce_check = false
 # 비즈 앱이 아니면 카카오가 이메일을 주지 않는다.
