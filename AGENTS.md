@@ -12,6 +12,7 @@
 - 백엔드는 Supabase 클라우드 프로젝트. 절차는 [DEPLOYMENT.md](DEPLOYMENT.md).
 - 운영 도메인이 들어가는 곳(도메인을 바꾸면 함께 바꾼다):
   - Supabase Authentication → Site URL `https://dongchat-eta.vercel.app`, Redirect URLs `https://dongchat-eta.vercel.app/auth/callback`
+  - 카카오 로그인의 `redirectTo`에는 `/auth/callback?next=…`처럼 쿼리가 붙는다. Supabase는 Site URL과 같은 호스트의 주소를 경로·쿼리와 무관하게 허용하므로(2026-10-15 로컬 `auth.flow_state`로 확인) Redirect URLs를 바꿀 필요 없다. 도메인을 바꾸면 Site URL도 함께 바꾼다.
   - 카카오 로그인은 Supabase 콜백(`https://<ref>.supabase.co/auth/v1/callback`)을 카카오 콘솔 Redirect URI에 등록(앱 도메인이 아님)
 - 비밀(service role 키, VAPID 개인키, 웹훅 비밀)은 Vercel 환경 변수에 넣지 않는다. Vercel에는 `NEXT_PUBLIC_*` 세 개만.
 

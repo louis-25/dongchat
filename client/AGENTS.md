@@ -31,7 +31,8 @@ app/, components/   UI — Supabase를 모른다
 - 발송은 서버(메시지 트리거 → Edge Function `send-push`). 알림 URL은 `/chat/rooms/<id>`(예전 `?room=<id>`는 목록 화면이 새 주소로 넘긴다).
 
 ## 화면 구조(모바일 우선)
-- 라우트: `/chat/friends`, `/chat/rooms`, `/chat/rooms/[id]`(하단 탭 숨김), `/chat/settings`, `/login`, `/join`, `/admin/*`(PC용).
+- 라우트: `/chat/friends`, `/chat/rooms`, `/chat/rooms/[id]`(하단 탭 숨김), `/chat/settings`, `/invite/[code]`(친구 초대 수락), `/login`, `/join`, `/admin/*`(PC용).
+- 로그인 복귀: proxy가 비로그인 접근을 `/login?next=<경로>`로 보내고, 로그인·가입·카카오 콜백은 `lib/safe-next.ts`의 `safeNext`로 검증한 경로로 돌아간다(같은 사이트 경로만, 로그인 화면 제외).
 - 선택된 방은 주소가 기준이다(전역 상태 없음). 방으로 이동할 때는 `markInAppNav()` 후 `roomPath(id)`.
 - 색은 `lib/theme.ts`가 단일 출처(대비 테스트 포함). 컴포넌트는 `bg-background`, `text-muted-foreground`, `bg-bubble-me` 같은 토큰만 쓰고 hex·`gray-*`·`blue-*`를 쓰지 않는다.
 - 시트·메뉴는 `components/ui/sheet.tsx`(네이티브 dialog). 새 UI 의존성을 추가하지 않는다.
