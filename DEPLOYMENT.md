@@ -19,14 +19,16 @@
 ## 2. 웹 푸시
 ```bash
 npx -y supabase@2.120.0 functions deploy send-push --no-verify-jwt
-npx -y supabase@2.120.0 secrets set VAPID_PUBLIC_KEY=<공개키> VAPID_PRIVATE_KEY=<개인키> VAPID_SUBJECT=mailto:<연락 메일> PUSH_WEBHOOK_SECRET=<임의의 긴 값>
+npx -y supabase@2.120.0 secrets set VAPID_PUBLIC_KEY=<공개키> VAPID_PRIVATE_KEY=<개인키> VAPID_SUBJECT=https://dongchat-eta.vercel.app PUSH_WEBHOOK_SECRET=<임의의 긴 값>
 ```
 Studio SQL에서 웹훅 값(Vault) 설정 — 비밀은 위 `PUSH_WEBHOOK_SECRET`과 같은 값:
 ```sql
 select vault.create_secret('https://<ref>.supabase.co/functions/v1/send-push', 'push_webhook_url');
 select vault.create_secret('<PUSH_WEBHOOK_SECRET 값>', 'push_webhook_secret');
 ```
-주의: `secrets set`은 로컬 `supabase/.env`도 함께 읽어 올린다(로컬 전용 `PUSH_ALLOW_HTTP` 포함). 실행할 때마다 끝에 `npx -y supabase@2.120.0 secrets unset PUSH_ALLOW_HTTP`를 하고 `secrets list`로 확인한다.
+주의:
+- `VAPID_SUBJECT`는 실제 사이트 주소나 실제 메일이어야 한다. Apple(아이폰)은 `mailto:…@dongchat.local` 같은 가짜 주소를 `403 BadJwtToken`으로 거부한다(안드로이드는 통과해서 놓치기 쉽다).
+- `secrets set`은 로컬 `supabase/.env`도 함께 읽어 올린다. 로컬 전용 `PUSH_ALLOW_HTTP`뿐 아니라 로컬 `PUSH_WEBHOOK_SECRET`도 올라가 운영 값(Vault와 같아야 함)을 덮어쓰고, 그러면 모든 알림이 401이 된다. 값 하나만 바꿀 때는 `supabase/.env`를 잠시 다른 이름으로 옮기고 `secrets set --env-file <그 값만 담은 파일>`로 올린 뒤 되돌린다. 끝나면 `secrets list`로 `PUSH_ALLOW_HTTP`가 없는지, 값 해시가 바뀌지 않았는지 확인한다.
 
 `PUSH_ALLOW_HTTP`는 운영에 절대 설정하지 않는다 — 설정하지 않으면 알려진 브라우저 푸시 서비스(FCM·Mozilla·Windows·Apple)의 https 주소로만 발송한다(SSRF 방지).
 
