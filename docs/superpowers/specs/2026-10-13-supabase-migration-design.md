@@ -319,7 +319,7 @@ messages INSERT → Database Webhook(pg_net 비동기) [헤더 x-webhook-secret:
     3) push_subscriptions 조회 → web-push 발송(VAPID: Function secrets)
     4) 410/404 → 구독 삭제
 ```
-- payload: `{title: 방 이름 ?? 발신자 표시명, body: content, data: {roomId, url: '/chat/rooms?room=<roomId>'}}` (현행 동일).
+- payload: `{title: 방 이름 ?? 발신자 표시명, body: content, data: {roomId, url: '/chat/rooms/<roomId>'}}` (2026-10-15 모바일 UI 개편으로 방별 주소).
 - 클라: `usePushNotification`·서비스워커 유지, 저장만 `services/push`(endpoint upsert).
 - 구현 시 확인: Deno에서 `npm:web-push` 동작(불가 시 Deno용 webpush 라이브러리), 로컬 webhook → function 주소.
 

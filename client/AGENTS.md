@@ -28,7 +28,14 @@ app/, components/   UI — Supabase를 모른다
 
 ## 웹 푸시
 - 구독 저장은 `services/push.ts`(`register_push_subscription` RPC — 같은 브라우저 endpoint는 등록한 사용자에게 이전). 로그아웃 시 이 브라우저 구독을 지운다.
-- 발송은 서버(메시지 트리거 → Edge Function `send-push`). 알림 URL은 `/chat/rooms?room=<id>`.
+- 발송은 서버(메시지 트리거 → Edge Function `send-push`). 알림 URL은 `/chat/rooms/<id>`(예전 `?room=<id>`는 목록 화면이 새 주소로 넘긴다).
+
+## 화면 구조(모바일 우선)
+- 라우트: `/chat/friends`, `/chat/rooms`, `/chat/rooms/[id]`(하단 탭 숨김), `/chat/settings`, `/login`, `/join`, `/admin/*`(PC용).
+- 선택된 방은 주소가 기준이다(전역 상태 없음). 방으로 이동할 때는 `markInAppNav()` 후 `roomPath(id)`.
+- 색은 `lib/theme.ts`가 단일 출처(대비 테스트 포함). 컴포넌트는 `bg-background`, `text-muted-foreground`, `bg-bubble-me` 같은 토큰만 쓰고 hex·`gray-*`·`blue-*`를 쓰지 않는다.
+- 시트·메뉴는 `components/ui/sheet.tsx`(네이티브 dialog). 새 UI 의존성을 추가하지 않는다.
+- 높이는 `h-dvh`·`env(safe-area-inset-*)` 기준, `100vh`·`h-screen` 금지.
 
 ## React 규칙
 - effect 본문에서 동기 setState 금지, 렌더 중 ref 읽기/쓰기 금지(React 19 hooks lint). 브라우저 전용 값은 `useSyncExternalStore`(서버 스냅샷)로.
