@@ -8,6 +8,7 @@ import {
   toFriendRequest,
   toMessagePage,
   toRoom,
+  toRoomSummary,
 } from "./mappers.ts";
 
 const alice = { id: "a", username: "alice_dev", nickname: null, avatar_url: null };
@@ -105,4 +106,19 @@ test("메시지 내용: 앞뒤 공백 제거, 공백만·2000자 초과 거부, 
   assert.throws(() => normalizeMessageContent("   "), { code: "VALIDATION_FAILED" });
   assert.throws(() => normalizeMessageContent("a".repeat(2001)), { code: "VALIDATION_FAILED" });
   assert.equal(normalizeMessageContent("😀".repeat(2000)).length, 4000);
+});
+
+test("방 요약 행은 RoomSummary로, 메시지 없는 방은 lastMessage null", () => {
+  const base = {
+    room_id: 7, name: null, is_group: false, created_at: "2026-10-15T00:00:00Z", member_count: 2,
+    last_message_id: null, last_message_content: null, last_message_deleted: false,
+    last_message_sender_id: null, last_message_at: null, unread_count: 0,
+  };
+  assert.deepEqual(toRoomSummary(base), {
+    id: 7, name: null, isGroup: false, createdAt: "2026-10-15T00:00:00Z", memberCount: 2, lastMessage: null, unreadCount: 0,
+  });
+  assert.deepEqual(
+    toRoomSummary({ ...base, last_message_id: 3, last_message_content: null, last_message_deleted: true, last_message_sender_id: "u", last_message_at: "2026-10-15T01:00:00Z", unread_count: 4 }).lastMessage,
+    { id: 3, content: "", deleted: true, senderId: "u", at: "2026-10-15T01:00:00Z" },
+  );
 });

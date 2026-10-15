@@ -7,6 +7,7 @@ import type {
   Participant,
   Profile,
   Room,
+  RoomSummary,
 } from "../types/domain";
 
 const PROFILE_COLUMNS = "id, username, nickname, avatar_url";
@@ -139,3 +140,36 @@ export const normalizeMessageContent = (content: string): string => {
   }
   return text;
 };
+
+export type RoomSummaryRow = {
+  room_id: number;
+  name: string | null;
+  is_group: boolean;
+  created_at: string;
+  member_count: number;
+  last_message_id: number | null;
+  last_message_content: string | null;
+  last_message_deleted: boolean;
+  last_message_sender_id: string | null;
+  last_message_at: string | null;
+  unread_count: number;
+};
+
+export const toRoomSummary = (r: RoomSummaryRow): RoomSummary => ({
+  id: r.room_id,
+  name: r.name,
+  isGroup: r.is_group,
+  createdAt: r.created_at,
+  memberCount: r.member_count,
+  lastMessage:
+    r.last_message_id === null || r.last_message_at === null
+      ? null
+      : {
+          id: r.last_message_id,
+          content: r.last_message_content ?? "",
+          deleted: r.last_message_deleted,
+          senderId: r.last_message_sender_id,
+          at: r.last_message_at,
+        },
+  unreadCount: r.unread_count,
+});

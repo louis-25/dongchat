@@ -1,8 +1,16 @@
 import { createClient } from "@/lib/supabase/client";
-import type { Participant, Room } from "@/types/domain";
+import type { Participant, Room, RoomSummary } from "@/types/domain";
 import { getCurrentUserId } from "./auth";
 import { toDomainError } from "./errors";
-import { PARTICIPANT_SELECT, ROOM_SELECT, toParticipant, toRoom, type ParticipantRow, type RoomRow } from "./mappers";
+import {
+  PARTICIPANT_SELECT,
+  ROOM_SELECT,
+  toParticipant,
+  toRoom,
+  toRoomSummary,
+  type ParticipantRow,
+  type RoomRow,
+} from "./mappers";
 
 // 채팅방 경계. NestJS 복귀 시 이 파일 내부만 교체한다.
 // 내가 참여한 방(최신 생성 순). 관리자 열람용 전체 방 목록은 services/admin(5단계).
@@ -47,4 +55,18 @@ export async function leaveRoom(roomId: number): Promise<void> {
 export async function kickMember(roomId: number, userId: string): Promise<void> {
   const { error } = await createClient().rpc("kick_member", { p_room_id: roomId, p_user_id: userId });
   if (error) throw toDomainError(error);
+}
+
+// 채팅 목록 요약(최근 활동 순). 안 읽은 수는 서버 기준(남이 보낸·삭제 안 된·내 읽음 위치 이후).
+export async function listMyRooms(): Promise<RoomSummary[]> {
+  const { data, error } = await createClient().rpc("list_my_rooms");
+  if (error) throw toDomainError(error);
+  return data.map(toRoomSummary);
+}
+
+// 친구와의 1:1 방(있으면 그 방, 없으면 생성)
+export async function openDirectRoom(username: string): Promise<number> {
+  const { data, error } = await createClient().rpc("open_direct_room", { p_username: username });
+  if (error) throw toDomainError(error);
+  return data;
 }

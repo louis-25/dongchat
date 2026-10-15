@@ -11,6 +11,7 @@ import {
   toChatMessage,
   toMessagePage,
   toParticipant,
+  toRoomSummary,
 } from "../src/services/mappers.ts";
 
 const URL = process.env.SUPABASE_URL ?? "http://127.0.0.1:54321";
@@ -128,6 +129,15 @@ const fl = await waitFor((e) => e.tag === "u2user" && e.event === "force_logout"
 assert.equal(fl.payload.sessionId, undefined, "정지 통지에는 sessionId가 없다(모든 세션 대상)");
 assert.equal((await ok(u2.client.from("messages").select("id").eq("room_id", roomId))).length, 0, "정지 중 조회 0행");
 await ok(admin.client.rpc("admin_unban", { p_user_id: u2.id }));
+
+// 채팅 목록 요약 + 1:1 방 재사용 (모바일 UI 스펙 §5)
+const summary = (await ok(u1.client.rpc("list_my_rooms"))).map(toRoomSummary).find((s) => s.id === roomId);
+assert.ok(summary, "참여 방이 요약 목록에 있다");
+assert.equal(summary.memberCount, 2, "요약 인원 수");
+assert.ok(summary.lastMessage !== null, "요약 마지막 메시지");
+assert.equal(typeof summary.unreadCount, "number", "요약 안 읽은 수");
+assert.equal(await ok(u1.client.rpc("open_direct_room", { p_username: u2.username })), roomId, "기존 1:1 방 재사용");
+assert.equal(await ok(u2.client.rpc("open_direct_room", { p_username: u1.username })), roomId, "상대도 같은 방");
 
 // 나가기 → 나간 사람 user 토픽, 남은 사람 room 토픽 member_removed
 await ok(u2.client.rpc("leave_room", { p_room_id: roomId }));

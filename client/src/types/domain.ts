@@ -31,6 +31,17 @@ export type Room = {
   participants: Participant[];
 };
 
+// 채팅 목록 한 줄(list_my_rooms). 참여자·표시 이름은 Room(listRooms)과 합쳐서 쓴다.
+export type RoomSummary = {
+  id: number;
+  name: string | null;
+  isGroup: boolean;
+  createdAt: string;
+  memberCount: number;
+  lastMessage: { id: number; content: string; deleted: boolean; senderId: string | null; at: string } | null;
+  unreadCount: number;
+};
+
 export const displayName = (p: { username: string; nickname: string | null }): string => p.nickname ?? p.username;
 
 export const roomTitle = (room: Room, me: string): string =>
