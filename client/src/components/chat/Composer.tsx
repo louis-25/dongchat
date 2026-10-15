@@ -84,7 +84,7 @@ export function Composer({ disabled = false, replyTarget, editTarget, onCancel, 
           placeholder="메시지 입력"
           aria-label="메시지 입력"
           enterKeyHint="send"
-          className="max-h-32 min-h-10 flex-1 resize-none rounded-[20px] bg-muted px-4 py-2 text-[15px] leading-6 outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          className="max-h-32 min-h-10 flex-1 resize-none rounded-[20px] bg-muted px-4 py-2 text-base leading-6 outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
         />
         <button
           type="submit"

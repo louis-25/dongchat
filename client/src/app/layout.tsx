@@ -14,6 +14,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // 앱처럼 쓰도록 손가락 확대·입력창 자동 확대를 막는다(입력 글자는 16px 이상 유지)
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
   themeColor: THEME_TOKENS.mint.light.background,
