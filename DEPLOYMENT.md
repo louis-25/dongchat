@@ -26,6 +26,8 @@ Studio SQL에서 웹훅 값(Vault) 설정 — 비밀은 위 `PUSH_WEBHOOK_SECRET
 select vault.create_secret('https://<ref>.supabase.co/functions/v1/send-push', 'push_webhook_url');
 select vault.create_secret('<PUSH_WEBHOOK_SECRET 값>', 'push_webhook_secret');
 ```
+주의: `secrets set`은 로컬 `supabase/.env`도 함께 읽어 올린다(로컬 전용 `PUSH_ALLOW_HTTP` 포함). 실행할 때마다 끝에 `npx -y supabase@2.120.0 secrets unset PUSH_ALLOW_HTTP`를 하고 `secrets list`로 확인한다.
+
 `PUSH_ALLOW_HTTP`는 운영에 절대 설정하지 않는다 — 설정하지 않으면 알려진 브라우저 푸시 서비스(FCM·Mozilla·Windows·Apple)의 https 주소로만 발송한다(SSRF 방지).
 
 ## 3. Vercel
