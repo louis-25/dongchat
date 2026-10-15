@@ -1,5 +1,7 @@
-// 푸시 알림 클릭 URL(/chat/rooms?room=<id>)에서 열 방 id를 읽는다. 잘못된 값은 무시(null).
+// 예전 푸시 알림 클릭 URL(/chat/rooms?room=<id>)에서 열 방 id를 읽는다(새 주소로 넘기기용). 잘못된 값은 무시(null).
 export const roomIdFromSearch = (search: string): number | null => {
   const id = Number(new URLSearchParams(search).get("room"));
   return Number.isInteger(id) && id > 0 ? id : null;
 };
+
+export const roomPath = (id: number): string => `/chat/rooms/${id}`;

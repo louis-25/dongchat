@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { roomIdFromSearch } from "./push-url.ts";
+import { roomIdFromSearch, roomPath } from "./push-url.ts";
 
 test("알림 URL의 ?room=을 방 id로 읽는다", () => {
   assert.equal(roomIdFromSearch("?room=42"), 42);
@@ -9,4 +9,8 @@ test("알림 URL의 ?room=을 방 id로 읽는다", () => {
   assert.equal(roomIdFromSearch("?room=abc"), null);
   assert.equal(roomIdFromSearch("?room=0"), null);
   assert.equal(roomIdFromSearch("?room=-3"), null);
+});
+
+test("방 주소", () => {
+  assert.equal(roomPath(42), "/chat/rooms/42");
 });
