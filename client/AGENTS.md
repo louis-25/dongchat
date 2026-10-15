@@ -27,6 +27,7 @@ app/, components/   UI — Supabase를 모른다
 - 같은 토픽 재구독은 `lib/topic-gate.ts`를 거친다(realtime-js가 해제 중인 채널을 돌려주는 문제).
 
 ## 웹 푸시
+- 켜는 흐름: 브라우저는 사용자 동작 없이 허락 창을 띄울 수 없다. 채팅 목록의 `PushPrompt`가 [켜기]로 묻고(닫으면 7일 숨김), 이미 허용한 브라우저는 채팅 레이아웃의 `usePushNotification({ autoRegister: true })`가 로그인마다 자동 등록한다. 설정에서 직접 끄면 `dongchat.pushOptOut`이 남아 자동 등록·안내를 하지 않는다. 판단은 `lib/push-prompt.ts`(단위 테스트).
 - 구독 저장은 `services/push.ts`(`register_push_subscription` RPC — 같은 브라우저 endpoint는 등록한 사용자에게 이전). 로그아웃 시 이 브라우저 구독을 지운다.
 - 발송은 서버(메시지 트리거 → Edge Function `send-push`). 알림 URL은 `/chat/rooms/<id>`(예전 `?room=<id>`는 목록 화면이 새 주소로 넘긴다).
 

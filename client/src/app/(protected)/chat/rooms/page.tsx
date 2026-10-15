@@ -9,6 +9,7 @@ import { ScreenHeader } from "@/components/chat/ScreenHeader";
 import { RoomRow } from "@/components/chat/RoomRow";
 import { CreateGroupSheet } from "@/components/chat/CreateGroupSheet";
 import { InstallBanner } from "@/components/chat/InstallBanner";
+import { PushPrompt } from "@/components/chat/PushPrompt";
 import useAuth from "@/hooks/useAuth";
 import { useRooms } from "@/hooks/useRooms";
 import { useRoomActions } from "@/hooks/useRoomActions";
@@ -62,6 +63,7 @@ export default function RoomsPage() {
           </ul>
         )}
       </div>
+      <PushPrompt />
       <InstallBanner />
       <CreateGroupSheet
         open={creating}

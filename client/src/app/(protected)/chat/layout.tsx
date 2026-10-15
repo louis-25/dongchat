@@ -3,12 +3,14 @@
 import { usePathname } from "next/navigation";
 import { BottomTabs } from "@/components/chat/BottomTabs";
 import { useInAppNotification } from "@/hooks/useInAppNotification";
+import { usePushNotification } from "@/hooks/usePushNotification";
 import { useRoomSummariesSync } from "@/hooks/useRoomSummaries";
 
 // 폰 한 화면: 위 화면 내용(각 페이지가 자기 상단 바), 아래 하단 탭(방 안에서는 숨김). PC는 가운데 한 열.
 export default function ChatLayout({ children }: { children: React.ReactNode }) {
   useInAppNotification();
   useRoomSummariesSync();
+  usePushNotification({ autoRegister: true }); // 이미 허용한 브라우저는 로그인 때마다 자동 등록
   const inRoom = /^\/chat\/rooms\/\d+/.test(usePathname());
   return (
     <div className="mx-auto flex h-dvh max-w-md flex-col bg-background md:border-x">

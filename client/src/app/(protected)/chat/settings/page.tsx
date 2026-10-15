@@ -60,13 +60,10 @@ export default function SettingsPage() {
       else toast.error("알림을 끄지 못했어요.");
       return;
     }
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-      toast.error("브라우저 설정에서 알림을 허용해 주세요.");
-      return;
-    }
-    if (await push.subscribe()) toast.success("알림을 켰어요.");
-    else toast.error("알림을 켜지 못했어요.");
+    const result = await push.subscribe();
+    if (result === "granted") toast.success("알림을 켰어요.");
+    else if (result === "denied") toast.error("브라우저 설정에서 이 사이트의 알림을 허용해 주세요.");
+    else if (result === "failed") toast.error("알림을 켜지 못했어요.");
   };
 
   const logout = async () => {
