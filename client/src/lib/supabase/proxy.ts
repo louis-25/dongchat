@@ -4,7 +4,7 @@ import type { Database } from "./database.types";
 
 const PUBLIC_PATHS = ["/login", "/join", "/auth"];
 const AUTH_ENTRY_PATHS = ["/", "/login", "/join"];
-const HOME = "/chat/friends";
+const HOME = "/chat/rooms";
 
 const isPublic = (pathname: string) =>
   PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

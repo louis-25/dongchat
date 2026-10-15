@@ -9,7 +9,7 @@ const useRouter = () => {
     goHome: () => router.push("/"),
     goLogin: () => router.push("/login"),
     goJoin: () => router.push("/join"),
-    goChat: () => router.push("/chat/friends"),
+    goChat: () => router.push("/chat/rooms"),
   };
 };
 

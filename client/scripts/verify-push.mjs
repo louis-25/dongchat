@@ -110,7 +110,7 @@ try {
   assert.deepEqual(decrypt(dev2, hit.body), {
     title: "push",
     body: "푸시 테스트",
-    data: { roomId, url: `/chat/rooms?room=${roomId}` },
+    data: { roomId, url: `/chat/rooms/${roomId}` },
   });
   await waitFor((r) => r.path === `/gone/${stamp}`, "u3(410)");
   await new Promise((r) => setTimeout(r, 1500));

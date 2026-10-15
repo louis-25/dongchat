@@ -6,11 +6,13 @@ import { toast } from "sonner";
 import { useChat } from "@/components/chat-provider";
 import useAuth from "@/hooks/useAuth";
 import { useRooms } from "@/hooks/useRooms";
+import { markInAppNav } from "@/lib/nav";
+import { roomPath } from "@/lib/push-url";
 import { displayName, roomTitle } from "@/types/domain";
 
 // 지금 보고 있지 않은 방(또는 탭이 가려진 상태)의 새 메시지를 토스트로 알린다.
 export function useInAppNotification() {
-  const { onRoomEvent, isViewing, setPickedRoomId } = useChat();
+  const { onRoomEvent, isViewing } = useChat();
   const { user } = useAuth();
   const { data: rooms = [] } = useRooms();
   const router = useRouter();
@@ -32,12 +34,12 @@ export function useInAppNotification() {
         action: {
           label: "열기",
           onClick: () => {
-            setPickedRoomId(e.roomId);
-            router.push("/chat/rooms");
+            markInAppNav();
+            router.push(roomPath(e.roomId));
           },
         },
         duration: 5000,
       });
     });
-  }, [user, onRoomEvent, isViewing, setPickedRoomId, router]);
+  }, [user, onRoomEvent, isViewing, router]);
 }

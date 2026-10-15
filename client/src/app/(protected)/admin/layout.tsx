@@ -18,21 +18,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!isLoading && user && !user.isAdmin) router.replace("/chat/friends");
+    if (!isLoading && user && !user.isAdmin) router.replace("/chat/rooms");
   }, [isLoading, user, router]);
 
   if (!user?.isAdmin) return null;
 
   return (
-    <div className="space-y-4">
-      <nav className="flex gap-2">
-        {TABS.map((tab) => (
-          <Button key={tab.href} variant={pathname === tab.href ? "default" : "outline"} asChild>
-            <Link href={tab.href}>{tab.label}</Link>
-          </Button>
-        ))}
-      </nav>
-      {children}
+    <div className="min-h-dvh bg-background">
+      <header className="border-b">
+        <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
+          <Link href="/chat/rooms" className="text-sm text-muted-foreground hover:text-foreground">‹ 채팅으로</Link>
+          <span className="font-semibold">관리자</span>
+        </div>
+      </header>
+      <main className="mx-auto max-w-5xl space-y-4 px-4 py-6">
+        <nav className="flex gap-2">
+          {TABS.map((tab) => (
+            <Button key={tab.href} variant={pathname === tab.href ? "default" : "outline"} asChild>
+              <Link href={tab.href}>{tab.label}</Link>
+            </Button>
+          ))}
+        </nav>
+        {children}
+      </main>
     </div>
   );
 }

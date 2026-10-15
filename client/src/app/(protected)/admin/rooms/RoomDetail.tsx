@@ -9,8 +9,8 @@ import useToast from "@/hooks/useToast";
 import { getErrorMessage } from "@/lib/error-handler";
 import { kickMember } from "@/services/rooms";
 import { displayName, type AdminRoom, type Room } from "@/types/domain";
-import { MessageList } from "@/app/(protected)/chat/[menu]/_components/ChatRooms/components/MessageList";
-import { useChatMessages } from "@/app/(protected)/chat/[menu]/_components/ChatRooms/hooks/useChatMessages";
+import { MessageList } from "@/components/chat/MessageList";
+import { useChatMessages } from "@/hooks/useChatMessages";
 
 export const ADMIN_ROOMS_QUERY_KEY = ["admin", "rooms"] as const;
 const noop = () => {};

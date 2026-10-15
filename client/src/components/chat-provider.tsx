@@ -16,10 +16,7 @@ type RoomListener = (e: RoomEvent) => void;
 type ChatContextValue = {
   // 참여 중인 모든 방의 이벤트를 받는다. 반환값으로 해제.
   onRoomEvent: (listener: RoomListener) => () => void;
-  // 채팅 탭에서 고른 방(탭을 오가도 유지). 인앱 알림 [열기]도 이 값을 바꾼다.
-  pickedRoomId: number | null;
-  setPickedRoomId: (id: number | null) => void;
-  // 지금 화면에 열려 있는 방(채팅 탭이 아니면 null). 알림 판단용이라 렌더하지 않는다.
+  // 지금 화면에 열려 있는 방(방 화면이 아니면 null). 알림·안 읽은 수 판단용이라 렌더하지 않는다.
   setViewingRoom: (id: number | null) => void;
   isViewing: (id: number) => boolean;
   // 참여하지 않은 방도 room 채널을 구독한다(관리자 열람). 반환값으로 해제.
@@ -43,7 +40,6 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const listeners = useRef(new Set<RoomListener>());
   const roomSubs = useRef(new Map<number, () => void>());
   const viewingRoom = useRef<number | null>(null);
-  const [pickedRoomId, setPickedRoomId] = useState<number | null>(null);
   const [watched, setWatched] = useState<number[]>([]);
 
   const refreshRooms = useCallback(
@@ -138,8 +134,8 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const value = useMemo(
-    () => ({ onRoomEvent, pickedRoomId, setPickedRoomId, setViewingRoom, isViewing, watchRoom }),
-    [onRoomEvent, pickedRoomId, setViewingRoom, isViewing, watchRoom],
+    () => ({ onRoomEvent, setViewingRoom, isViewing, watchRoom }),
+    [onRoomEvent, setViewingRoom, isViewing, watchRoom],
   );
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };

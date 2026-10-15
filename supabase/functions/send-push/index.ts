@@ -25,7 +25,7 @@ async function send(t: Target): Promise<number> {
     const payload = JSON.stringify({
       title: t.title,
       body: t.body,
-      data: { roomId: t.room_id, url: `/chat/rooms?room=${t.room_id}` },
+      data: { roomId: t.room_id, url: `/chat/rooms/${t.room_id}` },
     });
     // sendNotification은 Node https를 써서 Deno에서 불안정 → 요청만 만들고 fetch로 보낸다(스파이크로 확인).
     const req = webpush.generateRequestDetails({ endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth } }, payload, {
