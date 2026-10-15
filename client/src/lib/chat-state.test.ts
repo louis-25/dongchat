@@ -5,6 +5,7 @@ import {
   applyEdited,
   bumpRead,
   withoutRemoved,
+  withProfile,
   mergeMessages,
   mergeSnapshot,
   scrollAction,
@@ -112,7 +113,7 @@ test("뷰: 표시명·내 메시지·답장 미리보기(삭제·미로드 포�
     {
       me: "a",
       participants: [part(A, null), part(B, null)],
-      profiles: { x: profile("x", "left_user") },
+      profiles: { x: { ...profile("x", "left_user"), avatarUrl: "https://img/x.png" } },
       replyTargets: [msg(2, "b", { content: "", deletedAt: "t" })],
       readState: {},
     },
@@ -122,9 +123,20 @@ test("뷰: 표시명·내 메시지·답장 미리보기(삭제·미로드 포�
   assert.equal(views[1].isMine, true);
   assert.deepEqual(views[1].replyTo, { id: 5, senderName: "정동현", content: "m5", deleted: false });
   assert.equal(views[2].senderName, "left_user", "방을 나간 발신자는 조회한 프로필로");
+  assert.equal(views[2].senderAvatar, "https://img/x.png");
+  assert.equal(views[3].senderAvatar, null, "모르는 발신자는 사진 없음");
   assert.deepEqual(views[2].replyTo, { id: 2, senderName: "정동현", content: "", deleted: true });
   assert.equal(views[3].senderName, "(알 수 없음)");
   assert.deepEqual(views[3].replyTo, { id: 99, senderName: "", content: "이전 메시지", deleted: false });
+});
+
+test("프로필 변경: 해당 참여자만 바꾸고, 없으면 같은 배열", () => {
+  const list = [part(A, null), part(B, 3)];
+  const next = withProfile(list, { ...B, avatarUrl: "https://img/b2.png" });
+  assert.equal(next[1].user.avatarUrl, "https://img/b2.png");
+  assert.equal(next[1].lastReadMessageId, 3);
+  assert.equal(next[0], list[0]);
+  assert.equal(withProfile(list, profile("z", "zed")), list);
 });
 
 test("스크롤: 첫 로드·과거 로드·새 메시지·변화 없음 (Review Focus 2)", () => {

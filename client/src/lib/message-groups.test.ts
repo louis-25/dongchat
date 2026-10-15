@@ -6,7 +6,7 @@ import type { MessageView } from "./chat-state.ts";
 const v = (id: number, senderId: string, at: Date, deleted = false): MessageView => ({
   id, roomId: 1, senderId, content: `m${id}`, replyToId: null, editedAt: null,
   deletedAt: deleted ? at.toISOString() : null, createdAt: at.toISOString(),
-  senderName: senderId, isMine: senderId === "me", unreadCount: null, replyTo: null,
+  senderName: senderId, senderAvatar: null, isMine: senderId === "me", unreadCount: null, replyTo: null,
 });
 
 test("날짜가 바뀌면 구분선, 같은 사람 5분 이내는 한 묶음", () => {

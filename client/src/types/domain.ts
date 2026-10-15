@@ -76,12 +76,14 @@ export type RoomEvent =
   | { type: "message_deleted"; roomId: number; id: number }
   | { type: "read_update"; roomId: number; userId: string; lastReadMessageId: number }
   | { type: "member_removed"; roomId: number; userId: string }
+  | { type: "profile_updated"; roomId: number; profile: Profile }
   | { type: "subscribed"; roomId: number };
 
 export type UserEvent =
   | { type: "member_added"; roomId: number; userId: string }
   | { type: "member_removed"; roomId: number; userId: string }
-  | { type: "force_logout"; reason: string; sessionId?: string };
+  | { type: "force_logout"; reason: string; sessionId?: string }
+  | { type: "profile_updated"; profile: Profile };
 
 // ---- 관리자 ----
 export type Page<T> = { items: T[]; total: number; page: number; limit: number };

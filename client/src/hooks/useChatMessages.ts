@@ -11,6 +11,7 @@ import {
   mergeSnapshot,
   seedReadState,
   withoutRemoved,
+  withProfile,
   toViews,
   type ReadState,
 } from "@/lib/chat-state";
@@ -134,6 +135,13 @@ export const useChatMessages = (room: Room | null) => {
         }
         case "read_update":
           update(roomId, (s) => ({ ...s, readState: bumpRead(s.readState, e.userId, e.lastReadMessageId) }));
+          break;
+        case "profile_updated":
+          update(roomId, (s) => ({
+            ...s,
+            profiles: s.profiles[e.profile.id] ? { ...s.profiles, [e.profile.id]: e.profile } : s.profiles,
+            participants: s.participants && withProfile(s.participants, e.profile),
+          }));
           break;
         case "member_removed":
           // 나간 사람은 안 읽은 수 기준에서 바로 뺀다(목록 refetch를 기다리지 않음)

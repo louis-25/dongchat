@@ -83,7 +83,6 @@ export const RoomDetail = ({ room }: { room: AdminRoom }) => {
       <MessageList
         key={room.id}
         messages={messages}
-        isGroup={room.isGroup}
         readOnly
         onLoadOlder={loadOlder}
         hasMore={hasMore}

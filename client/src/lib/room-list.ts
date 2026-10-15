@@ -49,5 +49,7 @@ export const applyRoomEvent = (
     case "member_removed":
     case "subscribed":
       return { list, refetch: true };
+    case "profile_updated":
+      return { list, refetch: false };
   }
 };

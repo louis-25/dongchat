@@ -8,7 +8,6 @@ import { buildTimeline } from "@/lib/message-groups";
 
 type Props = {
   messages: MessageView[];
-  isGroup: boolean;
   readOnly?: boolean;
   onOpenActions?: (view: MessageView) => void;
   onLoadOlder: () => void;
@@ -21,7 +20,7 @@ const LOAD_OLDER_PX = 40;
 const noop = () => {};
 
 // 방이 바뀌면 부모가 key로 다시 마운트한다(스크롤 기준 초기화).
-export function MessageList({ messages, isGroup, readOnly = false, onOpenActions = noop, onLoadOlder, hasMore, loadingOlder }: Props) {
+export function MessageList({ messages, readOnly = false, onOpenActions = noop, onLoadOlder, hasMore, loadingOlder }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const last = useRef({ firstId: null as number | null, lastId: null as number | null, height: 0, nearBottom: true });
   const [atBottom, setAtBottom] = useState(true);
@@ -74,7 +73,6 @@ export function MessageList({ messages, isGroup, readOnly = false, onOpenActions
               view={item.view}
               first={item.first}
               last={item.last}
-              isGroup={isGroup}
               readOnly={readOnly}
               onOpenActions={onOpenActions}
               onJumpTo={jumpTo}

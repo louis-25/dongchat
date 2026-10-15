@@ -76,7 +76,6 @@ export default function RoomPage() {
       <MessageList
         key={room.id}
         messages={messages}
-        isGroup={room.isGroup}
         onOpenActions={setActionTarget}
         onLoadOlder={loadOlder}
         hasMore={hasMore}

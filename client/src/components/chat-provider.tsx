@@ -4,7 +4,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import useAuth, { AUTH_QUERY_KEY } from "@/hooks/useAuth";
+import { FRIENDS_QUERY_KEY } from "@/hooks/useFriends";
 import { ROOMS_QUERY_KEY, useRooms } from "@/hooks/useRooms";
+import { withProfile } from "@/lib/chat-state";
 import { getErrorMessage } from "@/lib/error-handler";
 import { createThrottle } from "@/lib/throttle";
 import { getCurrentSessionId, signOut } from "@/services/auth";
@@ -95,6 +97,19 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     // 재연결 재시도마다 확인 요청이 쌓이지 않게 10초에 한 번만(첫 확인은 항상 실행)
     const allowResync = createThrottle(10_000);
     return subscribeUser(userId, async (e) => {
+      if (e.type === "profile_updated") {
+        // 방 목록·채팅 화면은 받은 값으로 바로 고치고, 친구 목록·내 정보는 다시 받는다.
+        const rooms = queryClient.getQueryData<Room[]>(ROOMS_QUERY_KEY) ?? [];
+        queryClient.setQueryData<Room[]>(ROOMS_QUERY_KEY, (prev) =>
+          prev?.map((r) => ({ ...r, participants: withProfile(r.participants, e.profile) })),
+        );
+        for (const r of rooms) {
+          if (r.participants.some((p) => p.user.id === e.profile.id)) emit({ type: "profile_updated", roomId: r.id, profile: e.profile });
+        }
+        void queryClient.invalidateQueries({ queryKey: FRIENDS_QUERY_KEY });
+        if (e.profile.id === userId) void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+        return;
+      }
       if (e.type !== "force_logout") {
         if (e.type === "member_removed") dropRoom(e.roomId); // 방 채널 권한이 사라져 room 이벤트는 못 받을 수 있다
         void refreshRooms();
@@ -112,7 +127,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       void queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
       void refreshRooms();
     });
-  }, [userId, refreshRooms, dropRoom, queryClient]);
+  }, [userId, refreshRooms, dropRoom, queryClient, emit]);
 
   const onRoomEvent = useCallback((listener: RoomListener) => {
     listeners.current.add(listener);

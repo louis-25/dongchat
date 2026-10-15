@@ -10,18 +10,17 @@ type Props = {
   view: MessageView;
   first: boolean;
   last: boolean;
-  isGroup: boolean;
   readOnly: boolean;
   onOpenActions: (view: MessageView) => void;
   onJumpTo: (id: number) => void;
 };
 
-export function MessageBubble({ view, first, last, isGroup, readOnly, onOpenActions, onJumpTo }: Props) {
+export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJumpTo }: Props) {
   const deleted = view.deletedAt !== null;
   const press = useLongPress(() => onOpenActions(view));
   const interactive = !readOnly && !deleted;
   const mine = view.isMine;
-  const showSender = !mine && isGroup && first;
+  const showSender = !mine && first;
 
   const meta = last && (
     <div className={cn("flex shrink-0 flex-col justify-end pb-0.5 text-[11px] leading-tight", mine ? "items-end" : "items-start")}>
@@ -34,8 +33,10 @@ export function MessageBubble({ view, first, last, isGroup, readOnly, onOpenActi
 
   return (
     <div id={`msg-${view.id}`} className={cn("flex gap-2", mine ? "justify-end" : "justify-start", first ? "mt-2" : "mt-0.5")}>
-      {!mine && isGroup && (
-        <div className="w-9 shrink-0">{showSender && <UserAvatar name={view.senderName} className="size-9 rounded-[10px]" />}</div>
+      {!mine && (
+        <div className="w-9 shrink-0">
+          {showSender && <UserAvatar name={view.senderName} src={view.senderAvatar} className="size-9 rounded-[10px]" />}
+        </div>
       )}
       <div className={cn("flex min-w-0 max-w-[78%] flex-col", mine ? "items-end" : "items-start")}>
         {showSender && <div className="mb-1 text-xs text-muted-foreground">{view.senderName}</div>}

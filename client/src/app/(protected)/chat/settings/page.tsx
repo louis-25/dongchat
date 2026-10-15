@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScreenHeader } from "@/components/chat/ScreenHeader";
+import { UserAvatar } from "@/components/chat/UserAvatar";
 import useAuth, { AUTH_QUERY_KEY } from "@/hooks/useAuth";
 import { usePalette } from "@/hooks/usePalette";
 import { usePushNotification } from "@/hooks/usePushNotification";
@@ -18,8 +19,8 @@ import { PALETTES, PALETTE_LABELS, THEME_TOKENS } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/services/auth";
 import { resetMyInviteCode } from "@/services/invites";
-import { updateNickname } from "@/services/profile";
-import type { DomainError } from "@/types/domain";
+import { updateAvatar, updateNickname } from "@/services/profile";
+import { displayName, type DomainError } from "@/types/domain";
 
 const MODES = [
   { value: "light", label: "라이트" },
@@ -44,6 +45,15 @@ export default function SettingsPage() {
       await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
       setNickname(null);
       toast.success("닉네임을 바꿨어요.");
+    },
+    onError: (e) => toast.error(getErrorMessage(e as unknown as DomainError)),
+  });
+
+  const saveAvatar = useMutation({
+    mutationFn: updateAvatar,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+      toast.success("프로필 사진을 바꿨어요.");
     },
     onError: (e) => toast.error(getErrorMessage(e as unknown as DomainError)),
   });
@@ -135,6 +145,23 @@ export default function SettingsPage() {
         )}
 
         <h2 className={section}>내 프로필</h2>
+        {user && (
+          <label className={cn("pressable mx-4 mb-3 flex w-fit cursor-pointer items-center gap-3", saveAvatar.isPending && "opacity-60")}>
+            <UserAvatar name={displayName(user)} src={user.avatarUrl} className="size-16 rounded-[18px] text-xl" />
+            <span className="text-sm text-primary">{saveAvatar.isPending ? "올리는 중…" : "사진 바꾸기"}</span>
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={saveAvatar.isPending}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = ""; // 같은 파일을 다시 골라도 onChange가 오도록
+                if (file) saveAvatar.mutate(file);
+              }}
+            />
+          </label>
+        )}
         {user && (
           <form
             className="flex items-center gap-2 px-4"

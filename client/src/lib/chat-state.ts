@@ -6,6 +6,7 @@ export type ReadState = Record<string, number>; // userId → last_read_message_
 
 export type MessageView = ChatMessage & {
   senderName: string;
+  senderAvatar: string | null;
   isMine: boolean;
   unreadCount: number | null; // null = 읽음 스냅샷 전(숫자 숨김)
   replyTo: { id: number; senderName: string; content: string; deleted: boolean } | null;
@@ -59,6 +60,12 @@ export const bumpRead = (state: ReadState, userId: string, id: number): ReadStat
 export const withoutRemoved = (participants: Participant[], removed: string[]): Participant[] =>
   participants.filter((p) => !removed.includes(p.user.id));
 
+// 닉네임·사진 변경(profile_updated) 반영
+export const withProfile = (participants: Participant[], profile: Profile): Participant[] =>
+  participants.some((p) => p.user.id === profile.id)
+    ? participants.map((p) => (p.user.id === profile.id ? { ...p, user: profile } : p))
+    : participants;
+
 // 스냅샷 반영. 한 번도 안 읽은 참여자(null)는 0으로 본다.
 export const seedReadState = (participants: Participant[], prev: ReadState | null): ReadState =>
   participants.reduce((acc, p) => bumpRead(acc, p.user.id, p.lastReadMessageId ?? 0), prev ?? {});
@@ -73,8 +80,10 @@ export const toViews = (
     readState: ReadState | null;
   },
 ): MessageView[] => {
+  const profileOf = (id: string | null): Profile | undefined =>
+    id === null ? undefined : (ctx.participants.find((x) => x.user.id === id)?.user ?? ctx.profiles[id]);
   const nameOf = (id: string | null): string => {
-    const p = id === null ? undefined : (ctx.participants.find((x) => x.user.id === id)?.user ?? ctx.profiles[id]);
+    const p = profileOf(id);
     return p ? displayName(p) : "(알 수 없음)";
   };
   const known = new Map([...ctx.replyTargets, ...messages].map((m) => [m.id, m]));
@@ -85,6 +94,7 @@ export const toViews = (
     return {
       ...m,
       senderName: nameOf(m.senderId),
+      senderAvatar: profileOf(m.senderId)?.avatarUrl ?? null,
       isMine: m.senderId === ctx.me,
       unreadCount:
         readState === null
