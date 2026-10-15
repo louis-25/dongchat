@@ -32,7 +32,7 @@
   - `reset_my_invite_code() returns text` — 새 코드로 교체(예전 링크 무효).
   - `preview_invite(p_code text) returns table(username text, nickname text, avatar_url text)` — 없으면 0행.
   - `accept_invite(p_code text) returns table(username text, already boolean)` — §3.
-- 새 에러 코드 2개(선행 스펙 §5.5 확장): `INVITE_NOT_FOUND`, `FRIEND_BLOCKED`. 클라 `lib/error-handler.ts` 메시지 추가.
+- 새 에러 코드 2개(선행 스펙 §5.5 확장): `INVITE_NOT_FOUND`, `FRIEND_BLOCKED`. 사용자 문구는 RPC `hint`가 계약이다(`services/errors.ts`가 hint를 message로 옮기고 `getErrorMessage` default가 보여 준다) — `error-handler.ts` 변경 없음.
 - pgTAP: 생성·재사용·재발급 무효화, 미리보기, 수락 4가지 관계 상태, 차단, 본인, 없는 코드, 정지 세션, anon 불가.
 
 ## 5. 로그인 후 돌아오기

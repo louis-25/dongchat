@@ -62,13 +62,15 @@ client/src/components/chat/InviteButton.tsx
 `supabase/tests/database/150_friend_invites.test.sql`:
 ```sql
 begin;
-select plan(18);
+select plan(22);
 
 select tests.create_user('fi_alice@test.com', '{"username":"fi_alice"}');
 select tests.create_user('fi_bob@test.com', '{"username":"fi_bob"}');
 select tests.create_user('fi_carol@test.com', '{"username":"fi_carol"}');
 select tests.create_user('fi_dave@test.com', '{"username":"fi_dave"}');
 select tests.create_user('fi_erin@test.com', '{"username":"fi_erin"}');
+select tests.create_user('fi_frank@test.com', '{"username":"fi_frank"}');
+select tests.create_user('fi_gina@test.com', '{"username":"fi_gina"}');
 
 -- 코드 생성·재사용
 select tests.login_as(tests.uid('fi_alice@test.com'));
@@ -101,7 +103,27 @@ select lives_ok(format($$ select * from public.accept_invite(%L) $$, current_set
 reset role;
 select is((select status from public.friends where requester_id = tests.uid('fi_carol@test.com')), 'ACCEPTED', '대기 중 → ACCEPTED');
 
--- 차단 → FRIEND_BLOCKED
+-- 대기 중 요청(초대자→수신자 방향) → ACCEPTED
+select tests.login_as(tests.uid('fi_alice@test.com'));
+select public.send_friend_request('fi_frank');
+reset role;
+select tests.login_as(tests.uid('fi_frank@test.com'));
+select lives_ok(format($$ select * from public.accept_invite(%L) $$, current_setting('t.code')), '반대 방향 대기 중 요청도 수락');
+reset role;
+select is((select status from public.friends where receiver_id = tests.uid('fi_frank@test.com')), 'ACCEPTED', '반대 방향 대기 중 → ACCEPTED');
+
+-- 초대자가 수신자를 차단(gina→alice 요청을 alice가 차단) → FRIEND_BLOCKED
+select tests.login_as(tests.uid('fi_gina@test.com'));
+select public.send_friend_request('fi_alice');
+reset role;
+select tests.login_as(tests.uid('fi_alice@test.com'));
+select public.respond_friend_request((select id from public.friends where requester_id = tests.uid('fi_gina@test.com')), 'BLOCK');
+reset role;
+select tests.login_as(tests.uid('fi_gina@test.com'));
+select throws_ok(format($$ select * from public.accept_invite(%L) $$, current_setting('t.code')), 'P0001', 'FRIEND_BLOCKED', '초대자가 차단한 경우 거부');
+reset role;
+
+-- 수신자가 초대자를 차단 → FRIEND_BLOCKED
 select tests.login_as(tests.uid('fi_alice@test.com'));
 select public.send_friend_request('fi_dave');
 reset role;
@@ -123,6 +145,7 @@ reset role;
 
 -- 노출 범위·권한
 select ok(not has_table_privilege('authenticated', 'private.friend_invites', 'select'), '코드 테이블 직접 조회 불가');
+select is(pg_get_function_result('public.preview_invite(text)'::regprocedure), 'TABLE(username text, nickname text, avatar_url text)', '미리보기는 이름·사진만');
 select ok(not has_function_privilege('anon', 'public.accept_invite(text)', 'execute'), 'anon 수락 불가');
 insert into private.user_access (user_id, banned_until) values (tests.uid('fi_erin@test.com'), now() + interval '1 day');
 select tests.login_as(tests.uid('fi_erin@test.com'));
@@ -225,7 +248,7 @@ begin
   if v_row.id is null then
     insert into public.friends (requester_id, receiver_id, status) values (v_inviter, v_me, 'ACCEPTED')
     on conflict do nothing; -- 동시에 두 번 눌러도 한 행
-    return query select v_name, false;
+    return query select v_name, not found; -- 다른 탭이 먼저 넣었으면 already
   elsif v_row.status = 'BLOCKED' then
     raise exception 'FRIEND_BLOCKED' using hint = '친구를 추가할 수 없어요.';
   elsif v_row.status = 'ACCEPTED' then
@@ -243,7 +266,7 @@ grant execute on function public.get_my_invite_code(), public.reset_my_invite_co
   public.preview_invite(text), public.accept_invite(text) to authenticated;
 ```
 
-- [ ] **Step 4: 적용·통과** — `npx -y supabase@2.120.0 migration up --local < /dev/null`, `test db` → `Result: PASS`(179+18=197), `db advisors --local`의 ERROR 0.
+- [ ] **Step 4: 적용·통과** — `npx -y supabase@2.120.0 migration up --local < /dev/null`, `test db` → `Result: PASS`(179+22=201), `db advisors --local`의 ERROR 0.
 - [ ] **Step 5: 타입** — `gen types --local --lang typescript --schema public > client/src/lib/supabase/database.types.ts`, `npx -y prettier@3.6.2 --print-width 110 --write` 후 tsc 0.
 - [ ] **Step 6: 커밋** — `feat(db): 친구 초대 코드와 수락(accept_invite)`.
 
@@ -253,7 +276,7 @@ grant execute on function public.get_my_invite_code(), public.reset_my_invite_co
 
 **Files:** Create `client/src/lib/safe-next.ts`, `safe-next.test.ts`, `client/src/lib/share.ts`, `share.test.ts`, `client/src/services/invites.ts`; Modify `client/scripts/verify-social.mjs`.
 
-**Interfaces — Produces:** `safeNext(raw: string | null | undefined, fallback?: string): string`; `shareOrCopy(data: { title: string; text: string; url: string }, nav?: ShareNav): Promise<"shared" | "copied" | "cancelled">`; `getMyInviteCode(): Promise<string>`, `resetMyInviteCode(): Promise<string>`, `previewInvite(code): Promise<Profile | null>`, `acceptInvite(code): Promise<{ username: string; already: boolean }>`; `inviteUrl(origin: string, code: string): string`(safe-next.ts가 아닌 share.ts에).
+**Interfaces — Produces:** `safeNext(raw: string | null | undefined, fallback?: string): string`; `shareOrCopy(data: { title: string; text: string; url: string }, nav?: ShareNav): Promise<"shared" | "copied" | "cancelled" | "unavailable">`; `getMyInviteCode(): Promise<string>`, `resetMyInviteCode(): Promise<string>`, `previewInvite(code): Promise<Profile | null>`, `acceptInvite(code): Promise<{ username: string; already: boolean }>`; `inviteUrl(origin: string, code: string): string`(safe-next.ts가 아닌 share.ts에).
 
 - [ ] **Step 1: 실패하는 테스트**
 
@@ -301,6 +324,11 @@ test("공유 미지원·실패면 복사", async () => {
   assert.equal(await shareOrCopy(data, { share: async () => { throw new Error("NotAllowed"); }, clipboard }), "copied");
 });
 
+test("클립보드도 없거나 거부되면 unavailable", async () => {
+  assert.equal(await shareOrCopy(data, {}), "unavailable");
+  assert.equal(await shareOrCopy(data, { clipboard: { writeText: async () => { throw new Error("denied"); } } }), "unavailable");
+});
+
 test("초대 주소", () => {
   assert.equal(inviteUrl("https://a.app", "Ab_-1"), "https://a.app/invite/Ab_-1");
 });
@@ -331,10 +359,11 @@ export type ShareNav = {
 export const inviteUrl = (origin: string, code: string): string => `${origin}/invite/${code}`;
 
 // 폰은 공유 창, 없으면(주로 PC) 클립보드. 사용자가 공유 창을 닫으면(AbortError) 아무것도 하지 않는다.
+// 클립보드도 없거나 거부되면 unavailable — 화면이 링크를 직접 보여 준다.
 export const shareOrCopy = async (
   data: { title: string; text: string; url: string },
   nav: ShareNav = globalThis.navigator,
-): Promise<"shared" | "copied" | "cancelled"> => {
+): Promise<"shared" | "copied" | "cancelled" | "unavailable"> => {
   if (nav.share) {
     try {
       await nav.share(data);
@@ -343,8 +372,13 @@ export const shareOrCopy = async (
       if ((e as { name?: string }).name === "AbortError") return "cancelled";
     }
   }
-  await nav.clipboard?.writeText(data.url);
-  return "copied";
+  if (!nav.clipboard) return "unavailable";
+  try {
+    await nav.clipboard.writeText(data.url);
+    return "copied";
+  } catch {
+    return "unavailable";
+  }
 };
 ```
 `client/src/services/invites.ts`:
@@ -380,7 +414,7 @@ export async function acceptInvite(code: string): Promise<{ username: string; al
   return { username: data[0].username, already: data[0].already };
 }
 ```
-`pnpm test` → 모두 pass(58+5), tsc 0.
+`pnpm test` → 모두 pass(58+6), tsc 0.
 
 - [ ] **Step 3: verify-social 확장** — `console.log("verify-social: OK");` 바로 위에:
 ```js
@@ -476,13 +510,18 @@ export function InviteButton({ variant = "full" }: { variant?: "full" | "icon" }
   const invite = useMutation({
     mutationFn: async () => {
       const code = await getMyInviteCode();
-      return shareOrCopy({
+      const url = inviteUrl(window.location.origin, code);
+      return { url, result: await shareOrCopy({
         title: "dongchat 친구 초대",
         text: "dongchat에서 같이 대화해요! 링크를 누르면 바로 친구가 돼요.",
-        url: inviteUrl(window.location.origin, code),
-      });
+        url,
+      }) };
     },
-    onSuccess: (result) => result === "copied" && toast.success("초대 링크를 복사했어요. 친구에게 보내 주세요."),
+    onSuccess: ({ url, result }) => {
+      if (result === "copied") toast.success("초대 링크를 복사했어요. 친구에게 보내 주세요.");
+      // 공유·복사 모두 불가: 링크를 직접 보여 줘서 길게 눌러 복사하게 한다
+      if (result === "unavailable") toast.info(url, { description: "링크를 길게 눌러 복사해 친구에게 보내 주세요.", duration: 20_000 });
+    },
     onError: (e) => toast.error(getErrorMessage(e as unknown as DomainError)),
   });
   if (variant === "icon")
