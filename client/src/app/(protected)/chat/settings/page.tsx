@@ -1,5 +1,166 @@
-import { ScreenHeader } from "@/components/chat/ScreenHeader";
+"use client";
 
-export default function Page() {
-  return <ScreenHeader title="설정" />;
+import { useState, useSyncExternalStore } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTheme } from "next-themes";
+import { ChevronRight } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScreenHeader } from "@/components/chat/ScreenHeader";
+import useAuth, { AUTH_QUERY_KEY } from "@/hooks/useAuth";
+import { usePalette } from "@/hooks/usePalette";
+import { usePushNotification } from "@/hooks/usePushNotification";
+import { getErrorMessage } from "@/lib/error-handler";
+import { PALETTES, PALETTE_LABELS, THEME_TOKENS } from "@/lib/theme";
+import { cn } from "@/lib/utils";
+import { signOut } from "@/services/auth";
+import { updateNickname } from "@/services/profile";
+import type { DomainError } from "@/types/domain";
+
+const MODES = [
+  { value: "light", label: "라이트" },
+  { value: "dark", label: "다크" },
+  { value: "system", label: "기기 설정" },
+] as const;
+const noSubscribe = () => () => {};
+
+export default function SettingsPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { palette, setPalette } = usePalette();
+  const { theme, setTheme } = useTheme();
+  const mounted = useSyncExternalStore(noSubscribe, () => true, () => false); // next-themes 값은 브라우저에서만
+  const push = usePushNotification();
+  const [nickname, setNickname] = useState<string | null>(null); // null = 편집 전(현재 값 표시)
+
+  const saveNickname = useMutation({
+    mutationFn: updateNickname,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+      setNickname(null);
+      toast.success("닉네임을 바꿨어요.");
+    },
+    onError: (e) => toast.error(getErrorMessage(e as unknown as DomainError)),
+  });
+
+  const togglePush = async () => {
+    if (push.isSubscribed) {
+      if (await push.unsubscribe()) toast.success("알림을 껐어요.");
+      else toast.error("알림을 끄지 못했어요.");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      toast.error("브라우저 설정에서 알림을 허용해 주세요.");
+      return;
+    }
+    if (await push.subscribe()) toast.success("알림을 켰어요.");
+    else toast.error("알림을 켜지 못했어요.");
+  };
+
+  const logout = async () => {
+    await signOut();
+    queryClient.clear(); // 이전 사용자 데이터가 다음 로그인에 보이지 않도록
+    queryClient.setQueryData(AUTH_QUERY_KEY, null);
+    router.replace("/login");
+  };
+
+  const section = "px-4 pb-2 pt-5 text-xs font-medium text-muted-foreground";
+  const row = "flex min-h-12 w-full items-center justify-between gap-3 px-4 py-2 text-left";
+
+  return (
+    <>
+      <ScreenHeader title="설정" />
+      <div className="min-h-0 flex-1 overflow-y-auto pb-6">
+        <h2 className={section}>색 테마</h2>
+        <div className="grid grid-cols-3 gap-2 px-4" role="radiogroup" aria-label="색 테마">
+          {PALETTES.map((p) => {
+            const t = THEME_TOKENS[p].light;
+            return (
+              <button
+                key={p}
+                type="button"
+                role="radio"
+                aria-checked={palette === p}
+                onClick={() => setPalette(p)}
+                className={cn("rounded-xl border-2 p-2 text-sm", palette === p ? "border-primary font-semibold" : "border-border")}
+              >
+                <div className="mb-1.5 flex h-12 flex-col justify-center gap-1.5 rounded-lg px-2" style={{ background: t.background }}>
+                  <div className="h-2.5 w-3/5 rounded-full" style={{ background: t.bubbleThem }} />
+                  <div className="ml-auto h-2.5 w-3/5 rounded-full" style={{ background: t.bubbleMe }} />
+                </div>
+                {PALETTE_LABELS[p]}
+              </button>
+            );
+          })}
+        </div>
+
+        <h2 className={section}>밝기</h2>
+        <div className="mx-4 flex rounded-xl bg-muted p-1" role="radiogroup" aria-label="밝기">
+          {MODES.map((m) => {
+            const on = mounted && (theme ?? "system") === m.value;
+            return (
+              <button
+                key={m.value}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => setTheme(m.value)}
+                className={cn("flex-1 rounded-lg py-2 text-sm", on ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground")}
+              >
+                {m.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <h2 className={section}>알림</h2>
+        {push.isSupported ? (
+          <button type="button" className={row} onClick={() => void togglePush()} disabled={push.isLoading}>
+            <span>새 메시지 알림</span>
+            <span className={push.isSubscribed ? "font-semibold text-primary" : "text-muted-foreground"}>
+              {push.isSubscribed ? "켜짐" : "꺼짐"}
+            </span>
+          </button>
+        ) : (
+          <p className="px-4 text-sm text-muted-foreground">이 브라우저는 알림을 지원하지 않아요. 홈 화면에 추가하면 쓸 수 있어요.</p>
+        )}
+
+        <h2 className={section}>내 프로필</h2>
+        {user && (
+          <form
+            className="flex items-center gap-2 px-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (nickname !== null) saveNickname.mutate(nickname);
+            }}
+          >
+            <Input
+              value={nickname ?? user.nickname ?? ""}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder={user.username}
+              maxLength={20}
+              aria-label="닉네임"
+            />
+            <Button type="submit" disabled={nickname === null || saveNickname.isPending}>저장</Button>
+          </form>
+        )}
+        <p className="px-4 pt-1 text-xs text-muted-foreground">비워 두면 아이디(@{user?.username})가 보여요.</p>
+
+        <div className="mt-6 divide-y border-y">
+          {user?.isAdmin && (
+            <Link href="/admin/users" className={row}>
+              <span>관리자 화면</span>
+              <ChevronRight className="size-5 text-muted-foreground" />
+            </Link>
+          )}
+          <button type="button" className={`${row} text-destructive`} onClick={() => void logout()}>로그아웃</button>
+        </div>
+      </div>
+    </>
+  );
 }
