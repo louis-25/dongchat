@@ -53,7 +53,7 @@ export function Composer({ disabled = false, replyTarget, editTarget, onCancel, 
             <span className="font-semibold">{bar.label}</span>
             {bar.detail && <span className="text-muted-foreground">: {bar.detail}</span>}
           </span>
-          <button type="button" onClick={onCancel} aria-label={editTarget ? "수정 취소" : "답장 취소"} className="p-1">
+          <button type="button" onClick={onCancel} aria-label={editTarget ? "수정 취소" : "답장 취소"} className="pressable rounded-full p-1 active:bg-background">
             <X className="size-4" />
           </button>
         </div>
@@ -90,7 +90,7 @@ export function Composer({ disabled = false, replyTarget, editTarget, onCancel, 
           type="submit"
           disabled={disabled || text.trim() === ""}
           aria-label={editTarget ? "수정 저장" : "보내기"}
-          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
+          className="pressable flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-40"
         >
           <SendHorizontal className="size-5" />
         </button>

@@ -34,7 +34,7 @@ export default function RoomsPage() {
       <ScreenHeader
         title="채팅"
         actions={
-          <button type="button" onClick={() => setCreating(true)} aria-label="그룹 채팅 만들기" className="flex size-10 items-center justify-center rounded-full hover:bg-muted">
+          <button type="button" onClick={() => setCreating(true)} aria-label="그룹 채팅 만들기" className="flex size-10 items-center justify-center rounded-full pressable hover:bg-muted active:bg-muted">
             <Plus className="size-6" />
           </button>
         }

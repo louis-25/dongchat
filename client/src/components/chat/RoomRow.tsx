@@ -20,7 +20,7 @@ export function RoomRow({ summary, room, me }: Props) {
       <Link
         href={roomPath(summary.id)}
         onClick={(e) => isPlainClick(e) && markInAppNav()}
-        className="flex items-center gap-3 px-4 py-2.5 active:bg-muted"
+        className="flex items-center gap-3 px-4 py-2.5 pressable-row"
       >
         <UserAvatar name={other ? displayName(other) : title} src={other?.avatarUrl} />
         <div className="min-w-0 flex-1">

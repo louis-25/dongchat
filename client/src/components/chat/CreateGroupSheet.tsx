@@ -38,7 +38,7 @@ export function CreateGroupSheet({ open, onClose, onCreate, pending }: Props) {
             const on = picked.includes(f.user.username);
             return (
               <li key={f.id}>
-                <button type="button" onClick={() => toggle(f.user.username)} aria-pressed={on} className="flex w-full items-center gap-3 px-4 py-2 text-left active:bg-muted">
+                <button type="button" onClick={() => toggle(f.user.username)} aria-pressed={on} className="flex w-full items-center gap-3 px-4 py-2 text-left pressable-row">
                   <UserAvatar name={displayName(f.user)} src={f.user.avatarUrl} className="size-10" />
                   <span className="flex-1 truncate">{displayName(f.user)}</span>
                   <span className={cn("flex size-6 items-center justify-center rounded-full border", on && "border-primary bg-primary text-primary-foreground")}>
@@ -52,7 +52,8 @@ export function CreateGroupSheet({ open, onClose, onCreate, pending }: Props) {
       )}
       <Button
         className="mt-4 h-12 w-full text-base"
-        disabled={picked.length === 0 || pending}
+        disabled={picked.length === 0}
+        loading={pending}
         onClick={() => onCreate({ name: name.trim() || undefined, usernames: picked })}
       >
         {picked.length === 0 ? "함께할 친구를 골라 주세요" : `만들기 (${picked.length + 1}명)`}

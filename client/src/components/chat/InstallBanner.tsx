@@ -14,7 +14,7 @@ export function InstallBanner() {
         {mode === "prompt" ? "홈 화면에 추가하면 앱처럼 쓸 수 있어요" : "공유 버튼 → ‘홈 화면에 추가’로 앱처럼 쓸 수 있어요"}
       </p>
       {mode === "prompt" && <Button size="sm" onClick={() => void install()}>추가</Button>}
-      <button type="button" onClick={dismiss} aria-label="설치 안내 닫기" className="p-1 opacity-70">
+      <button type="button" onClick={dismiss} aria-label="설치 안내 닫기" className="pressable rounded-full p-1 opacity-70">
         <X className="size-4" />
       </button>
     </div>

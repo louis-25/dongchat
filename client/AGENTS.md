@@ -37,6 +37,8 @@ app/, components/   UI — Supabase를 모른다
 - 색은 `lib/theme.ts`가 단일 출처(대비 테스트 포함). 컴포넌트는 `bg-background`, `text-muted-foreground`, `bg-bubble-me` 같은 토큰만 쓰고 hex·`gray-*`·`blue-*`를 쓰지 않는다.
 - 시트·메뉴는 `components/ui/sheet.tsx`(네이티브 dialog). 새 UI 의존성을 추가하지 않는다.
 - 높이는 `h-dvh`·`env(safe-area-inset-*)` 기준, `100vh`·`h-screen` 금지.
+- 누름 반응: 폰에는 hover가 없다. 새 버튼·링크는 `pressable`(작아짐+어두워짐), 목록 행은 `pressable-row`(배경만)를 붙이고, 서버 요청 버튼은 `<Button loading>`으로 처리 중을 보인다. `hover:`만으로 상태를 표시하지 않는다.
+- 토스트는 상단 바 아래(offset 64px)에 뜬다 — 상단 버튼을 가리지 않게.
 
 ## React 규칙
 - effect 본문에서 동기 setState 금지, 렌더 중 ref 읽기/쓰기 금지(React 19 hooks lint). 브라우저 전용 값은 `useSyncExternalStore`(서버 스냅샷)로.

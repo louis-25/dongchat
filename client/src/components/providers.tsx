@@ -17,13 +17,29 @@ function ThemeColorSync() {
   return null;
 }
 
+// iOS 사파리는 touchstart 리스너가 없으면 :active(누르는 순간 스타일)를 적용하지 않는다.
+function ActiveStateOnIOS() {
+  useEffect(() => {
+    const noop = () => {};
+    document.addEventListener("touchstart", noop, { passive: true });
+    return () => document.removeEventListener("touchstart", noop);
+  }, []);
+  return null;
+}
+
 // 앱 전역 Provider. 인증 세션은 Supabase 쿠키 + useAuth(React Query)로 관리한다.
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <ThemeColorSync />
+      <ActiveStateOnIOS />
       <ReactQueryProvider>
-        <Toaster position="top-center" />
+        {/* 상단 바(56px + 노치) 아래에 띄워 ‹·＋·☰ 버튼을 가리지 않게 한다 */}
+        <Toaster
+          position="top-center"
+          offset={{ top: "calc(64px + env(safe-area-inset-top))" }}
+          mobileOffset={{ top: "calc(64px + env(safe-area-inset-top))" }}
+        />
         {children}
       </ReactQueryProvider>
     </ThemeProvider>

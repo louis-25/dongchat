@@ -26,7 +26,7 @@ export function AddFriendSheet({ open, onClose, onSubmit, pending }: { open: boo
       >
         <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="친구 아이디" autoCapitalize="none" autoCorrect="off" aria-label="친구 아이디" />
         <p className="mt-2 text-xs text-muted-foreground">영문·숫자·밑줄 3~20자. 상대가 수락하면 친구가 돼요.</p>
-        <Button type="submit" className="mt-4 h-12 w-full text-base" disabled={!valid || pending}>요청 보내기</Button>
+        <Button type="submit" className="mt-4 h-12 w-full text-base" disabled={!valid} loading={pending}>요청 보내기</Button>
       </form>
     </Sheet>
   );

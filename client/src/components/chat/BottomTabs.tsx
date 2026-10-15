@@ -27,7 +27,7 @@ export function BottomTabs() {
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={cn("relative flex h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs", active ? "font-semibold text-primary" : "text-muted-foreground")}
+            className={cn("pressable relative flex h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs", active ? "font-semibold text-primary" : "text-muted-foreground")}
           >
             <Icon className="size-6" strokeWidth={active ? 2.4 : 1.8} />
             {label}

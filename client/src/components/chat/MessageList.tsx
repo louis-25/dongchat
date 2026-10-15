@@ -86,7 +86,7 @@ export function MessageList({ messages, isGroup, readOnly = false, onOpenActions
         <button
           type="button"
           onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })}
-          className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow"
+          className="pressable absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow"
         >
           새 메시지 {unseen}개 <ArrowDown className="size-3.5" />
         </button>

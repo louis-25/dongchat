@@ -49,6 +49,31 @@
   --radius: 0.75rem;
 }
 
+/* 누르는 순간의 반응: 폰에는 hover가 없으므로 :active로 보여 준다. 빠르게(0.1초) 눌렀다 떼도 보이도록 짧은 전환. */
+@utility pressable {
+  transition: transform 100ms ease-out, filter 100ms ease-out, background-color 100ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  &:active:not(:disabled) {
+    transform: scale(0.96);
+    filter: brightness(0.92);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:active:not(:disabled) {
+      transform: none;
+    }
+  }
+}
+/* 목록 행: 줄 전체가 작아지면 어색하므로 배경만 */
+@utility pressable-row {
+  transition: background-color 100ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  &:active:not(:disabled) {
+    background-color: var(--muted);
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -57,4 +82,5 @@
     @apply bg-background text-foreground antialiased;
   }
   html, body { height: 100%; overscroll-behavior-y: none; }
+  button, a, [role="button"] { touch-action: manipulation; }
 }

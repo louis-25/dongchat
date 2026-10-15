@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { UserPlus } from "lucide-react";
+import { Loader2, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScreenHeader } from "@/components/chat/ScreenHeader";
 import { UserAvatar } from "@/components/chat/UserAvatar";
@@ -20,6 +20,13 @@ export default function FriendsPage() {
   const { sendFriendRequest, respondFriendRequest, isRequestPending, isResponding } = useFriendsActions();
   const { openDirect, isPending: opening } = useRoomActions();
   const [adding, setAdding] = useState(false);
+  // 처리 중 표시는 실제로 누른 버튼·줄에만(진행 여부는 mutation, 대상은 마지막으로 누른 것)
+  const [lastResponse, setLastResponse] = useState<string | null>(null);
+  const [lastOpened, setLastOpened] = useState<string | null>(null);
+  const respond = (id: number, action: "ACCEPT" | "BLOCK") => {
+    setLastResponse(`${id}:${action}`);
+    respondFriendRequest(id, action);
+  };
   const section = "px-4 pb-1 pt-4 text-xs font-medium text-muted-foreground";
 
   return (
@@ -33,7 +40,7 @@ export default function FriendsPage() {
               type="button"
               onClick={() => setAdding(true)}
               aria-label="친구 추가"
-              className="flex size-10 items-center justify-center rounded-full hover:bg-muted"
+              className="flex size-10 items-center justify-center rounded-full pressable hover:bg-muted active:bg-muted"
             >
               <UserPlus className="size-6" />
             </button>
@@ -65,14 +72,20 @@ export default function FriendsPage() {
                     <div className="truncate font-medium">{displayName(p.requester)}</div>
                     <div className="truncate text-xs text-muted-foreground">@{p.requester.username}</div>
                   </div>
-                  <Button size="sm" disabled={isResponding} onClick={() => respondFriendRequest(p.id, "ACCEPT")}>
+                  <Button
+                    size="sm"
+                    disabled={isResponding}
+                    loading={isResponding && lastResponse === `${p.id}:ACCEPT`}
+                    onClick={() => respond(p.id, "ACCEPT")}
+                  >
                     수락
                   </Button>
                   <Button
                     size="sm"
                     variant="secondary"
                     disabled={isResponding}
-                    onClick={() => respondFriendRequest(p.id, "BLOCK")}
+                    loading={isResponding && lastResponse === `${p.id}:BLOCK`}
+                    onClick={() => respond(p.id, "BLOCK")}
                   >
                     차단
                   </Button>
@@ -94,14 +107,20 @@ export default function FriendsPage() {
               <button
                 type="button"
                 disabled={opening}
-                onClick={() => openDirect(f.user.username)}
-                className="flex w-full items-center gap-3 px-4 py-2 text-left active:bg-muted disabled:opacity-60"
+                onClick={() => {
+                  setLastOpened(f.user.username);
+                  openDirect(f.user.username);
+                }}
+                className="flex w-full items-center gap-3 px-4 py-2 text-left pressable-row disabled:opacity-60"
               >
                 <UserAvatar name={displayName(f.user)} src={f.user.avatarUrl} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{displayName(f.user)}</div>
                   <div className="truncate text-xs text-muted-foreground">@{f.user.username}</div>
                 </div>
+                {opening && lastOpened === f.user.username && (
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" aria-label="대화 여는 중" />
+                )}
               </button>
             </li>
           ))}

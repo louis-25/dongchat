@@ -77,7 +77,7 @@ export default function SettingsPage() {
   };
 
   const section = "px-4 pb-2 pt-5 text-xs font-medium text-muted-foreground";
-  const row = "flex min-h-12 w-full items-center justify-between gap-3 px-4 py-2 text-left";
+  const row = "pressable-row flex min-h-12 w-full items-center justify-between gap-3 px-4 py-2 text-left";
 
   return (
     <>
@@ -94,7 +94,7 @@ export default function SettingsPage() {
                 role="radio"
                 aria-checked={palette === p}
                 onClick={() => setPalette(p)}
-                className={cn("rounded-xl border-2 p-2 text-sm", palette === p ? "border-primary font-semibold" : "border-border")}
+                className={cn("pressable rounded-xl border-2 p-2 text-sm", palette === p ? "border-primary font-semibold" : "border-border")}
               >
                 <div className="mb-1.5 flex h-12 flex-col justify-center gap-1.5 rounded-lg px-2" style={{ background: t.background }}>
                   <div className="h-2.5 w-3/5 rounded-full" style={{ background: t.bubbleThem }} />
@@ -117,7 +117,7 @@ export default function SettingsPage() {
                 role="radio"
                 aria-checked={on}
                 onClick={() => setTheme(m.value)}
-                className={cn("flex-1 rounded-lg py-2 text-sm", on ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground")}
+                className={cn("pressable flex-1 rounded-lg py-2 text-sm", on ? "bg-primary font-semibold text-primary-foreground" : "text-muted-foreground")}
               >
                 {m.label}
               </button>
@@ -153,7 +153,7 @@ export default function SettingsPage() {
               maxLength={20}
               aria-label="닉네임"
             />
-            <Button type="submit" disabled={nickname === null || saveNickname.isPending}>저장</Button>
+            <Button type="submit" disabled={nickname === null} loading={saveNickname.isPending}>저장</Button>
           </form>
         )}
         <p className="px-4 pt-1 text-xs text-muted-foreground">비워 두면 아이디(@{user?.username})가 보여요.</p>
@@ -166,7 +166,7 @@ export default function SettingsPage() {
           onClick={() => confirm("예전 초대 링크는 더 이상 쓸 수 없어요. 새로 만들까요?") && resetInvite.mutate()}
         >
           <span>초대 링크 새로 만들기</span>
-          <span className="text-xs text-muted-foreground">예전 링크 무효</span>
+          <span className="text-xs text-muted-foreground">{resetInvite.isPending ? "만드는 중…" : "예전 링크 무효"}</span>
         </button>
 
         <div className="mt-6 divide-y border-y">

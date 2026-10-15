@@ -49,7 +49,7 @@ export default function InvitePage() {
             <p className="text-lg font-bold">{displayName(inviter)}</p>
             <p className="text-sm text-muted-foreground">@{inviter.username}님이 친구로 초대했어요</p>
           </div>
-          <Button className="h-12 w-full text-base" disabled={accept.isPending} onClick={() => accept.mutate()}>친구 되기</Button>
+          <Button className="h-12 w-full text-base" loading={accept.isPending} onClick={() => accept.mutate()}>친구 되기</Button>
           <Link href="/chat/rooms" className="text-sm text-muted-foreground">나중에</Link>
         </>
       )}

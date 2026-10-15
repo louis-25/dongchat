@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { Share2 } from "lucide-react";
+import { Loader2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { getErrorMessage } from "@/lib/error-handler";
@@ -30,13 +30,13 @@ export function InviteButton({ variant = "full" }: { variant?: "full" | "icon" }
   });
   if (variant === "icon")
     return (
-      <button type="button" onClick={() => invite.mutate()} disabled={invite.isPending} aria-label="친구 초대" className="flex size-10 items-center justify-center rounded-full hover:bg-muted">
-        <Share2 className="size-5" />
+      <button type="button" onClick={() => invite.mutate()} disabled={invite.isPending} aria-label="친구 초대" className="flex size-10 items-center justify-center rounded-full pressable hover:bg-muted active:bg-muted">
+        {invite.isPending ? <Loader2 className="size-5 animate-spin" /> : <Share2 className="size-5" />}
       </button>
     );
   return (
-    <Button className="h-11 w-full" onClick={() => invite.mutate()} disabled={invite.isPending}>
-      <Share2 className="size-4" /> 친구 초대 링크 보내기
+    <Button className="h-11 w-full" onClick={() => invite.mutate()} loading={invite.isPending}>
+      {!invite.isPending && <Share2 className="size-4" />} 친구 초대 링크 보내기
     </Button>
   );
 }

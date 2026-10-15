@@ -68,7 +68,7 @@ export default function RoomPage() {
         subtitle={room.isGroup ? String(participants.length) : undefined}
         onBack={back}
         actions={
-          <button type="button" onClick={() => setMenuOpen(true)} aria-label="채팅방 메뉴" className="flex size-10 items-center justify-center rounded-full hover:bg-muted">
+          <button type="button" onClick={() => setMenuOpen(true)} aria-label="채팅방 메뉴" className="flex size-10 items-center justify-center rounded-full pressable hover:bg-muted active:bg-muted">
             <Menu className="size-6" />
           </button>
         }

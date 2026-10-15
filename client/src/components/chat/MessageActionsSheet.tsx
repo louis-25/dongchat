@@ -18,7 +18,7 @@ export function MessageActionsSheet({ target, onClose, onReply, onCopy, onEdit, 
     if (target) fn(target);
     onClose();
   };
-  const item = "flex h-12 w-full items-center px-1 text-left text-base active:bg-muted";
+  const item = "flex h-12 w-full items-center px-1 text-left text-base pressable-row";
   return (
     <Sheet open={target !== null} onClose={onClose} title="메시지">
       {target && (
