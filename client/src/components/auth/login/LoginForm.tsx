@@ -46,27 +46,23 @@ const LoginForm = () => {
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={methods.handleSubmit((data) => login.mutate(data))} className="space-y-4 mt-4">
-        <FormInput name="email" label="이메일" type="email" placeholder="이메일을 입력하세요" disabled={busy} />
-        <FormInput name="password" label="비밀번호" type="password" placeholder="비밀번호를 입력하세요" disabled={busy} />
-        <Button type="submit" className="w-full" disabled={busy}>
-          {login.isPending ? "로그인 중..." : "로그인"}
-        </Button>
-        <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">또는</span>
-          </div>
-        </div>
+      <form onSubmit={methods.handleSubmit((data) => login.mutate(data))} className="space-y-3">
         <Button
           type="button"
           onClick={() => kakao.mutate()}
-          className="w-full bg-[#FEE500] text-[#000000] hover:bg-[#FEE500]/90"
+          className="h-12 w-full bg-[#FEE500] text-base font-semibold text-[#191600] hover:bg-[#FEE500]/90"
           disabled={busy}
         >
-          {kakao.isPending ? "카카오 로그인 중..." : "카카오로 시작하기"}
+          {kakao.isPending ? "카카오로 이동 중…" : "카카오로 시작하기"}
+        </Button>
+        <div className="relative py-3">
+          <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+          <div className="relative flex justify-center text-xs"><span className="bg-background px-2 text-muted-foreground">또는 이메일로</span></div>
+        </div>
+        <FormInput name="email" label="이메일" type="email" placeholder="이메일" disabled={busy} />
+        <FormInput name="password" label="비밀번호" type="password" placeholder="비밀번호" disabled={busy} />
+        <Button type="submit" className="h-12 w-full text-base" disabled={busy}>
+          {login.isPending ? "로그인 중…" : "로그인"}
         </Button>
       </form>
     </FormProvider>
