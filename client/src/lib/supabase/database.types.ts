@@ -247,6 +247,13 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_invite: {
+        Args: { p_code: string };
+        Returns: {
+          already: boolean;
+          username: string;
+        }[];
+      };
       admin_ban: {
         Args: { p_reason?: string; p_until: string; p_user_id: string };
         Returns: undefined;
@@ -276,6 +283,7 @@ export type Database = {
         Returns: undefined;
       };
       get_me: { Args: Record<PropertyKey, never>; Returns: Json };
+      get_my_invite_code: { Args: Record<PropertyKey, never>; Returns: string };
       is_username_available: { Args: { p_username: string }; Returns: boolean };
       kick_member: {
         Args: { p_room_id: number; p_user_id: string };
@@ -300,6 +308,14 @@ export type Database = {
       };
       mark_read: { Args: { p_room_id: number }; Returns: number };
       open_direct_room: { Args: { p_username: string }; Returns: number };
+      preview_invite: {
+        Args: { p_code: string };
+        Returns: {
+          avatar_url: string;
+          nickname: string;
+          username: string;
+        }[];
+      };
       push_targets: {
         Args: { p_message_id: number };
         Returns: {
@@ -314,6 +330,10 @@ export type Database = {
       register_push_subscription: {
         Args: { p_auth: string; p_endpoint: string; p_p256dh: string };
         Returns: undefined;
+      };
+      reset_my_invite_code: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
       };
       respond_friend_request: {
         Args: { p_action: string; p_id: number };
