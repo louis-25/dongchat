@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ScreenHeader } from "@/components/chat/ScreenHeader";
 import { RoomRow } from "@/components/chat/RoomRow";
 import { CreateGroupSheet } from "@/components/chat/CreateGroupSheet";
+import { InstallBanner } from "@/components/chat/InstallBanner";
 import useAuth from "@/hooks/useAuth";
 import { useRooms } from "@/hooks/useRooms";
 import { useRoomActions } from "@/hooks/useRoomActions";
@@ -61,6 +62,7 @@ export default function RoomsPage() {
           </ul>
         )}
       </div>
+      <InstallBanner />
       <CreateGroupSheet
         open={creating}
         onClose={() => setCreating(false)}
