@@ -30,7 +30,9 @@ async function send(t: Target): Promise<number> {
     // sendNotification은 Node https를 써서 Deno에서 불안정 → 요청만 만들고 fetch로 보낸다(스파이크로 확인).
     const req = webpush.generateRequestDetails({ endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth } }, payload, {
       vapidDetails,
-      TTL: 60,
+      // 안드로이드는 화면이 꺼지면(Doze) 보통 우선순위를 미루고, 그사이 TTL이 지나면 버린다 → high + 하루 보관
+      TTL: 60 * 60 * 24,
+      urgency: "high",
     });
     // 응답 없는 endpoint가 함수를 붙잡지 않게 10초 제한, 리다이렉트로 다른 주소에 가지 않게 차단
     const res = await fetch(req.endpoint, {

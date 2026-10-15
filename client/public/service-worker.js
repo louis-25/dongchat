@@ -56,6 +56,7 @@ self.addEventListener('push', (event) => {
     data: notificationData.data,
     requireInteraction: false,
     tag: `chat-${notificationData.data.roomId || 'default'}`,
+    renotify: true, // 같은 방 알림이 남아 있어도 새 메시지마다 다시 울린다(없으면 조용히 내용만 바뀜)
     vibrate: [200, 100, 200],
   };
 
