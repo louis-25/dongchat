@@ -26,3 +26,13 @@ export const consumeInAppNav = (store: Storage | null = session()): boolean => {
     return false;
   }
 };
+
+// 같은 탭에서 이동하는 평범한 왼쪽 클릭만 앱 안 이동으로 본다(새 탭·수정키 클릭은 이 탭에 표시를 남기지 않는다).
+export const isPlainClick = (e: {
+  button: number;
+  metaKey: boolean;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  altKey: boolean;
+  defaultPrevented: boolean;
+}): boolean => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && !e.defaultPrevented;

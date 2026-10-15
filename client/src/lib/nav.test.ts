@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { consumeInAppNav, markInAppNav } from "./nav.ts";
+import { consumeInAppNav, isPlainClick, markInAppNav } from "./nav.ts";
 
 const memory = (): Storage => {
   const m = new Map<string, string>();
@@ -13,4 +13,14 @@ test("앱 안 이동 표시는 한 번만 소비된다", () => {
   markInAppNav(store);
   assert.equal(consumeInAppNav(store), true);
   assert.equal(consumeInAppNav(store), false);
+});
+
+test("새 탭·수정키 클릭은 앱 안 이동이 아니다", () => {
+  const click = { button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, defaultPrevented: false };
+  assert.equal(isPlainClick(click), true);
+  assert.equal(isPlainClick({ ...click, ctrlKey: true }), false);
+  assert.equal(isPlainClick({ ...click, metaKey: true }), false);
+  assert.equal(isPlainClick({ ...click, shiftKey: true }), false);
+  assert.equal(isPlainClick({ ...click, button: 1 }), false);
+  assert.equal(isPlainClick({ ...click, defaultPrevented: true }), false);
 });

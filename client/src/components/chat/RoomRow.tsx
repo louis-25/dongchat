@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { UserAvatar } from "@/components/chat/UserAvatar";
 import { badgeText, formatListTime, previewText } from "@/lib/format";
-import { markInAppNav } from "@/lib/nav";
+import { isPlainClick, markInAppNav } from "@/lib/nav";
 import { roomPath } from "@/lib/push-url";
 import { displayName, roomTitle, type Room, type RoomSummary } from "@/types/domain";
 
@@ -19,7 +19,7 @@ export function RoomRow({ summary, room, me }: Props) {
     <li>
       <Link
         href={roomPath(summary.id)}
-        onClick={() => markInAppNav()}
+        onClick={(e) => isPlainClick(e) && markInAppNav()}
         className="flex items-center gap-3 px-4 py-2.5 active:bg-muted"
       >
         <UserAvatar name={other ? displayName(other) : title} src={other?.avatarUrl} />
