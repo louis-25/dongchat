@@ -109,4 +109,13 @@ assert.deepEqual(
 await ok(u2.client.rpc("leave_room", { p_room_id: roomId }));
 assert.equal(await adminSees(roomId), 0, "마지막 멤버가 나가면 방 삭제");
 
+// 초대 링크(초대 스펙 §3): u4가 u1의 코드로 친구 → 다시 수락하면 already
+const u4 = await signUp("vs4");
+const code = await ok(u1.client.rpc("get_my_invite_code"));
+assert.equal(await ok(u1.client.rpc("get_my_invite_code")), code, "같은 코드");
+assert.equal((await ok(u4.client.rpc("preview_invite", { p_code: code })))[0].username, u1.username, "미리보기");
+assert.equal((await ok(u4.client.rpc("accept_invite", { p_code: code })))[0].already, false, "수락");
+assert.equal((await ok(u4.client.rpc("accept_invite", { p_code: code })))[0].already, true, "이미 친구");
+await fails(u1.client.rpc("accept_invite", { p_code: code }), "FRIEND_SELF_REQUEST");
+await fails(u4.client.rpc("accept_invite", { p_code: "nope_nope_00" }), "INVITE_NOT_FOUND");
 console.log("verify-social: OK");
