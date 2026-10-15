@@ -144,7 +144,7 @@ update public.chat_rooms set created_at = now() - interval '2 hours' where id = 
 select tests.login_as(tests.uid('rl_alice@test.com'));
 select is((select count(*)::int from public.list_my_rooms()), 3, '참여 방만 3개');
 select ok(not exists (select 1 from public.list_my_rooms() where name = 'rl_other'), '남의 방 제외');
-select is((select array_agg(name) from public.list_my_rooms()), array['rl_grp', 'rl_dm', 'rl_empty'], '최근 활동 순');
+select is(array(select name from public.list_my_rooms()), array['rl_grp', 'rl_dm', 'rl_empty'], '최근 활동 순');
 select is((select unread_count from public.list_my_rooms() where name = 'rl_dm'), 2, '안 읽은 수: 내 메시지 제외');
 select is((select last_message_content from public.list_my_rooms() where name = 'rl_dm'), 'a1', '마지막 메시지');
 select is((select member_count from public.list_my_rooms() where name = 'rl_grp'), 3, '인원 수');
@@ -3111,7 +3111,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 로컬 Supabase + `pnpm dev`(:3000) 실행 상태에서, 시드 계정 alice·bob(`password123`)으로 다음을 순서대로 확인하고 각 단계 결과를 출력한다. 뷰포트 390×844, `hasTouch: true`, `isMobile: true`.
 1. alice `/login` → 이메일 로그인 → URL `/chat/rooms`, 하단 탭 3개(`nav[aria-label="주요 메뉴"] a` 3개).
 2. 친구 탭 → bob 행 클릭 → URL `/chat/rooms/<id>`, 하단 탭 없음. ‹ 클릭 → `/chat/rooms`. 친구 탭에서 bob 다시 클릭 → 같은 `<id>`(1:1 중복 없음).
-3. 별도 컨텍스트로 bob 로그인 → 그 방에 "안녕" 전송 → alice 목록에서 그 방 미리보기 "안녕"·배지 "1"·채팅 탭 배지. alice가 방에 들어가면 1초 안에 목록 배지 사라짐(돌아와서 확인).
+3. 별도 컨텍스트로 bob 로그인 → 그 방에 "안녕" 전송 → alice 목록에서 그 방 미리보기 "안녕"·배지 "1"·채팅 탭 배지. alice가 방에 들어가면 1초 안에 목록 배지 사라짐(돌아와서 확인). 이어서 bob이 alice를 넣은 그룹방을 만들면(ui 또는 `create_room` RPC) alice 목록에 새로고침 없이 3초 안에 그 방 행이 나타남(user 채널 `member_added` → `["rooms"]` 무효화가 요약 `["rooms","summaries"]`까지 다시 받는 경로).
 4. alice 방에서 bob 메시지 말풍선을 길게 누르기(`page.mouse.down` 600ms 후 up 또는 `dispatchEvent('contextmenu')`) → 시트에 답장·복사만. 답장 → 입력창 위 "bob에게 답장" → 보내기 → 말풍선 안 인용 줄.
 5. 직접 주소 `/chat/rooms/999999` → 토스트 "참여 중인 채팅방이 아니에요." 후 `/chat/rooms`. 새 탭에서 방 주소로 직접 진입 → ‹ → `/chat/rooms`(앱 밖으로 안 나감).
 6. 설정 → 파랑 → `document.documentElement.dataset.palette === "blue"`, 다크 → `classList.contains("dark")`. 새로고침 후 둘 다 유지, `<meta name="theme-color">` 값이 `#10131a`. localStorage `dongchat.palette`를 `"pink"`로 바꾸고 새로고침 → `data-palette` 없음(민트).
