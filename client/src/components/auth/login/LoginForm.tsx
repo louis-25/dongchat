@@ -9,6 +9,7 @@ import FormInput from "@/components/common/RHF/FormInput";
 import useRouter from "@/hooks/useRouter";
 import useToast from "@/hooks/useToast";
 import { AUTH_QUERY_KEY } from "@/hooks/useAuth";
+import { useNextParam } from "@/hooks/useNextParam";
 import { getErrorMessage } from "@/lib/error-handler";
 import { signIn, signInWithKakao } from "@/services/auth";
 import type { DomainError } from "@/types/domain";
@@ -21,7 +22,8 @@ const loginSchema = yup.object({
 type LoginFormValues = yup.InferType<typeof loginSchema>;
 
 const LoginForm = () => {
-  const { goChat } = useRouter();
+  const { router } = useRouter();
+  const next = useNextParam();
   const { success, error } = useToast();
   const queryClient = useQueryClient();
   const methods = useForm<LoginFormValues>({ resolver: yupResolver(loginSchema) });
@@ -31,14 +33,14 @@ const LoginForm = () => {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
       success("로그인 성공!");
-      goChat();
+      router.replace(next);
     },
     onError: (e) => error(`로그인 실패: ${getErrorMessage(e as unknown as DomainError)}`),
   });
 
   // 성공 시 카카오로 페이지가 이동하므로 pending이 풀리지 않는 것이 정상이다.
   const kakao = useMutation({
-    mutationFn: signInWithKakao,
+    mutationFn: () => signInWithKakao(next),
     onError: (e) => error(`카카오 로그인 실패: ${getErrorMessage(e as unknown as DomainError)}`),
   });
 

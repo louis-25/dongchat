@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { safeNext } from "@/lib/safe-next";
 import type { Database } from "./database.types";
 
 const PUBLIC_PATHS = ["/login", "/join", "/auth"];
@@ -38,10 +39,10 @@ export async function updateSession(request: NextRequest) {
   const isAuthed = Boolean(data?.claims);
   const { pathname } = request.nextUrl;
 
-  const redirectTo = (target: string) => {
+  const redirectTo = (target: string, search = "") => {
     const url = request.nextUrl.clone();
     url.pathname = target;
-    url.search = "";
+    url.search = search;
     const response = NextResponse.redirect(url);
     // 갱신된 세션 쿠키·캐시 헤더를 리다이렉트 응답에도 옮긴다.
     supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie));
@@ -52,8 +53,17 @@ export async function updateSession(request: NextRequest) {
     return response;
   };
 
-  if (!isAuthed && !isPublic(pathname)) return redirectTo("/login");
-  if (isAuthed && AUTH_ENTRY_PATHS.includes(pathname)) return redirectTo(HOME);
+  // 비로그인: 원래 가려던 곳을 ?next=로 들고 로그인 화면으로(초대 링크 등)
+  if (!isAuthed && !isPublic(pathname)) {
+    const next = `${pathname}${request.nextUrl.search}`;
+    return redirectTo("/login", pathname === "/" ? "" : `?next=${encodeURIComponent(next)}`);
+  }
+  // 이미 로그인: 로그인·가입 화면 대신 next(검증) 또는 홈
+  if (isAuthed && AUTH_ENTRY_PATHS.includes(pathname)) {
+    const target = safeNext(request.nextUrl.searchParams.get("next"), HOME);
+    const [path, query = ""] = target.split("?");
+    return redirectTo(path, query ? `?${query}` : "");
+  }
 
   return supabaseResponse;
 }

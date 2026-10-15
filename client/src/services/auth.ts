@@ -41,10 +41,13 @@ export async function signIn(input: { email: string; password: string }): Promis
   }
 }
 
-export async function signInWithKakao(): Promise<void> {
+// next: 로그인 뒤 돌아갈 경로(콜백이 safeNext로 다시 검증).
+export async function signInWithKakao(next?: string): Promise<void> {
+  const callback = new URL("/auth/callback", window.location.origin);
+  if (next) callback.searchParams.set("next", next);
   const { error } = await createClient().auth.signInWithOAuth({
     provider: "kakao",
-    options: { redirectTo: `${window.location.origin}/auth/callback` },
+    options: { redirectTo: callback.toString() },
   });
   if (error) throw toDomainError(error);
 }

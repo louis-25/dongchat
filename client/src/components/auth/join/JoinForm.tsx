@@ -9,6 +9,7 @@ import FormInput from "@/components/common/RHF/FormInput";
 import useRouter from "@/hooks/useRouter";
 import useToast from "@/hooks/useToast";
 import { AUTH_QUERY_KEY } from "@/hooks/useAuth";
+import { useNextParam } from "@/hooks/useNextParam";
 import { getErrorMessage } from "@/lib/error-handler";
 import { signInWithKakao, signUp } from "@/services/auth";
 import type { DomainError } from "@/types/domain";
@@ -25,7 +26,8 @@ const joinSchema = yup.object({
 type JoinFormValues = yup.InferType<typeof joinSchema>;
 
 const JoinForm = () => {
-  const { goLogin, goChat } = useRouter();
+  const { router } = useRouter();
+  const next = useNextParam();
   const { success, error } = useToast();
   const queryClient = useQueryClient();
   const methods = useForm<JoinFormValues>({ resolver: yupResolver(joinSchema) });
@@ -36,18 +38,18 @@ const JoinForm = () => {
       // 이메일 확인이 켜진 환경(운영)에서는 세션이 없다.
       if (needsEmailConfirmation) {
         success("가입 완료! 메일함에서 인증 후 로그인해주세요.");
-        goLogin();
+        router.replace(`/login?next=${encodeURIComponent(next)}`);
         return;
       }
       await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
       success("회원가입 완료!");
-      goChat();
+      router.replace(next);
     },
     onError: (e) => error(`회원가입 실패: ${getErrorMessage(e as unknown as DomainError)}`),
   });
 
   const kakao = useMutation({
-    mutationFn: signInWithKakao,
+    mutationFn: () => signInWithKakao(next),
     onError: (e) => error(`카카오 로그인 실패: ${getErrorMessage(e as unknown as DomainError)}`),
   });
 
