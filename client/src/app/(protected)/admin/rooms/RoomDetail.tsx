@@ -13,7 +13,6 @@ import { MessageList } from "@/components/chat/MessageList";
 import { useChatMessages } from "@/hooks/useChatMessages";
 
 export const ADMIN_ROOMS_QUERY_KEY = ["admin", "rooms"] as const;
-const noop = () => {};
 
 // 관리자 방 열람: 멤버(그룹방 강퇴) + 메시지 읽기 전용 실시간. setViewingRoom을 호출하지 않으므로 mark_read 없음(§8.3).
 export const RoomDetail = ({ room }: { room: AdminRoom }) => {
@@ -84,11 +83,8 @@ export const RoomDetail = ({ room }: { room: AdminRoom }) => {
       <MessageList
         key={room.id}
         messages={messages}
-        hasRoom
+        isGroup={room.isGroup}
         readOnly
-        onReply={noop}
-        onEdit={noop}
-        onDelete={noop}
         onLoadOlder={loadOlder}
         hasMore={hasMore}
         loadingOlder={loadingOlder}
