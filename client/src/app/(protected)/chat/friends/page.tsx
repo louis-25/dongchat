@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScreenHeader } from "@/components/chat/ScreenHeader";
 import { UserAvatar } from "@/components/chat/UserAvatar";
 import { AddFriendSheet } from "@/components/chat/AddFriendSheet";
+import { InviteButton } from "@/components/chat/InviteButton";
 import useAuth from "@/hooks/useAuth";
 import { useFriendsList, usePendingFriends } from "@/hooks/useFriends";
 import { useFriendsActions } from "@/hooks/useFriendsActions";
@@ -26,9 +27,17 @@ export default function FriendsPage() {
       <ScreenHeader
         title="친구"
         actions={
-          <button type="button" onClick={() => setAdding(true)} aria-label="친구 추가" className="flex size-10 items-center justify-center rounded-full hover:bg-muted">
-            <UserPlus className="size-6" />
-          </button>
+          <>
+            <InviteButton variant="icon" />
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              aria-label="친구 추가"
+              className="flex size-10 items-center justify-center rounded-full hover:bg-muted"
+            >
+              <UserPlus className="size-6" />
+            </button>
+          </>
         }
       />
       <div className="min-h-0 flex-1 overflow-y-auto pb-4">
@@ -41,6 +50,9 @@ export default function FriendsPage() {
             </div>
           </div>
         )}
+        <div className="mx-4 mt-2">
+          <InviteButton />
+        </div>
 
         {pending.length > 0 && (
           <>
@@ -53,8 +65,17 @@ export default function FriendsPage() {
                     <div className="truncate font-medium">{displayName(p.requester)}</div>
                     <div className="truncate text-xs text-muted-foreground">@{p.requester.username}</div>
                   </div>
-                  <Button size="sm" disabled={isResponding} onClick={() => respondFriendRequest(p.id, "ACCEPT")}>수락</Button>
-                  <Button size="sm" variant="secondary" disabled={isResponding} onClick={() => respondFriendRequest(p.id, "BLOCK")}>차단</Button>
+                  <Button size="sm" disabled={isResponding} onClick={() => respondFriendRequest(p.id, "ACCEPT")}>
+                    수락
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={isResponding}
+                    onClick={() => respondFriendRequest(p.id, "BLOCK")}
+                  >
+                    차단
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -64,7 +85,7 @@ export default function FriendsPage() {
         <h2 className={section}>친구 {friends.length}</h2>
         {!isLoading && friends.length === 0 && (
           <p className="px-6 py-8 text-center text-sm text-muted-foreground">
-            아직 친구가 없어요. 오른쪽 위 버튼으로 아이디를 검색해 친구를 추가해 보세요.
+            아직 친구가 없어요. 초대 링크를 보내거나 오른쪽 위 ＋로 아이디를 검색해 보세요.
           </p>
         )}
         <ul>
@@ -86,7 +107,12 @@ export default function FriendsPage() {
           ))}
         </ul>
       </div>
-      <AddFriendSheet open={adding} onClose={() => setAdding(false)} onSubmit={sendFriendRequest} pending={isRequestPending} />
+      <AddFriendSheet
+        open={adding}
+        onClose={() => setAdding(false)}
+        onSubmit={sendFriendRequest}
+        pending={isRequestPending}
+      />
     </>
   );
 }

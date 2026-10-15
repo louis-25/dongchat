@@ -17,6 +17,7 @@ import { getErrorMessage } from "@/lib/error-handler";
 import { PALETTES, PALETTE_LABELS, THEME_TOKENS } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/services/auth";
+import { resetMyInviteCode } from "@/services/invites";
 import { updateNickname } from "@/services/profile";
 import type { DomainError } from "@/types/domain";
 
@@ -44,6 +45,12 @@ export default function SettingsPage() {
       setNickname(null);
       toast.success("닉네임을 바꿨어요.");
     },
+    onError: (e) => toast.error(getErrorMessage(e as unknown as DomainError)),
+  });
+
+  const resetInvite = useMutation({
+    mutationFn: resetMyInviteCode,
+    onSuccess: () => toast.success("새 초대 링크를 만들었어요."),
     onError: (e) => toast.error(getErrorMessage(e as unknown as DomainError)),
   });
 
@@ -150,6 +157,17 @@ export default function SettingsPage() {
           </form>
         )}
         <p className="px-4 pt-1 text-xs text-muted-foreground">비워 두면 아이디(@{user?.username})가 보여요.</p>
+
+        <h2 className={section}>친구 초대</h2>
+        <button
+          type="button"
+          className={row}
+          disabled={resetInvite.isPending}
+          onClick={() => confirm("예전 초대 링크는 더 이상 쓸 수 없어요. 새로 만들까요?") && resetInvite.mutate()}
+        >
+          <span>초대 링크 새로 만들기</span>
+          <span className="text-xs text-muted-foreground">예전 링크 무효</span>
+        </button>
 
         <div className="mt-6 divide-y border-y">
           {user?.isAdmin && (
