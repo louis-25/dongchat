@@ -252,9 +252,17 @@ export type Database = {
         Returns: undefined;
       };
       admin_force_logout: { Args: { p_user_id: string }; Returns: undefined };
-      admin_list_rooms: { Args: { p_limit?: number; p_page?: number }; Returns: Json };
+      admin_list_rooms: {
+        Args: { p_limit?: number; p_page?: number };
+        Returns: Json;
+      };
       admin_list_users: {
-        Args: { p_limit?: number; p_order?: string; p_page?: number; p_sort?: string };
+        Args: {
+          p_limit?: number;
+          p_order?: string;
+          p_page?: number;
+          p_sort?: string;
+        };
         Returns: Json;
       };
       admin_unban: { Args: { p_user_id: string }; Returns: undefined };
@@ -263,12 +271,35 @@ export type Database = {
         Returns: number;
       };
       delete_message: { Args: { p_id: number }; Returns: undefined };
-      edit_message: { Args: { p_content: string; p_id: number }; Returns: undefined };
+      edit_message: {
+        Args: { p_content: string; p_id: number };
+        Returns: undefined;
+      };
       get_me: { Args: Record<PropertyKey, never>; Returns: Json };
       is_username_available: { Args: { p_username: string }; Returns: boolean };
-      kick_member: { Args: { p_room_id: number; p_user_id: string }; Returns: undefined };
+      kick_member: {
+        Args: { p_room_id: number; p_user_id: string };
+        Returns: undefined;
+      };
       leave_room: { Args: { p_room_id: number }; Returns: undefined };
+      list_my_rooms: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          created_at: string;
+          is_group: boolean;
+          last_message_at: string;
+          last_message_content: string;
+          last_message_deleted: boolean;
+          last_message_id: number;
+          last_message_sender_id: string;
+          member_count: number;
+          name: string;
+          room_id: number;
+          unread_count: number;
+        }[];
+      };
       mark_read: { Args: { p_room_id: number }; Returns: number };
+      open_direct_room: { Args: { p_username: string }; Returns: number };
       push_targets: {
         Args: { p_message_id: number };
         Returns: {
@@ -284,7 +315,10 @@ export type Database = {
         Args: { p_auth: string; p_endpoint: string; p_p256dh: string };
         Returns: undefined;
       };
-      respond_friend_request: { Args: { p_action: string; p_id: number }; Returns: undefined };
+      respond_friend_request: {
+        Args: { p_action: string; p_id: number };
+        Returns: undefined;
+      };
       send_friend_request: {
         Args: { p_username: string };
         Returns: {
@@ -320,13 +354,15 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R;
@@ -345,12 +381,14 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I;
     }
@@ -368,12 +406,14 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U;
     }
@@ -391,12 +431,14 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
@@ -406,12 +448,14 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
