@@ -27,7 +27,7 @@ export const applyRoomEvent = (
         list: sortSummaries(
           replace(list, i, {
             ...r,
-            lastMessage: { id: m.id, content: m.content, deleted: false, senderId: m.senderId, at: m.createdAt },
+            lastMessage: { id: m.id, content: m.content, sticker: m.sticker, deleted: false, senderId: m.senderId, at: m.createdAt },
             unreadCount: r.unreadCount + (counts ? 1 : 0),
           }),
         ),

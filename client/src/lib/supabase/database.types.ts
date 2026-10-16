@@ -310,6 +310,7 @@ export type Database = {
           name: string;
           room_id: number;
           unread_count: number;
+          last_message_sticker: string;
         }[];
       };
       mark_read: { Args: { p_room_id: number }; Returns: number };
@@ -330,6 +331,7 @@ export type Database = {
           endpoint: string;
           p256dh: string;
           room_id: number;
+          sticker: string;
           title: string;
         }[];
       };

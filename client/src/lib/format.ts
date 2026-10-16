@@ -1,4 +1,5 @@
 import type { RoomSummary } from "../types/domain.ts";
+import { stickerLabel } from "./stickers.ts";
 
 // 화면 표시 문자열. 기기 시간대·ko-KR 기준.
 const clock = new Intl.DateTimeFormat("ko-KR", { hour: "numeric", minute: "2-digit" });
@@ -27,6 +28,7 @@ export const previewText = (s: RoomSummary, ctx: { me: string; senderName: (id: 
   const m = s.lastMessage;
   if (!m) return "아직 메시지가 없어요";
   if (m.deleted) return "삭제된 메시지입니다";
-  if (s.isGroup && m.senderId && m.senderId !== ctx.me) return `${ctx.senderName(m.senderId)}: ${m.content}`;
-  return m.content;
+  const content = m.sticker ? stickerLabel(m.sticker) : m.content; // 이모티콘은 그림(RoomRow) + 이름
+  if (s.isGroup && m.senderId && m.senderId !== ctx.me) return `${ctx.senderName(m.senderId)}: ${content}`;
+  return content;
 };

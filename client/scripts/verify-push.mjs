@@ -110,12 +110,18 @@ try {
   assert.deepEqual(decrypt(dev2, hit.body), {
     title: "push",
     body: "푸시 테스트",
-    data: { roomId, url: `/chat/rooms/${roomId}` },
+    data: { roomId, url: `/chat/rooms/${roomId}`, sticker: null },
   });
   await waitFor((r) => r.path === `/gone/${stamp}`, "u3(410)");
   await new Promise((r) => setTimeout(r, 1500));
   assert.ok(!received.some((r) => r.path === `/sender/${stamp}`), "발신자에게는 보내지 않음");
   assert.equal((await ok(u3.client.from("push_subscriptions").select("id"))).length, 0, "410 응답 구독은 삭제");
+
+  // 이모티콘 → payload에 sticker id(서비스 워커가 그림을 붙인다)
+  received.length = 0;
+  await ok(u1.client.from("messages").insert({ room_id: roomId, content: "(이모티콘)", sticker: "love" }));
+  const stickerHit = await waitFor((r) => r.path === `/ok/${stamp}`, "u2 이모티콘");
+  assert.equal(decrypt(dev2, stickerHit.body).data.sticker, "love");
 
   // 공용 브라우저: u1이 u2의 endpoint를 등록하면 u1 소유 (Review Focus 2)
   await subscribe(u1, `/ok/${stamp}`, dev2);

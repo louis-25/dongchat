@@ -5,7 +5,7 @@ import type { ChatMessage, RoomSummary } from "../types/domain.ts";
 
 const s = (id: number, at: string | null, unread = 0, createdAt = "2026-10-01T00:00:00Z"): RoomSummary => ({
   id, name: null, isGroup: false, createdAt, memberCount: 2, unreadCount: unread,
-  lastMessage: at === null ? null : { id: id * 10, content: "x", deleted: false, senderId: "u", at },
+  lastMessage: at === null ? null : { id: id * 10, content: "x", sticker: null, deleted: false, senderId: "u", at },
 });
 const msg = (roomId: number, id: number, senderId: string): ChatMessage => ({
   id, roomId, senderId, content: "새", sticker: null, replyToId: null, editedAt: null, deletedAt: null, createdAt: "2026-10-15T10:00:00Z",

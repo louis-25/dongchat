@@ -3,6 +3,7 @@ import { UserAvatar } from "@/components/chat/UserAvatar";
 import { badgeText, formatListTime, previewText } from "@/lib/format";
 import { isPlainClick, markInAppNav } from "@/lib/nav";
 import { roomPath } from "@/lib/push-url";
+import { stickerSrc } from "@/lib/stickers";
 import { displayName, roomTitle, type Room, type RoomSummary } from "@/types/domain";
 
 type Props = { summary: RoomSummary; room: Room | undefined; me: string };
@@ -28,7 +29,13 @@ export function RoomRow({ summary, room, me }: Props) {
             {title}
             {summary.isGroup && <span className="ml-1.5 text-sm font-normal text-muted-foreground">{summary.memberCount}</span>}
           </div>
-          <div className="truncate text-sm text-muted-foreground">{previewText(summary, { me, senderName: nameOf })}</div>
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            {summary.lastMessage?.sticker && !summary.lastMessage.deleted && (
+              // eslint-disable-next-line @next/next/no-img-element -- 작은 정적 SVG
+              <img src={stickerSrc(summary.lastMessage.sticker)} alt="" className="size-5 shrink-0" />
+            )}
+            <span className="truncate">{previewText(summary, { me, senderName: nameOf })}</span>
+          </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1 self-start pt-0.5">
           <time className="text-xs text-muted-foreground tabular-nums">

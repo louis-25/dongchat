@@ -48,9 +48,14 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  // 이모티콘이면 그림을 아이콘·큰 이미지로(PNG — 안드로이드 Chrome. iOS는 이미지 미지원이라 글자만)
+  const sticker = notificationData.data.sticker;
+  const stickerPng = sticker && /^[a-z0-9_]{1,32}$/.test(sticker) ? `/stickers/${sticker}.png` : null;
+
   const notificationOptions = {
     body: notificationData.body,
-    icon: notificationData.icon,
+    icon: stickerPng || notificationData.icon,
+    image: stickerPng || undefined,
     badge: notificationData.badge,
     data: notificationData.data,
     requireInteraction: false,

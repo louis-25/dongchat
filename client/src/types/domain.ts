@@ -40,7 +40,7 @@ export type RoomSummary = {
   isGroup: boolean;
   createdAt: string;
   memberCount: number;
-  lastMessage: { id: number; content: string; deleted: boolean; senderId: string | null; at: string } | null;
+  lastMessage: { id: number; content: string; sticker: string | null; deleted: boolean; senderId: string | null; at: string } | null;
   unreadCount: number;
 };
 
