@@ -165,6 +165,7 @@ export type RoomSummaryRow = {
   last_message_at: string | null;
   unread_count: number;
   last_message_sticker: string | null;
+  muted: boolean;
 };
 
 export const toRoomSummary = (r: RoomSummaryRow): RoomSummary => ({
@@ -185,4 +186,5 @@ export const toRoomSummary = (r: RoomSummaryRow): RoomSummary => ({
           at: r.last_message_at,
         },
   unreadCount: r.unread_count,
+  muted: r.muted ?? false,
 });

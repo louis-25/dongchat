@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BellOff } from "lucide-react";
 import { UserAvatar } from "@/components/chat/UserAvatar";
 import { badgeText, formatListTime, previewText } from "@/lib/format";
 import { isPlainClick, markInAppNav } from "@/lib/nav";
@@ -28,6 +29,7 @@ export function RoomRow({ summary, room, me }: Props) {
           <div className="truncate font-semibold">
             {title}
             {summary.isGroup && <span className="ml-1.5 text-sm font-normal text-muted-foreground">{summary.memberCount}</span>}
+            {summary.muted && <BellOff className="ml-1 inline size-3.5 align-[-1px] text-muted-foreground" aria-label="알림 꺼짐" />}
           </div>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             {summary.lastMessage?.sticker && !summary.lastMessage.deleted && (

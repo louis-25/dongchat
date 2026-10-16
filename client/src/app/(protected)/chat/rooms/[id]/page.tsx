@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ScreenHeader } from "@/components/chat/ScreenHeader";
 import { MessageList } from "@/components/chat/MessageList";
@@ -16,9 +17,12 @@ import useAuth from "@/hooks/useAuth";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useRooms } from "@/hooks/useRooms";
 import { useRoomActions } from "@/hooks/useRoomActions";
+import { ROOM_SUMMARIES_QUERY_KEY, useRoomSummaries } from "@/hooks/useRoomSummaries";
+import { getErrorMessage } from "@/lib/error-handler";
+import { setRoomMuted } from "@/services/rooms";
 import type { MessageView } from "@/lib/chat-state";
 import { consumeInAppNav } from "@/lib/nav";
-import { roomTitle } from "@/types/domain";
+import { roomTitle, type DomainError } from "@/types/domain";
 
 export default function RoomPage() {
   const params = useParams<{ id: string }>();
@@ -36,6 +40,17 @@ export default function RoomPage() {
   const [actionTarget, setActionTarget] = useState<MessageView | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { data: summaries } = useRoomSummaries();
+  const muted = summaries?.find((s) => s.id === roomId)?.muted ?? false;
+  const toggleMute = useMutation({
+    mutationFn: (next: boolean) => setRoomMuted(roomId, next),
+    onSuccess: async (_, next) => {
+      await queryClient.invalidateQueries({ queryKey: ROOM_SUMMARIES_QUERY_KEY });
+      toast.success(next ? "이 방 알림을 껐어요." : "이 방 알림을 켰어요.");
+    },
+    onError: (e) => toast.error(getErrorMessage(e as unknown as DomainError)),
+  });
   const cameFromApp = useRef<boolean | null>(null);
   const leaving = useRef(false);
 
@@ -147,6 +162,9 @@ export default function RoomPage() {
           leave(room.id, { onError: () => (leaving.current = false) });
         }}
         onKick={(userId) => kick(room.id, userId)}
+        muted={muted}
+        muting={toggleMute.isPending}
+        onToggleMute={() => toggleMute.mutate(!muted)}
       />
     </>
   );

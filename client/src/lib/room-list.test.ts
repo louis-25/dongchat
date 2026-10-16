@@ -4,7 +4,7 @@ import { applyRoomEvent, sortSummaries, totalUnread } from "./room-list.ts";
 import type { ChatMessage, RoomSummary } from "../types/domain.ts";
 
 const s = (id: number, at: string | null, unread = 0, createdAt = "2026-10-01T00:00:00Z"): RoomSummary => ({
-  id, name: null, isGroup: false, createdAt, memberCount: 2, unreadCount: unread,
+  id, name: null, isGroup: false, createdAt, memberCount: 2, unreadCount: unread, muted: false,
   lastMessage: at === null ? null : { id: id * 10, content: "x", sticker: null, deleted: false, senderId: "u", at },
 });
 const msg = (roomId: number, id: number, senderId: string): ChatMessage => ({

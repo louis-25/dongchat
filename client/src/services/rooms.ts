@@ -65,6 +65,11 @@ export async function listMyRooms(): Promise<RoomSummary[]> {
 }
 
 // 친구와의 1:1 방(있으면 그 방, 없으면 생성)
+export async function setRoomMuted(roomId: number, muted: boolean): Promise<void> {
+  const { error } = await createClient().rpc("set_room_muted", { p_room_id: roomId, p_muted: muted });
+  if (error) throw toDomainError(error);
+}
+
 export async function openDirectRoom(username: string): Promise<number> {
   const { data, error } = await createClient().rpc("open_direct_room", { p_username: username });
   if (error) throw toDomainError(error);

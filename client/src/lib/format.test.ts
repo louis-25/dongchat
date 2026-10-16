@@ -26,7 +26,7 @@ test("배지: 0은 숨김, 100부터 99+", () => {
 });
 
 test("미리보기: 없음·삭제·그룹 보낸사람·내 메시지·1:1", () => {
-  const s: RoomSummary = { id: 1, name: "g", isGroup: true, createdAt: "", memberCount: 3, lastMessage: null, unreadCount: 0 };
+  const s: RoomSummary = { id: 1, name: "g", isGroup: true, createdAt: "", memberCount: 3, lastMessage: null, unreadCount: 0, muted: false };
   const ctx = { me: "me", senderName: (id: string) => (id === "u2" ? "준호" : "?") };
   assert.equal(previewText(s, ctx), "아직 메시지가 없어요");
   const msg = { id: 1, content: "사진 올렸어", sticker: null, deleted: false, senderId: "u2", at: "" };

@@ -1,6 +1,7 @@
 "use client";
 
 import { Sheet } from "@/components/ui/sheet";
+import { Bell, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/chat/UserAvatar";
 import { displayName, type Participant, type Room } from "@/types/domain";
@@ -14,10 +15,13 @@ type Props = {
   disabled: boolean;
   onLeave: () => void;
   onKick: (userId: string) => void;
+  muted: boolean;
+  muting: boolean;
+  onToggleMute: () => void;
 };
 
 // 멤버 목록·내보내기(그룹방 방장만, DB도 같은 규칙)·나가기
-export function RoomMenuSheet({ open, onClose, room, participants, me, disabled, onLeave, onKick }: Props) {
+export function RoomMenuSheet({ open, onClose, room, participants, me, disabled, onLeave, onKick, muted, muting, onToggleMute }: Props) {
   const canKick = room.isGroup && room.ownerId === me;
   return (
     <Sheet open={open} onClose={onClose} title={`대화 상대 ${participants.length}`}>
@@ -44,9 +48,13 @@ export function RoomMenuSheet({ open, onClose, room, participants, me, disabled,
           </li>
         ))}
       </ul>
+      <Button variant="outline" className="mt-4 h-12 w-full text-base" loading={muting} onClick={onToggleMute}>
+        {muted ? <Bell className="size-5" /> : <BellOff className="size-5" />}
+        {muted ? "알림 켜기" : "알림 끄기"}
+      </Button>
       <Button
         variant="outline"
-        className="mt-4 h-12 w-full text-base text-destructive"
+        className="mt-2 h-12 w-full text-base text-destructive"
         disabled={disabled}
         onClick={() => confirm("이 채팅방에서 나갈까요?") && onLeave()}
       >

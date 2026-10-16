@@ -42,6 +42,7 @@ export type RoomSummary = {
   memberCount: number;
   lastMessage: { id: number; content: string; sticker: string | null; deleted: boolean; senderId: string | null; at: string } | null;
   unreadCount: number;
+  muted: boolean; // 내 알림 끄기(푸시·인앱 알림 없음, 안 읽은 수는 그대로)
 };
 
 export const displayName = (p: { username: string; nickname: string | null }): string => p.nickname ?? p.username;

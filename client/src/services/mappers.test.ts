@@ -121,10 +121,10 @@ test("방 요약 행은 RoomSummary로, 메시지 없는 방은 lastMessage null
   const base = {
     room_id: 7, name: null, is_group: false, created_at: "2026-10-15T00:00:00Z", member_count: 2,
     last_message_id: null, last_message_content: null, last_message_deleted: false,
-    last_message_sender_id: null, last_message_at: null, unread_count: 0, last_message_sticker: null,
+    last_message_sender_id: null, last_message_at: null, unread_count: 0, last_message_sticker: null, muted: true,
   };
   assert.deepEqual(toRoomSummary(base), {
-    id: 7, name: null, isGroup: false, createdAt: "2026-10-15T00:00:00Z", memberCount: 2, lastMessage: null, unreadCount: 0,
+    id: 7, name: null, isGroup: false, createdAt: "2026-10-15T00:00:00Z", memberCount: 2, lastMessage: null, unreadCount: 0, muted: true,
   });
   assert.deepEqual(
     toRoomSummary({ ...base, last_message_id: 3, last_message_content: null, last_message_deleted: true, last_message_sender_id: "u", last_message_at: "2026-10-15T01:00:00Z", unread_count: 4 }).lastMessage,

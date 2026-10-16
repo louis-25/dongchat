@@ -123,6 +123,13 @@ try {
   const stickerHit = await waitFor((r) => r.path === `/ok/${stamp}`, "u2 이모티콘");
   assert.equal(decrypt(dev2, stickerHit.body).data.sticker, "love");
 
+  // 방 알림 끄기 → 그 사람에게는 보내지 않음
+  await ok(u2.client.rpc("set_room_muted", { p_room_id: roomId, p_muted: true }));
+  received.length = 0;
+  await ok(u1.client.from("messages").insert({ room_id: roomId, content: "조용히" }));
+  await new Promise((r) => setTimeout(r, 2000));
+  assert.ok(!received.some((r) => r.path === `/ok/${stamp}`), "알림 끈 방은 푸시 안 함");
+
   // 공용 브라우저: u1이 u2의 endpoint를 등록하면 u1 소유 (Review Focus 2)
   await subscribe(u1, `/ok/${stamp}`, dev2);
   assert.equal((await ok(u2.client.from("push_subscriptions").select("id"))).length, 0, "이전 사용자 구독은 넘어감");
