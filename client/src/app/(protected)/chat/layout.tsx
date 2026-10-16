@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { BottomTabs } from "@/components/chat/BottomTabs";
 import { useInAppNotification } from "@/hooks/useInAppNotification";
+import { useLabFlag } from "@/hooks/useLabFlag";
 import { usePushNotification } from "@/hooks/usePushNotification";
 import { useRoomSummariesSync } from "@/hooks/useRoomSummaries";
 
@@ -12,9 +13,22 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
   useRoomSummariesSync();
   usePushNotification({ autoRegister: true }); // 이미 허용한 브라우저는 로그인 때마다 자동 등록
   const inRoom = /^\/chat\/rooms\/\d+/.test(usePathname());
+  const [chiikawa] = useLabFlag("chiikawa");
   return (
     <div className="mx-auto flex h-dvh max-w-md flex-col bg-background md:border-x">
-      <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        {/* 실험실: 하단 탭 바로 위 뒷배경(내용 뒤, 터치는 통과). 방 안은 하단 탭이 없어 제외 */}
+        {chiikawa && !inRoom && (
+          // eslint-disable-next-line @next/next/no-img-element -- 장식용 정적 이미지
+          <img
+            src="/lab/chiikawa.webp"
+            alt=""
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 mx-auto w-4/5 max-w-xs select-none opacity-40 dark:opacity-20"
+          />
+        )}
+        <div className="relative flex min-h-0 flex-1 flex-col">{children}</div>
+      </div>
       {!inRoom && <BottomTabs />}
     </div>
   );

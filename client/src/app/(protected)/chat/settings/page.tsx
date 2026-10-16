@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { ScreenHeader } from "@/components/chat/ScreenHeader";
 import { UserAvatar } from "@/components/chat/UserAvatar";
 import useAuth, { AUTH_QUERY_KEY } from "@/hooks/useAuth";
+import { useLabFlag } from "@/hooks/useLabFlag";
 import { usePalette } from "@/hooks/usePalette";
 import { usePushNotification } from "@/hooks/usePushNotification";
 import { getErrorMessage } from "@/lib/error-handler";
@@ -38,6 +39,7 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(noSubscribe, () => true, () => false); // next-themes 값은 브라우저에서만
   const push = usePushNotification();
+  const [chiikawa, setChiikawa] = useLabFlag("chiikawa");
   const [nickname, setNickname] = useState<string | null>(null); // null = 편집 전(현재 값 표시)
   const [status, setStatus] = useState<string | null>(null);
 
@@ -222,6 +224,15 @@ export default function SettingsPage() {
           <span>초대 링크 새로 만들기</span>
           <span className="text-xs text-muted-foreground">{resetInvite.isPending ? "만드는 중…" : "예전 링크 무효"}</span>
         </button>
+
+        <h2 className={section}>실험실</h2>
+        <button type="button" role="switch" aria-checked={mounted && chiikawa} className={row} onClick={() => setChiikawa(!chiikawa)}>
+          <span>치이카와 배경</span>
+          <span className={mounted && chiikawa ? "font-semibold text-primary" : "text-muted-foreground"}>
+            {mounted && chiikawa ? "켜짐" : "꺼짐"}
+          </span>
+        </button>
+        <p className="px-4 text-xs text-muted-foreground">이 기기에만 적용돼요.</p>
 
         <div className="mt-6 divide-y border-y">
           {user?.isAdmin && (
