@@ -18,7 +18,6 @@ import {
   type ReadState,
 } from "@/lib/chat-state";
 import { deleteMessage, editMessage, fetchMessages, markRead, sendImage, sendMessage, sendSticker, setReaction } from "@/services/messages";
-import type { ReactionCode } from "@/lib/reactions";
 import { listParticipants } from "@/services/rooms";
 import {
   MESSAGE_PAGE_SIZE,
@@ -204,7 +203,7 @@ export const useChatMessages = (room: Room | null) => {
   );
 
   const react = useCallback(
-    async (messageId: number, reaction: ReactionCode | null) => {
+    async (messageId: number, reaction: string | null) => {
       try {
         await setReaction(messageId, reaction); // 반영은 reaction_updated 이벤트로
       } catch (e) {

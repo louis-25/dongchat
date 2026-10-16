@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -25,6 +26,9 @@ import type { MessageView } from "@/lib/chat-state";
 import { consumeInAppNav } from "@/lib/nav";
 import { roomTitle, type DomainError } from "@/types/domain";
 
+// ➕를 눌렀을 때만 불러온다(frimousse)
+const EmojiPickerSheet = dynamic(() => import("@/components/chat/EmojiPickerSheet"), { ssr: false });
+
 export default function RoomPage() {
   const params = useParams<{ id: string }>();
   const roomId = Number(params.id);
@@ -42,6 +46,7 @@ export default function RoomPage() {
   const [actionTarget, setActionTarget] = useState<MessageView | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [pickerTarget, setPickerTarget] = useState<MessageView | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { data: summaries } = useRoomSummaries();
@@ -148,6 +153,7 @@ export default function RoomPage() {
         }}
         me={user.id}
         onReact={(v, reaction) => void react(v.id, reaction)}
+        onMoreReactions={setPickerTarget}
         onDelete={(v) => confirm("메시지를 삭제할까요?") && void deleteMessage(v.id, v.imagePath)}
       />
       <ProfileSheet profile={profile} onClose={() => setProfileId(null)}>
@@ -160,6 +166,13 @@ export default function RoomPage() {
           </Button>
         )}
       </ProfileSheet>
+      {pickerTarget && (
+        <EmojiPickerSheet
+          open
+          onClose={() => setPickerTarget(null)}
+          onSelect={(emoji) => void react(pickerTarget.id, emoji)}
+        />
+      )}
       <InviteMembersSheet
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}

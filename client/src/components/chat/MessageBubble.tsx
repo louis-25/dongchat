@@ -5,7 +5,7 @@ import { UserAvatar } from "@/components/chat/UserAvatar";
 import { useLongPress } from "@/hooks/useLongPress";
 import type { MessageView } from "@/lib/chat-state";
 import { formatClock } from "@/lib/format";
-import { summarizeReactions, type ReactionCode } from "@/lib/reactions";
+import { summarizeReactions } from "@/lib/reactions";
 import { stickerLabel, stickerSrc } from "@/lib/stickers";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ type Props = {
   onJumpTo: (id: number) => void;
   onOpenProfile?: (userId: string) => void;
   me?: string;
-  onReact?: (messageId: number, reaction: ReactionCode | null) => void;
+  onReact?: (messageId: number, reaction: string | null) => void;
 };
 
 export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJumpTo, onOpenProfile, me = "", onReact }: Props) {
@@ -93,10 +93,10 @@ export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJu
           <div className="mt-1 flex flex-wrap gap-1">
             {summarizeReactions(view.reactions, me).map((r) => (
               <button
-                key={r.code}
+                key={r.emoji}
                 type="button"
                 disabled={!onReact}
-                onClick={() => onReact?.(view.id, r.mine ? null : r.code)}
+                onClick={() => onReact?.(view.id, r.mine ? null : r.emoji)}
                 aria-pressed={r.mine}
                 aria-label={`${r.emoji} ${r.count}`}
                 className={cn(

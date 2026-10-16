@@ -1,4 +1,4 @@
-import { withReaction, type ReactionCode } from "./reactions.ts";
+import { withReaction } from "./reactions.ts";
 import { MESSAGE_PAGE_SIZE, displayName, type ChatMessage, type Participant, type Profile } from "../types/domain.ts";
 
 // 채팅 화면 상태의 순수 함수. useChatMessages가 Realtime 이벤트·스냅샷을 이 함수들로 반영한다.
@@ -54,7 +54,7 @@ export const applyDeleted = (list: ChatMessage[], e: { id: number }, at: string)
 
 export const applyReaction = (
   list: ChatMessage[],
-  e: { messageId: number; userId: string; reaction: ReactionCode | null },
+  e: { messageId: number; userId: string; reaction: string | null },
 ): ChatMessage[] =>
   list.map((m) => (m.id === e.messageId ? { ...m, reactions: withReaction(m.reactions, e.userId, e.reaction) } : m));
 

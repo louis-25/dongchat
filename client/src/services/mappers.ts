@@ -1,4 +1,3 @@
-import type { ReactionCode } from "../lib/reactions.ts";
 import type {
   ChatMessage,
   DomainError,
@@ -55,7 +54,7 @@ export type MessageCoreRow = {
   sticker: string | null;
   image_path: string | null;
   reply_to_id: number | null;
-  reactions?: { user_id: string; reaction: ReactionCode }[]; // 목록 조회에만
+  reactions?: { user_id: string; reaction: string }[]; // 목록 조회에만
   edited_at: string | null;
   deleted_at: string | null;
   created_at: string;

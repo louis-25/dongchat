@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { MESSAGE_PAGE_SIZE, type ChatMessage, type MessagePage } from "@/types/domain";
 import { toJpeg } from "@/lib/image";
-import type { ReactionCode } from "@/lib/reactions";
 import { STICKER_FALLBACK } from "@/lib/stickers";
 import { toDomainError } from "./errors";
 import {
@@ -83,7 +82,7 @@ export async function getImageUrl(path: string): Promise<string> {
 }
 
 // null이면 내 반응 취소. 화면 반영은 reaction_updated 이벤트로.
-export async function setReaction(messageId: number, reaction: ReactionCode | null): Promise<void> {
+export async function setReaction(messageId: number, reaction: string | null): Promise<void> {
   const { error } = await createClient().rpc("set_reaction", { p_message_id: messageId, p_reaction: reaction as string });
   if (error) throw toDomainError(error);
 }

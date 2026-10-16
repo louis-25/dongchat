@@ -4,24 +4,23 @@ import { summarizeReactions, withReaction, type Reaction } from "./reactions.ts"
 
 test("반응: 한 사람당 하나 — 바꾸기·취소", () => {
   let list: Reaction[] = [];
-  list = withReaction(list, "a", "heart");
-  list = withReaction(list, "b", "heart");
-  list = withReaction(list, "a", "lol");
-  assert.deepEqual(list, [{ userId: "b", reaction: "heart" }, { userId: "a", reaction: "lol" }]);
-  assert.deepEqual(withReaction(list, "b", null), [{ userId: "a", reaction: "lol" }]);
+  list = withReaction(list, "a", "❤️");
+  list = withReaction(list, "b", "❤️");
+  list = withReaction(list, "a", "🥹");
+  assert.deepEqual(list, [{ userId: "b", reaction: "❤️" }, { userId: "a", reaction: "🥹" }]);
+  assert.deepEqual(withReaction(list, "b", null), [{ userId: "a", reaction: "🥹" }]);
 });
 
-test("반응 요약: 정해진 순서, 개수, 내 반응 표시, 0개는 숨김", () => {
+test("반응 요약: 많이 달린 순, 동률은 먼저 달린 순, 내 반응 표시", () => {
   const list: Reaction[] = [
-    { userId: "a", reaction: "lol" },
-    { userId: "b", reaction: "heart" },
-    { userId: "c", reaction: "lol" },
+    { userId: "a", reaction: "🥹" },
+    { userId: "b", reaction: "❤️" },
+    { userId: "c", reaction: "😂" },
+    { userId: "d", reaction: "😂" },
   ];
-  assert.deepEqual(
-    summarizeReactions(list, "a").map(({ code, count, mine }) => ({ code, count, mine })),
-    [
-      { code: "heart", count: 1, mine: false },
-      { code: "lol", count: 2, mine: true },
-    ],
-  );
+  assert.deepEqual(summarizeReactions(list, "a"), [
+    { emoji: "😂", count: 2, mine: false },
+    { emoji: "🥹", count: 1, mine: true },
+    { emoji: "❤️", count: 1, mine: false },
+  ]);
 });

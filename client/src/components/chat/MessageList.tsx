@@ -5,7 +5,6 @@ import { ArrowDown } from "lucide-react";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { scrollAction, type MessageView } from "@/lib/chat-state";
 import { buildTimeline } from "@/lib/message-groups";
-import type { ReactionCode } from "@/lib/reactions";
 
 type Props = {
   messages: MessageView[];
@@ -13,7 +12,7 @@ type Props = {
   onOpenActions?: (view: MessageView) => void;
   onOpenProfile?: (userId: string) => void;
   me?: string;
-  onReact?: (messageId: number, reaction: ReactionCode | null) => void;
+  onReact?: (messageId: number, reaction: string | null) => void;
   onLoadOlder: () => void;
   hasMore: boolean;
   loadingOlder: boolean;

@@ -147,8 +147,8 @@ test("프로필 변경: 해당 참여자만 바꾸고, 없으면 같은 배열",
 
 test("반응 이벤트: 해당 메시지만 바꾼다", () => {
   const list = [msg(1), msg(2)];
-  const next = applyReaction(list, { messageId: 2, userId: "b", reaction: "heart" });
-  assert.deepEqual(next[1].reactions, [{ userId: "b", reaction: "heart" }]);
+  const next = applyReaction(list, { messageId: 2, userId: "b", reaction: "❤️" });
+  assert.deepEqual(next[1].reactions, [{ userId: "b", reaction: "❤️" }]);
   assert.equal(next[0], list[0]);
 });
 

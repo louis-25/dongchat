@@ -36,7 +36,7 @@ app/, components/   UI — Supabase를 모른다
 - 로그인 복귀: proxy가 비로그인 접근을 `/login?next=<경로>`로 보내고, 로그인·가입·카카오 콜백은 `lib/safe-next.ts`의 `safeNext`로 검증한 경로로 돌아간다(같은 사이트 경로만, 로그인 화면 제외).
 - 선택된 방은 주소가 기준이다(전역 상태 없음). 방으로 이동할 때는 `markInAppNav()` 후 `roomPath(id)`.
 - 색은 `lib/theme.ts`가 단일 출처(대비 테스트 포함). 컴포넌트는 `bg-background`, `text-muted-foreground`, `bg-bubble-me` 같은 토큰만 쓰고 hex·`gray-*`·`blue-*`를 쓰지 않는다.
-- 시트·메뉴는 `components/ui/sheet.tsx`(네이티브 dialog). 새 UI 의존성을 추가하지 않는다.
+- 시트·메뉴는 `components/ui/sheet.tsx`(네이티브 dialog). 새 UI 의존성을 추가하지 않는다. 예외: 반응 이모지 선택기 `frimousse`(2026-10-17 사용자 요청, `EmojiPickerSheet`를 next/dynamic으로 필요할 때만 로드).
 - 높이는 `h-dvh`·`env(safe-area-inset-*)` 기준, `100vh`·`h-screen` 금지.
 - 누름 반응: 폰에는 hover가 없다. 새 버튼·링크는 `pressable`(작아짐+어두워짐), 목록 행은 `pressable-row`(배경만)를 붙이고, 서버 요청 버튼은 `<Button loading>`으로 처리 중을 보인다. `hover:`만으로 상태를 표시하지 않는다.
 - 토스트는 상단 바 아래(offset 64px)에 뜬다 — 상단 버튼을 가리지 않게.
