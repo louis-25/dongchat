@@ -4,7 +4,7 @@ import { buildTimeline } from "./message-groups.ts";
 import type { MessageView } from "./chat-state.ts";
 
 const v = (id: number, senderId: string, at: Date, deleted = false): MessageView => ({
-  id, roomId: 1, senderId, content: `m${id}`, sticker: null, imagePath: null, replyToId: null, editedAt: null,
+  id, roomId: 1, senderId, content: `m${id}`, sticker: null, imagePath: null, reactions: [], replyToId: null, editedAt: null,
   deletedAt: deleted ? at.toISOString() : null, createdAt: at.toISOString(),
   senderName: senderId, senderAvatar: null, isMine: senderId === "me", unreadCount: null, replyTo: null,
 });

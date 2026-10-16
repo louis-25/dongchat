@@ -5,6 +5,7 @@ import { UserAvatar } from "@/components/chat/UserAvatar";
 import { useLongPress } from "@/hooks/useLongPress";
 import type { MessageView } from "@/lib/chat-state";
 import { formatClock } from "@/lib/format";
+import { summarizeReactions, type ReactionCode } from "@/lib/reactions";
 import { stickerLabel, stickerSrc } from "@/lib/stickers";
 import { cn } from "@/lib/utils";
 
@@ -16,9 +17,11 @@ type Props = {
   onOpenActions: (view: MessageView) => void;
   onJumpTo: (id: number) => void;
   onOpenProfile?: (userId: string) => void;
+  me?: string;
+  onReact?: (messageId: number, reaction: ReactionCode | null) => void;
 };
 
-export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJumpTo, onOpenProfile }: Props) {
+export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJumpTo, onOpenProfile, me = "", onReact }: Props) {
   const deleted = view.deletedAt !== null;
   const press = useLongPress(() => onOpenActions(view));
   const interactive = !readOnly && !deleted;
@@ -86,6 +89,27 @@ export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJu
           </div>
           {meta}
         </div>
+        {!deleted && view.reactions.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {summarizeReactions(view.reactions, me).map((r) => (
+              <button
+                key={r.code}
+                type="button"
+                disabled={!onReact}
+                onClick={() => onReact?.(view.id, r.mine ? null : r.code)}
+                aria-pressed={r.mine}
+                aria-label={`${r.emoji} ${r.count}`}
+                className={cn(
+                  "pressable flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-xs tabular-nums",
+                  r.mine ? "border-primary bg-primary/10 font-semibold text-primary" : "border-border bg-background text-muted-foreground",
+                )}
+              >
+                <span>{r.emoji}</span>
+                {r.count}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

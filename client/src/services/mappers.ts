@@ -1,3 +1,4 @@
+import type { ReactionCode } from "../lib/reactions.ts";
 import type {
   ChatMessage,
   DomainError,
@@ -22,7 +23,7 @@ export const ROOM_SELECT = `id, name, is_group, created_by, me:chat_room_partici
 
 export const MESSAGE_COLUMNS = "id, room_id, sender_id, content, sticker, image_path, reply_to_id, edited_at, deleted_at, created_at";
 // reply:reply_to_id(...) = 답장 대상(다대일). messages!fk 힌트는 자기참조에서 일대다로 해석되므로 쓰지 않는다.
-export const MESSAGE_SELECT = `${MESSAGE_COLUMNS}, sender:profiles!messages_sender_id_fkey(${PROFILE_COLUMNS}), reply:reply_to_id(${MESSAGE_COLUMNS})`;
+export const MESSAGE_SELECT = `${MESSAGE_COLUMNS}, sender:profiles!messages_sender_id_fkey(${PROFILE_COLUMNS}), reply:reply_to_id(${MESSAGE_COLUMNS}), reactions:message_reactions(user_id, reaction)`;
 
 // PostgREST 응답 row → 도메인 타입. 이 파일은 상대 경로·type-only import만 쓴다(Node 단위 테스트·통합 스크립트가 직접 import).
 export type ProfileRow = {
@@ -54,6 +55,7 @@ export type MessageCoreRow = {
   sticker: string | null;
   image_path: string | null;
   reply_to_id: number | null;
+  reactions?: { user_id: string; reaction: ReactionCode }[]; // 목록 조회에만
   edited_at: string | null;
   deleted_at: string | null;
   created_at: string;
@@ -113,6 +115,7 @@ export const toChatMessage = (r: MessageCoreRow): ChatMessage => ({
   content: r.content,
   sticker: r.sticker,
   imagePath: r.image_path,
+  reactions: (r.reactions ?? []).map((x) => ({ userId: x.user_id, reaction: x.reaction })),
   replyToId: r.reply_to_id,
   editedAt: r.edited_at,
   deletedAt: r.deleted_at,
@@ -138,6 +141,7 @@ export const fromMessagePayload = (p: MessagePayload): ChatMessage => ({
   content: p.content,
   sticker: p.sticker ?? null,
   imagePath: p.imagePath ?? null,
+  reactions: [],
   replyToId: p.replyToId,
   editedAt: null,
   deletedAt: null,

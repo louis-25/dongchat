@@ -6,6 +6,7 @@ import { getErrorMessage } from "@/lib/error-handler";
 import {
   applyDeleted,
   applyEdited,
+  applyReaction,
   bumpRead,
   mergeMessages,
   mergeSnapshot,
@@ -16,7 +17,8 @@ import {
   toViews,
   type ReadState,
 } from "@/lib/chat-state";
-import { deleteMessage, editMessage, fetchMessages, markRead, sendImage, sendMessage, sendSticker } from "@/services/messages";
+import { deleteMessage, editMessage, fetchMessages, markRead, sendImage, sendMessage, sendSticker, setReaction } from "@/services/messages";
+import type { ReactionCode } from "@/lib/reactions";
 import { listParticipants } from "@/services/rooms";
 import {
   MESSAGE_PAGE_SIZE,
@@ -144,6 +146,9 @@ export const useChatMessages = (room: Room | null) => {
             participants: s.participants && withProfile(s.participants, e.profile),
           }));
           break;
+        case "reaction_updated":
+          update(roomId, (s) => ({ ...s, messages: applyReaction(s.messages, e) }));
+          break;
         case "member_added":
           // 다시 초대된 사람도 다음 스냅샷에서 참여자로 돌아오게 하고, 참여자·읽음 위치를 다시 받는다
           update(roomId, (s) => ({ ...s, removed: readmit(s.removed, e.userId) }));
@@ -196,6 +201,17 @@ export const useChatMessages = (room: Room | null) => {
       }
     },
     [roomId, update, error],
+  );
+
+  const react = useCallback(
+    async (messageId: number, reaction: ReactionCode | null) => {
+      try {
+        await setReaction(messageId, reaction); // 반영은 reaction_updated 이벤트로
+      } catch (e) {
+        error(`반응 실패: ${message(e)}`);
+      }
+    },
+    [error],
   );
 
   const edit = useCallback(
@@ -260,6 +276,7 @@ export const useChatMessages = (room: Room | null) => {
     messages,
     sendMessage: send,
     sendImages,
+    react,
     editMessage: edit,
     deleteMessage: remove,
     loadOlder,

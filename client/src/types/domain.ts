@@ -1,4 +1,5 @@
 // 앱 도메인 타입. 백엔드(Supabase/NestJS)와 무관한 계약이며 services/가 이 타입으로 변환해 반환한다.
+import type { Reaction, ReactionCode } from "../lib/reactions.ts";
 export type DomainError = { code: string; message: string };
 
 export type AuthUser = {
@@ -65,6 +66,7 @@ export type ChatMessage = {
   content: string; // 삭제되면 "", 이모티콘이면 "(이모티콘)"
   sticker: string | null; // 이모티콘 id(lib/stickers.ts)
   imagePath: string | null; // 사진(chat-images 버킷 경로, 화면은 서명 URL)
+  reactions: Reaction[];
   replyToId: number | null;
   editedAt: string | null;
   deletedAt: string | null;
@@ -83,6 +85,7 @@ export type RoomEvent =
   | { type: "member_removed"; roomId: number; userId: string }
   | { type: "profile_updated"; roomId: number; profile: Profile }
   | { type: "member_added"; roomId: number; userId: string }
+  | { type: "reaction_updated"; roomId: number; messageId: number; userId: string; reaction: ReactionCode | null }
   | { type: "subscribed"; roomId: number };
 
 export type UserEvent =

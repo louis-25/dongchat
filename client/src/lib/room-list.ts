@@ -51,6 +51,7 @@ export const applyRoomEvent = (
     case "subscribed":
       return { list, refetch: true };
     case "profile_updated":
+    case "reaction_updated":
       return { list, refetch: false };
   }
 };

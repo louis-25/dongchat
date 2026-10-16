@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   applyDeleted,
   applyEdited,
+  applyReaction,
   bumpRead,
   withoutRemoved,
   withProfile,
@@ -22,6 +23,7 @@ const msg = (id: number, senderId: string | null = "a", extra: Partial<ChatMessa
   content: `m${id}`,
   sticker: null,
   imagePath: null,
+  reactions: [],
   replyToId: null,
   editedAt: null,
   deletedAt: null,
@@ -141,6 +143,13 @@ test("프로필 변경: 해당 참여자만 바꾸고, 없으면 같은 배열",
   assert.equal(next[1].lastReadMessageId, 3);
   assert.equal(next[0], list[0]);
   assert.equal(withProfile(list, profile("z", "zed")), list);
+});
+
+test("반응 이벤트: 해당 메시지만 바꾼다", () => {
+  const list = [msg(1), msg(2)];
+  const next = applyReaction(list, { messageId: 2, userId: "b", reaction: "heart" });
+  assert.deepEqual(next[1].reactions, [{ userId: "b", reaction: "heart" }]);
+  assert.equal(next[0], list[0]);
 });
 
 test("다시 초대: 제외 목록에서 빠져 스냅샷 참여자로 돌아온다", () => {

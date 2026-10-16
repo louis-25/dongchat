@@ -85,6 +85,7 @@ test("메시지 페이지: 최신순 행 → 오름차순, 발신자 프로필·
     content: "m3",
     sticker: null,
     imagePath: null,
+    reactions: [],
     replyToId: 1,
     editedAt: null,
     deletedAt: null,
