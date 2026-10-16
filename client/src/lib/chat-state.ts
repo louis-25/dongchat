@@ -56,9 +56,11 @@ export const bumpRead = (state: ReadState, userId: string, id: number): ReadStat
   (state[userId] ?? 0) >= id ? state : { ...state, [userId]: id };
 
 // 스냅샷 조회 중에 나간(강퇴된) 사람을 늦게 도착한 참여자 목록이 되살리지 않게 한다.
-// 기존 방에 다시 초대하는 기능이 없으므로 한 번 나간 id는 그 방에서 계속 제외해도 된다.
+// 다시 초대되면(member_added) readmit으로 제외 목록에서 뺀다.
 export const withoutRemoved = (participants: Participant[], removed: string[]): Participant[] =>
   participants.filter((p) => !removed.includes(p.user.id));
+
+export const readmit = (removed: string[], userId: string): string[] => removed.filter((id) => id !== userId);
 
 // 닉네임·사진 변경(profile_updated) 반영
 export const withProfile = (participants: Participant[], profile: Profile): Participant[] =>

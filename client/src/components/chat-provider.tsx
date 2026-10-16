@@ -58,6 +58,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const emit = useCallback(
     (e: RoomEvent) => {
       // 멤버 변동(강퇴·나가기·방장 승계)은 방 목록·참여자에 반영
+      if (e.type === "member_added") void refreshRooms(); // 인원 수·참여자
       if (e.type === "member_removed") {
         if (e.userId === userId) dropRoom(e.roomId);
         void refreshRooms();

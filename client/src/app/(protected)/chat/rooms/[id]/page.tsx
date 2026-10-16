@@ -12,6 +12,7 @@ import { MessageActionsSheet } from "@/components/chat/MessageActionsSheet";
 import { ProfileSheet } from "@/components/chat/ProfileSheet";
 import { Button } from "@/components/ui/button";
 import { RoomMenuSheet } from "@/components/chat/RoomMenuSheet";
+import { InviteMembersSheet } from "@/components/chat/InviteMembersSheet";
 import { useChat } from "@/components/chat-provider";
 import useAuth from "@/hooks/useAuth";
 import { useChatMessages } from "@/hooks/useChatMessages";
@@ -32,7 +33,7 @@ export default function RoomPage() {
   const { data: rooms, isLoading } = useRooms();
   const room = rooms?.find((r) => r.id === roomId) ?? null;
   const { setViewingRoom } = useChat();
-  const { leave, kick, openDirect, isPending } = useRoomActions();
+  const { leave, kick, openDirect, invite, isInviting, isPending } = useRoomActions();
   const { messages, sendMessage, sendImages, editMessage, deleteMessage, loadOlder, hasMore, loadingOlder, participants } =
     useChatMessages(room);
 
@@ -40,6 +41,7 @@ export default function RoomPage() {
   const [editTarget, setEditTarget] = useState<MessageView | null>(null);
   const [actionTarget, setActionTarget] = useState<MessageView | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { data: summaries } = useRoomSummaries();
@@ -154,6 +156,13 @@ export default function RoomPage() {
           </Button>
         )}
       </ProfileSheet>
+      <InviteMembersSheet
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        memberIds={participants.map((p) => p.user.id)}
+        onInvite={(usernames) => invite(room.id, usernames)}
+        pending={isInviting}
+      />
       <RoomMenuSheet
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -170,6 +179,10 @@ export default function RoomPage() {
         muted={muted}
         muting={toggleMute.isPending}
         onToggleMute={() => toggleMute.mutate(!muted)}
+        onInvite={() => {
+          setMenuOpen(false);
+          setInviteOpen(true);
+        }}
       />
     </>
   );

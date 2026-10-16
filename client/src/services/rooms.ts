@@ -46,6 +46,12 @@ export async function createRoom(input: { name?: string; isGroup: boolean; usern
   return data;
 }
 
+// 단체방에 친구 초대(멤버 누구나, 이미 있는 사람은 DB가 건너뜀)
+export async function inviteToRoom(roomId: number, usernames: string[]): Promise<void> {
+  const { error } = await createClient().rpc("invite_to_room", { p_room_id: roomId, p_usernames: usernames });
+  if (error) throw toDomainError(error);
+}
+
 export async function leaveRoom(roomId: number): Promise<void> {
   const { error } = await createClient().rpc("leave_room", { p_room_id: roomId });
   if (error) throw toDomainError(error);

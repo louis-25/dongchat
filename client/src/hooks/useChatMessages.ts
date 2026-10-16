@@ -12,6 +12,7 @@ import {
   seedReadState,
   withoutRemoved,
   withProfile,
+  readmit,
   toViews,
   type ReadState,
 } from "@/lib/chat-state";
@@ -142,6 +143,11 @@ export const useChatMessages = (room: Room | null) => {
             profiles: s.profiles[e.profile.id] ? { ...s.profiles, [e.profile.id]: e.profile } : s.profiles,
             participants: s.participants && withProfile(s.participants, e.profile),
           }));
+          break;
+        case "member_added":
+          // 다시 초대된 사람도 다음 스냅샷에서 참여자로 돌아오게 하고, 참여자·읽음 위치를 다시 받는다
+          update(roomId, (s) => ({ ...s, removed: readmit(s.removed, e.userId) }));
+          void sync(roomId);
           break;
         case "member_removed":
           // 나간 사람은 안 읽은 수 기준에서 바로 뺀다(목록 refetch를 기다리지 않음)

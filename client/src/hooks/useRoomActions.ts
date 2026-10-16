@@ -7,7 +7,7 @@ import { ROOMS_QUERY_KEY } from "@/hooks/useRooms";
 import { getErrorMessage } from "@/lib/error-handler";
 import { markInAppNav } from "@/lib/nav";
 import { roomPath } from "@/lib/push-url";
-import { createRoom, kickMember, leaveRoom, openDirectRoom } from "@/services/rooms";
+import { createRoom, inviteToRoom, kickMember, leaveRoom, openDirectRoom } from "@/services/rooms";
 
 // 방 만들기·1:1 열기·나가기·강퇴. 성공하면 목록(요약 포함)을 다시 받고 해당 화면으로 이동한다.
 export const useRoomActions = () => {
@@ -49,8 +49,19 @@ export const useRoomActions = () => {
     onError: (e) => error(`내보내지 못했어요: ${getErrorMessage(e)}`),
   });
 
+  const invite = useMutation({
+    mutationFn: ({ roomId, usernames }: { roomId: number; usernames: string[] }) => inviteToRoom(roomId, usernames),
+    onSuccess: async () => {
+      await refresh();
+      success("친구를 초대했어요.");
+    },
+    onError: (e) => error(`초대하지 못했어요: ${getErrorMessage(e)}`),
+  });
+
   return {
     create: create.mutate,
+    invite: (roomId: number, usernames: string[]) => invite.mutate({ roomId, usernames }),
+    isInviting: invite.isPending,
     openDirect: openDirect.mutate,
     leave: leave.mutate,
     kick: (roomId: number, userId: string) => kick.mutate({ roomId, userId }),

@@ -6,6 +6,7 @@ import {
   bumpRead,
   withoutRemoved,
   withProfile,
+  readmit,
   mergeMessages,
   mergeSnapshot,
   scrollAction,
@@ -140,6 +141,12 @@ test("프로필 변경: 해당 참여자만 바꾸고, 없으면 같은 배열",
   assert.equal(next[1].lastReadMessageId, 3);
   assert.equal(next[0], list[0]);
   assert.equal(withProfile(list, profile("z", "zed")), list);
+});
+
+test("다시 초대: 제외 목록에서 빠져 스냅샷 참여자로 돌아온다", () => {
+  const removed = readmit(["b", "c"], "b");
+  assert.deepEqual(removed, ["c"]);
+  assert.deepEqual(withoutRemoved([part(A, null), part(B, null)], removed).map((p) => p.user.id), ["a", "b"]);
 });
 
 test("스크롤: 첫 로드·과거 로드·새 메시지·변화 없음 (Review Focus 2)", () => {

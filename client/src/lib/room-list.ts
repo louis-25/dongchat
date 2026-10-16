@@ -46,6 +46,7 @@ export const applyRoomEvent = (
     }
     // 삭제(보낸이·읽음 여부를 모름)·멤버 변동·재구독(놓친 이벤트)은 서버에서 다시 받는다.
     case "message_deleted":
+    case "member_added":
     case "member_removed":
     case "subscribed":
       return { list, refetch: true };

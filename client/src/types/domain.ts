@@ -82,6 +82,7 @@ export type RoomEvent =
   | { type: "read_update"; roomId: number; userId: string; lastReadMessageId: number }
   | { type: "member_removed"; roomId: number; userId: string }
   | { type: "profile_updated"; roomId: number; profile: Profile }
+  | { type: "member_added"; roomId: number; userId: string }
   | { type: "subscribed"; roomId: number };
 
 export type UserEvent =

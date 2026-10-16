@@ -317,6 +317,7 @@ export type Database = {
           muted: boolean;
         }[];
       };
+      invite_to_room: { Args: { p_room_id: number; p_usernames: string[] }; Returns: undefined };
       mark_read: { Args: { p_room_id: number }; Returns: number };
       set_room_muted: { Args: { p_room_id: number; p_muted: boolean }; Returns: undefined };
       open_direct_room: { Args: { p_username: string }; Returns: number };
