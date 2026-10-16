@@ -59,8 +59,12 @@ self.addEventListener('push', (event) => {
     vibrate: [200, 100, 200],
   };
 
+  // 같은 tag 알림을 '교체'하면 안드로이드가 팝업(헤드업)을 생략할 수 있다 → 기존 것을 닫고 새로 올린다.
   event.waitUntil(
-    self.registration.showNotification(notificationData.title, notificationOptions)
+    self.registration
+      .getNotifications({ tag: notificationOptions.tag })
+      .then((old) => old.forEach((n) => n.close()))
+      .then(() => self.registration.showNotification(notificationData.title, notificationOptions))
   );
 });
 
