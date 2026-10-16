@@ -61,7 +61,8 @@ export type ChatMessage = {
   id: number;
   roomId: number;
   senderId: string | null; // 탈퇴 사용자는 null
-  content: string; // 삭제되면 ""
+  content: string; // 삭제되면 "", 이모티콘이면 "(이모티콘)"
+  sticker: string | null; // 이모티콘 id(lib/stickers.ts)
   replyToId: number | null;
   editedAt: string | null;
   deletedAt: string | null;

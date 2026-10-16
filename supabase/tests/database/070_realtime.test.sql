@@ -29,15 +29,15 @@ reset role;
 
 -- 10~13: 이벤트 매핑
 select is((select event from private.message_event('INSERT', null,
-  row(1, 7, null, 'hi', null, null, null, now())::public.messages)), 'message', 'INSERT → message');
+  row(1, 7, null, 'hi', null, null, null, now(), null)::public.messages)), 'message', 'INSERT → message');
 select is((select event from private.message_event('UPDATE',
-  row(1, 7, null, 'hi', null, null, null, now())::public.messages,
-  row(1, 7, null, '', null, null, now(), now())::public.messages)), 'message_deleted', 'deleted_at 설정 → message_deleted');
+  row(1, 7, null, 'hi', null, null, null, now(), null)::public.messages,
+  row(1, 7, null, '', null, null, now(), now(), null)::public.messages)), 'message_deleted', 'deleted_at 설정 → message_deleted');
 select is((select event from private.message_event('UPDATE',
-  row(1, 7, null, 'hi', null, null, null, now())::public.messages,
-  row(1, 7, null, 'hello', null, now(), null, now())::public.messages)), 'message_edited', '내용 변경 → message_edited');
+  row(1, 7, null, 'hi', null, null, null, now(), null)::public.messages,
+  row(1, 7, null, 'hello', null, now(), null, now(), null)::public.messages)), 'message_edited', '내용 변경 → message_edited');
 select is((select payload ->> 'roomId' from private.message_event('INSERT', null,
-  row(1, 7, null, 'hi', null, null, null, now())::public.messages)), '7', 'payload에 roomId');
+  row(1, 7, null, 'hi', null, null, null, now(), null)::public.messages)), '7', 'payload에 roomId');
 
 -- 14~17: 송출 트리거와 함께 원 작업이 성공 (send 실패 시에도 private.broadcast가 예외를 삼킴)
 select tests.login_as(tests.uid('alice@test.com'));

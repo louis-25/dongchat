@@ -58,6 +58,7 @@ const core = (id: number, extra: Partial<Record<string, unknown>> = {}) => ({
   room_id: 9,
   sender_id: "a",
   content: `m${id}`,
+  sticker: null,
   reply_to_id: null,
   edited_at: null,
   deleted_at: null,
@@ -81,6 +82,7 @@ test("메시지 페이지: 최신순 행 → 오름차순, 발신자 프로필·
     roomId: 9,
     senderId: "k",
     content: "m3",
+    sticker: null,
     replyToId: 1,
     editedAt: null,
     deletedAt: null,
@@ -99,6 +101,13 @@ test("메시지 페이지: 최신순 행 → 오름차순, 발신자 프로필·
 test("Realtime message payload는 조회 행과 같은 ChatMessage가 된다", () => {
   const payload = { id: 5, roomId: 9, senderId: "a", content: "m5", replyToId: null, createdAt: "2026-10-14T03:00:05Z" };
   assert.deepEqual(fromMessagePayload(payload), toChatMessage(core(5) as never));
+});
+
+test("이모티콘: payload·조회 행 모두 sticker 유지, 예전 payload(sticker 없음)는 null", () => {
+  const payload = { id: 6, roomId: 9, senderId: "a", content: "(이모티콘)", sticker: "hi", replyToId: null, createdAt: "t" };
+  assert.equal(fromMessagePayload(payload).sticker, "hi");
+  assert.equal(toChatMessage(core(6, { sticker: "hi" }) as never).sticker, "hi");
+  assert.equal(fromMessagePayload({ ...payload, sticker: undefined }).sticker, null);
 });
 
 test("메시지 내용: 앞뒤 공백 제거, 공백만·2000자 초과 거부, 이모지는 코드 포인트로 센다", () => {

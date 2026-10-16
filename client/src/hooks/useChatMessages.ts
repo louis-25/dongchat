@@ -15,7 +15,7 @@ import {
   toViews,
   type ReadState,
 } from "@/lib/chat-state";
-import { deleteMessage, editMessage, fetchMessages, markRead, sendMessage } from "@/services/messages";
+import { deleteMessage, editMessage, fetchMessages, markRead, sendMessage, sendSticker } from "@/services/messages";
 import { listParticipants } from "@/services/rooms";
 import {
   MESSAGE_PAGE_SIZE,
@@ -164,10 +164,10 @@ export const useChatMessages = (room: Room | null) => {
   }, [roomId, markReadIfOpen]);
 
   const send = useCallback(
-    async (content: string, replyToId?: number) => {
+    async (content: string, replyToId?: number, sticker?: string) => {
       if (roomId === null) return;
       try {
-        const sent = await sendMessage(roomId, content, replyToId);
+        const sent = sticker ? await sendSticker(roomId, sticker, replyToId) : await sendMessage(roomId, content, replyToId);
         update(roomId, (s) => ({ ...s, messages: mergeMessages(s.messages, [sent]) })); // 에코보다 먼저 표시
       } catch (e) {
         error(`전송 실패: ${message(e)}`);

@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CornerUpLeft, Pencil, SendHorizontal, X } from "lucide-react";
+import { CornerUpLeft, Pencil, SendHorizontal, Smile, X } from "lucide-react";
 import type { MessageView } from "@/lib/chat-state";
 import { shouldSend } from "@/lib/composer-keys";
+import { STICKERS, stickerSrc } from "@/lib/stickers";
 
 type Props = {
   disabled?: boolean;
@@ -11,15 +12,17 @@ type Props = {
   editTarget: MessageView | null;
   onCancel: () => void;
   onSend: (content: string) => void;
+  onSendSticker: (id: string) => void;
   onEdit: (id: number, content: string) => void;
 };
 
 const MAX_HEIGHT_PX = 128; // 약 5줄
 
 // 수정 대상이 바뀌면 부모가 key로 다시 마운트해 기존 내용으로 시작한다.
-export function Composer({ disabled = false, replyTarget, editTarget, onCancel, onSend, onEdit }: Props) {
+export function Composer({ disabled = false, replyTarget, editTarget, onCancel, onSend, onSendSticker, onEdit }: Props) {
   const [text, setText] = useState(editTarget?.content ?? "");
   const ref = useRef<HTMLTextAreaElement>(null);
+  const [stickersOpen, setStickersOpen] = useState(false);
 
   const resize = () => {
     const el = ref.current;
@@ -65,8 +68,20 @@ export function Composer({ disabled = false, replyTarget, editTarget, onCancel, 
           submit();
         }}
       >
+        {!editTarget && (
+          <button
+            type="button"
+            onClick={() => setStickersOpen((o) => !o)}
+            aria-label="이모티콘"
+            aria-expanded={stickersOpen}
+            className={`pressable flex size-10 shrink-0 items-center justify-center rounded-full ${stickersOpen ? "text-primary" : "text-muted-foreground"}`}
+          >
+            <Smile className="size-6" />
+          </button>
+        )}
         <textarea
           ref={ref}
+          onFocus={() => setStickersOpen(false)}
           rows={1}
           value={text}
           disabled={disabled}
@@ -95,6 +110,27 @@ export function Composer({ disabled = false, replyTarget, editTarget, onCancel, 
           <SendHorizontal className="size-5" />
         </button>
       </form>
+      {stickersOpen && !editTarget && (
+        <div className="grid max-h-56 grid-cols-4 gap-1 overflow-y-auto px-3 pb-2" role="list" aria-label="이모티콘 목록">
+          {STICKERS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              role="listitem"
+              disabled={disabled}
+              onClick={() => {
+                onSendSticker(s.id);
+                setStickersOpen(false);
+              }}
+              className="pressable rounded-xl p-1 active:bg-muted"
+              aria-label={s.label}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- 작은 정적 SVG */}
+              <img src={stickerSrc(s.id)} alt="" className="aspect-square w-full" />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

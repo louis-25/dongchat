@@ -96,6 +96,10 @@ export default function RoomPage() {
           void sendMessage(content, replyTarget?.id);
           setReplyTarget(null);
         }}
+        onSendSticker={(id) => {
+          void sendMessage("", replyTarget?.id, id);
+          setReplyTarget(null);
+        }}
         onEdit={(id, content) => {
           void editMessage(id, content);
           setEditTarget(null);

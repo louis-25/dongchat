@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { MESSAGE_PAGE_SIZE, type ChatMessage, type MessagePage } from "@/types/domain";
+import { STICKER_FALLBACK } from "@/lib/stickers";
 import { toDomainError } from "./errors";
 import {
   MESSAGE_COLUMNS,
@@ -33,6 +34,17 @@ export async function sendMessage(roomId: number, content: string, replyToId?: n
   const { data, error } = await createClient()
     .from("messages")
     .insert({ room_id: roomId, content: text, reply_to_id: replyToId ?? null })
+    .select(MESSAGE_COLUMNS)
+    .single();
+  if (error) throw toDomainError(error);
+  return toChatMessage(data as unknown as MessageCoreRow);
+}
+
+// content는 알림·목록·답장 미리보기에 쓰이는 대체 문구
+export async function sendSticker(roomId: number, sticker: string, replyToId?: number): Promise<ChatMessage> {
+  const { data, error } = await createClient()
+    .from("messages")
+    .insert({ room_id: roomId, content: STICKER_FALLBACK, sticker, reply_to_id: replyToId ?? null })
     .select(MESSAGE_COLUMNS)
     .single();
   if (error) throw toDomainError(error);

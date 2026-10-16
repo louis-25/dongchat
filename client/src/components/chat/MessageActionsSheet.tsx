@@ -26,8 +26,8 @@ export function MessageActionsSheet({ target, onClose, onReply, onCopy, onEdit, 
           <p className="mb-2 line-clamp-3 rounded-xl bg-muted px-3 py-2 text-sm">{target.content}</p>
           <div className="divide-y">
             <button type="button" className={item} onClick={run(onReply)}>답장</button>
-            <button type="button" className={item} onClick={run(onCopy)}>복사</button>
-            {target.isMine && <button type="button" className={item} onClick={run(onEdit)}>수정</button>}
+            {!target.sticker && <button type="button" className={item} onClick={run(onCopy)}>복사</button>}
+            {target.isMine && !target.sticker && <button type="button" className={item} onClick={run(onEdit)}>수정</button>}
             {target.isMine && <button type="button" className={`${item} text-destructive`} onClick={run(onDelete)}>삭제</button>}
           </div>
         </>

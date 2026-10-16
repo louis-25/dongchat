@@ -129,6 +129,7 @@ export type Database = {
           reply_to_id: number | null;
           room_id: number;
           sender_id: string | null;
+          sticker: string | null;
         };
         ComputedFields: never;
         Insert: {
@@ -140,6 +141,7 @@ export type Database = {
           reply_to_id?: number | null;
           room_id: number;
           sender_id?: string | null;
+          sticker?: string | null;
         };
         Update: {
           content?: string;
@@ -150,6 +152,7 @@ export type Database = {
           reply_to_id?: number | null;
           room_id?: number;
           sender_id?: string | null;
+          sticker?: string | null;
         };
         Relationships: [
           {
