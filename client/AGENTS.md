@@ -25,6 +25,7 @@ app/, components/   UI — Supabase를 모른다
 - `ChatProvider`(`(protected)` 레이아웃)가 참여 방마다 `room:<id>`, 본인 `user:<uuid>` 비공개 채널을 구독한다. 관리자 열람은 `watchRoom(id)`.
 - 채널 (재)구독(`SUBSCRIBED`)마다 스냅샷을 다시 받아 id로 병합한다. user 채널은 구독 성공·거부 때 세션(`get_me`)·방 목록을 재확인한다(10초 제한). 상태 규칙은 `lib/chat-state.ts`(순수 함수, 단위 테스트).
 - 같은 토픽 재구독은 `lib/topic-gate.ts`를 거친다(realtime-js가 해제 중인 채널을 돌려주는 문제).
+- 접속자가 없으면 Realtime이 약 10분 뒤 테넌트를 내리고, 다음 접속 때 복제 슬롯을 다시 만든다. `SUBSCRIBED`가 슬롯 생성(~0.1초)보다 먼저 와서 그 사이 DB 송출은 유실된다(2026-10-17 로그로 확인). 앱은 재구독 스냅샷으로 메우므로 영향 없음. 검증 스크립트가 오래 쉰 뒤 첫 실행에서 이벤트를 못 받으면 다시 실행한다.
 
 ## 웹 푸시
 - 켜는 흐름: 브라우저는 사용자 동작 없이 허락 창을 띄울 수 없다. 채팅 목록의 `PushPrompt`가 [켜기]로 묻고(닫으면 7일 숨김), 이미 허용한 브라우저는 채팅 레이아웃의 `usePushNotification({ autoRegister: true })`가 로그인마다 자동 등록한다. 설정에서 직접 끄면 `dongchat.pushOptOut`이 남아 자동 등록·안내를 하지 않는다. 판단은 `lib/push-prompt.ts`(단위 테스트).
