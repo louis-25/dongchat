@@ -64,6 +64,7 @@ export type ChatMessage = {
   senderId: string | null; // 탈퇴 사용자는 null
   content: string; // 삭제되면 "", 이모티콘이면 "(이모티콘)"
   sticker: string | null; // 이모티콘 id(lib/stickers.ts)
+  imagePath: string | null; // 사진(chat-images 버킷 경로, 화면은 서명 URL)
   replyToId: number | null;
   editedAt: string | null;
   deletedAt: string | null;

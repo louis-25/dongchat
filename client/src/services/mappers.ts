@@ -20,7 +20,7 @@ export const PARTICIPANT_SELECT = `user_id, joined_at, last_read_message_id, pro
 // participants: 방의 전체 참여자.
 export const ROOM_SELECT = `id, name, is_group, created_by, me:chat_room_participants!inner(user_id), participants:chat_room_participants(${PARTICIPANT_SELECT})`;
 
-export const MESSAGE_COLUMNS = "id, room_id, sender_id, content, sticker, reply_to_id, edited_at, deleted_at, created_at";
+export const MESSAGE_COLUMNS = "id, room_id, sender_id, content, sticker, image_path, reply_to_id, edited_at, deleted_at, created_at";
 // reply:reply_to_id(...) = 답장 대상(다대일). messages!fk 힌트는 자기참조에서 일대다로 해석되므로 쓰지 않는다.
 export const MESSAGE_SELECT = `${MESSAGE_COLUMNS}, sender:profiles!messages_sender_id_fkey(${PROFILE_COLUMNS}), reply:reply_to_id(${MESSAGE_COLUMNS})`;
 
@@ -52,6 +52,7 @@ export type MessageCoreRow = {
   sender_id: string | null;
   content: string;
   sticker: string | null;
+  image_path: string | null;
   reply_to_id: number | null;
   edited_at: string | null;
   deleted_at: string | null;
@@ -65,6 +66,7 @@ export type MessagePayload = {
   senderId: string | null;
   content: string;
   sticker?: string | null; // 배포 전 DB는 없음
+  imagePath?: string | null;
   replyToId: number | null;
   createdAt: string;
 };
@@ -110,6 +112,7 @@ export const toChatMessage = (r: MessageCoreRow): ChatMessage => ({
   senderId: r.sender_id,
   content: r.content,
   sticker: r.sticker,
+  imagePath: r.image_path,
   replyToId: r.reply_to_id,
   editedAt: r.edited_at,
   deletedAt: r.deleted_at,
@@ -134,6 +137,7 @@ export const fromMessagePayload = (p: MessagePayload): ChatMessage => ({
   senderId: p.senderId,
   content: p.content,
   sticker: p.sticker ?? null,
+  imagePath: p.imagePath ?? null,
   replyToId: p.replyToId,
   editedAt: null,
   deletedAt: null,

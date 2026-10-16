@@ -59,6 +59,7 @@ const core = (id: number, extra: Partial<Record<string, unknown>> = {}) => ({
   sender_id: "a",
   content: `m${id}`,
   sticker: null,
+  image_path: null,
   reply_to_id: null,
   edited_at: null,
   deleted_at: null,
@@ -83,6 +84,7 @@ test("메시지 페이지: 최신순 행 → 오름차순, 발신자 프로필·
     senderId: "k",
     content: "m3",
     sticker: null,
+    imagePath: null,
     replyToId: 1,
     editedAt: null,
     deletedAt: null,
@@ -130,4 +132,11 @@ test("방 요약 행은 RoomSummary로, 메시지 없는 방은 lastMessage null
     toRoomSummary({ ...base, last_message_id: 3, last_message_content: null, last_message_deleted: true, last_message_sender_id: "u", last_message_at: "2026-10-15T01:00:00Z", unread_count: 4 }).lastMessage,
     { id: 3, content: "", sticker: null, deleted: true, senderId: "u", at: "2026-10-15T01:00:00Z" },
   );
+});
+
+test("사진: payload·조회 행 모두 imagePath 유지, 예전 payload는 null", () => {
+  const payload = { id: 7, roomId: 9, senderId: "a", content: "(사진)", imagePath: "9/x.jpg", replyToId: null, createdAt: "t" };
+  assert.equal(fromMessagePayload(payload).imagePath, "9/x.jpg");
+  assert.equal(toChatMessage(core(7, { image_path: "9/x.jpg" }) as never).imagePath, "9/x.jpg");
+  assert.equal(fromMessagePayload({ ...payload, imagePath: undefined }).imagePath, null);
 });

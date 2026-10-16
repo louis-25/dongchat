@@ -5,9 +5,11 @@ import { useRef } from "react";
 const MOVE_TOLERANCE_PX = 10;
 
 // 길게 누르기(터치·마우스) 또는 우클릭으로 onLongPress. 스크롤하려고 움직이면 취소한다.
+// 길게 누른 뒤 손을 떼면 오는 click은 막는다(안쪽 버튼·사진이 함께 열리지 않게).
 export const useLongPress = (onLongPress: () => void, ms = 500) => {
   const timer = useRef<number | null>(null);
   const start = useRef({ x: 0, y: 0 });
+  const fired = useRef(false);
   const clear = () => {
     if (timer.current !== null) window.clearTimeout(timer.current);
     timer.current = null;
@@ -16,9 +18,11 @@ export const useLongPress = (onLongPress: () => void, ms = 500) => {
     onPointerDown: (e: React.PointerEvent) => {
       if (e.pointerType === "mouse" && e.button !== 0) return;
       clear();
+      fired.current = false;
       start.current = { x: e.clientX, y: e.clientY };
       timer.current = window.setTimeout(() => {
         timer.current = null;
+        fired.current = true;
         onLongPress();
       }, ms);
     },
@@ -31,7 +35,14 @@ export const useLongPress = (onLongPress: () => void, ms = 500) => {
     onContextMenu: (e: React.MouseEvent) => {
       e.preventDefault();
       clear();
+      fired.current = true;
       onLongPress();
+    },
+    onClickCapture: (e: React.MouseEvent) => {
+      if (!fired.current) return;
+      fired.current = false;
+      e.preventDefault();
+      e.stopPropagation();
     },
   };
 };

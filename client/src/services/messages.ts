@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { MESSAGE_PAGE_SIZE, type ChatMessage, type MessagePage } from "@/types/domain";
+import { toJpeg } from "@/lib/image";
 import { STICKER_FALLBACK } from "@/lib/stickers";
 import { toDomainError } from "./errors";
 import {
@@ -51,14 +52,46 @@ export async function sendSticker(roomId: number, sticker: string, replyToId?: n
   return toChatMessage(data as unknown as MessageCoreRow);
 }
 
+const IMAGE_FALLBACK = "(사진)";
+const IMAGE_BUCKET = "chat-images";
+
+// 긴 변 1600px JPEG로 줄여 `<room>/<uuid>.jpg`에 올리고 메시지를 만든다. 메시지가 실패하면 올린 파일을 지운다.
+export async function sendImage(roomId: number, file: File, replyToId?: number): Promise<ChatMessage> {
+  const supabase = createClient();
+  const path = `${roomId}/${crypto.randomUUID()}.jpg`;
+  const blob = await toJpeg(file, { maxSide: 1600, quality: 0.8 });
+  const up = await supabase.storage.from(IMAGE_BUCKET).upload(path, blob, { contentType: "image/jpeg" });
+  if (up.error) throw toDomainError(up.error);
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({ room_id: roomId, content: IMAGE_FALLBACK, image_path: path, reply_to_id: replyToId ?? null })
+    .select(MESSAGE_COLUMNS)
+    .single();
+  if (error) {
+    await supabase.storage.from(IMAGE_BUCKET).remove([path]);
+    throw toDomainError(error);
+  }
+  return toChatMessage(data as unknown as MessageCoreRow);
+}
+
+// 비공개 버킷이라 서명 URL(1시간)로 읽는다. 화면은 useImageUrl이 캐시한다.
+export async function getImageUrl(path: string): Promise<string> {
+  const { data, error } = await createClient().storage.from(IMAGE_BUCKET).createSignedUrl(path, 60 * 60);
+  if (error) throw toDomainError(error);
+  return data.signedUrl;
+}
+
 export async function editMessage(id: number, content: string): Promise<void> {
   const { error } = await createClient().rpc("edit_message", { p_id: id, p_content: normalizeMessageContent(content) });
   if (error) throw toDomainError(error);
 }
 
-export async function deleteMessage(id: number): Promise<void> {
-  const { error } = await createClient().rpc("delete_message", { p_id: id });
+// 사진 메시지면 파일도 지운다(실패해도 메시지 삭제는 유지 — 파일만 남는다).
+export async function deleteMessage(id: number, imagePath?: string | null): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("delete_message", { p_id: id });
   if (error) throw toDomainError(error);
+  if (imagePath) await supabase.storage.from(IMAGE_BUCKET).remove([imagePath]);
 }
 
 // 방의 최신 메시지까지 읽음(단조 증가, 변화 없으면 DB가 UPDATE 생략).

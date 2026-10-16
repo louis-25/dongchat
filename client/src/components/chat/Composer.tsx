@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CornerUpLeft, Pencil, SendHorizontal, Smile, X } from "lucide-react";
+import { CornerUpLeft, ImagePlus, Pencil, SendHorizontal, Smile, X } from "lucide-react";
 import type { MessageView } from "@/lib/chat-state";
 import { shouldSend } from "@/lib/composer-keys";
 import { STICKERS, stickerSrc } from "@/lib/stickers";
@@ -13,13 +13,14 @@ type Props = {
   onCancel: () => void;
   onSend: (content: string) => void;
   onSendSticker: (id: string) => void;
+  onSendImages: (files: File[]) => void;
   onEdit: (id: number, content: string) => void;
 };
 
 const MAX_HEIGHT_PX = 128; // 약 5줄
 
 // 수정 대상이 바뀌면 부모가 key로 다시 마운트해 기존 내용으로 시작한다.
-export function Composer({ disabled = false, replyTarget, editTarget, onCancel, onSend, onSendSticker, onEdit }: Props) {
+export function Composer({ disabled = false, replyTarget, editTarget, onCancel, onSend, onSendSticker, onSendImages, onEdit }: Props) {
   const [text, setText] = useState(editTarget?.content ?? "");
   const ref = useRef<HTMLTextAreaElement>(null);
   const [stickersOpen, setStickersOpen] = useState(false);
@@ -68,6 +69,26 @@ export function Composer({ disabled = false, replyTarget, editTarget, onCancel, 
           submit();
         }}
       >
+        {!editTarget && (
+          <label
+            aria-label="사진 보내기"
+            className="pressable flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground"
+          >
+            <ImagePlus className="size-6" />
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="sr-only"
+              disabled={disabled}
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                e.target.value = ""; // 같은 사진을 다시 골라도 onChange가 오도록
+                if (files.length > 0) onSendImages(files);
+              }}
+            />
+          </label>
+        )}
         {!editTarget && (
           <button
             type="button"

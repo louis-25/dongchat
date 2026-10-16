@@ -1,5 +1,6 @@
 "use client";
 
+import { ChatImage } from "@/components/chat/ChatImage";
 import { UserAvatar } from "@/components/chat/UserAvatar";
 import { useLongPress } from "@/hooks/useLongPress";
 import type { MessageView } from "@/lib/chat-state";
@@ -23,6 +24,7 @@ export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJu
   const interactive = !readOnly && !deleted;
   const mine = view.isMine;
   const sticker = !deleted && view.sticker !== null;
+  const image = !deleted && view.imagePath !== null;
   const showSender = !mine && first;
 
   const meta = last && (
@@ -57,7 +59,7 @@ export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJu
               "min-w-0 select-none whitespace-pre-wrap break-words px-3 py-2 text-[15px] leading-snug [-webkit-touch-callout:none]",
               mine ? "rounded-[18px_6px_18px_18px] bg-bubble-me text-bubble-me-foreground" : "rounded-[6px_18px_18px_18px] bg-bubble-them text-foreground",
               deleted && "bg-transparent italic text-muted-foreground ring-1 ring-border",
-              sticker && "bg-transparent p-0",
+              (sticker || image) && "bg-transparent p-0",
             )}
           >
             {view.replyTo && !deleted && (
@@ -72,6 +74,8 @@ export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJu
             )}
             {deleted ? (
               "삭제된 메시지입니다"
+            ) : image ? (
+              <ChatImage path={view.imagePath!} />
             ) : sticker ? (
               // eslint-disable-next-line @next/next/no-img-element -- 작은 정적 SVG
               <img src={stickerSrc(view.sticker!)} alt={stickerLabel(view.sticker!)} className="size-32" draggable={false} />

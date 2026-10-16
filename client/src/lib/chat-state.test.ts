@@ -20,6 +20,7 @@ const msg = (id: number, senderId: string | null = "a", extra: Partial<ChatMessa
   senderId,
   content: `m${id}`,
   sticker: null,
+  imagePath: null,
   replyToId: null,
   editedAt: null,
   deletedAt: null,

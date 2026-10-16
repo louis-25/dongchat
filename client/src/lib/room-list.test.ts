@@ -8,7 +8,7 @@ const s = (id: number, at: string | null, unread = 0, createdAt = "2026-10-01T00
   lastMessage: at === null ? null : { id: id * 10, content: "x", sticker: null, deleted: false, senderId: "u", at },
 });
 const msg = (roomId: number, id: number, senderId: string): ChatMessage => ({
-  id, roomId, senderId, content: "새", sticker: null, replyToId: null, editedAt: null, deletedAt: null, createdAt: "2026-10-15T10:00:00Z",
+  id, roomId, senderId, content: "새", sticker: null, imagePath: null, replyToId: null, editedAt: null, deletedAt: null, createdAt: "2026-10-15T10:00:00Z",
 });
 const ctx = { me: "me", isViewing: () => false };
 

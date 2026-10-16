@@ -126,6 +126,7 @@ export type Database = {
           deleted_at: string | null;
           edited_at: string | null;
           id: number;
+          image_path: string | null;
           reply_to_id: number | null;
           room_id: number;
           sender_id: string | null;
@@ -138,6 +139,7 @@ export type Database = {
           deleted_at?: string | null;
           edited_at?: string | null;
           id?: never;
+          image_path?: string | null;
           reply_to_id?: number | null;
           room_id: number;
           sender_id?: string | null;
@@ -149,6 +151,7 @@ export type Database = {
           deleted_at?: string | null;
           edited_at?: string | null;
           id?: never;
+          image_path?: string | null;
           reply_to_id?: number | null;
           room_id?: number;
           sender_id?: string | null;

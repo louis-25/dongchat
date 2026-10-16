@@ -33,7 +33,8 @@ export default function RoomPage() {
   const room = rooms?.find((r) => r.id === roomId) ?? null;
   const { setViewingRoom } = useChat();
   const { leave, kick, openDirect, isPending } = useRoomActions();
-  const { messages, sendMessage, editMessage, deleteMessage, loadOlder, hasMore, loadingOlder, participants } = useChatMessages(room);
+  const { messages, sendMessage, sendImages, editMessage, deleteMessage, loadOlder, hasMore, loadingOlder, participants } =
+    useChatMessages(room);
 
   const [replyTarget, setReplyTarget] = useState<MessageView | null>(null);
   const [editTarget, setEditTarget] = useState<MessageView | null>(null);
@@ -111,6 +112,10 @@ export default function RoomPage() {
           void sendMessage(content, replyTarget?.id);
           setReplyTarget(null);
         }}
+        onSendImages={(files) => {
+          void sendImages(files, replyTarget?.id);
+          setReplyTarget(null);
+        }}
         onSendSticker={(id) => {
           void sendMessage("", replyTarget?.id, id);
           setReplyTarget(null);
@@ -137,7 +142,7 @@ export default function RoomPage() {
           setReplyTarget(null);
           setEditTarget(v);
         }}
-        onDelete={(v) => confirm("메시지를 삭제할까요?") && void deleteMessage(v.id)}
+        onDelete={(v) => confirm("메시지를 삭제할까요?") && void deleteMessage(v.id, v.imagePath)}
       />
       <ProfileSheet profile={profile} onClose={() => setProfileId(null)}>
         {profile && room.isGroup && (

@@ -15,7 +15,7 @@ import {
   toViews,
   type ReadState,
 } from "@/lib/chat-state";
-import { deleteMessage, editMessage, fetchMessages, markRead, sendMessage, sendSticker } from "@/services/messages";
+import { deleteMessage, editMessage, fetchMessages, markRead, sendImage, sendMessage, sendSticker } from "@/services/messages";
 import { listParticipants } from "@/services/rooms";
 import {
   MESSAGE_PAGE_SIZE,
@@ -176,6 +176,22 @@ export const useChatMessages = (room: Room | null) => {
     [roomId, update, error],
   );
 
+  // 여러 장이면 고른 순서대로 한 장씩
+  const sendImages = useCallback(
+    async (files: File[], replyToId?: number) => {
+      if (roomId === null) return;
+      for (const file of files) {
+        try {
+          const sent = await sendImage(roomId, file, replyToId);
+          update(roomId, (s) => ({ ...s, messages: mergeMessages(s.messages, [sent]) }));
+        } catch (e) {
+          error(`사진 전송 실패: ${message(e)}`);
+        }
+      }
+    },
+    [roomId, update, error],
+  );
+
   const edit = useCallback(
     async (id: number, content: string) => {
       try {
@@ -188,9 +204,9 @@ export const useChatMessages = (room: Room | null) => {
   );
 
   const remove = useCallback(
-    async (id: number) => {
+    async (id: number, imagePath?: string | null) => {
       try {
-        await deleteMessage(id); // 반영은 message_deleted 이벤트로
+        await deleteMessage(id, imagePath); // 반영은 message_deleted 이벤트로
       } catch (e) {
         error(`삭제 실패: ${message(e)}`);
       }
@@ -237,6 +253,7 @@ export const useChatMessages = (room: Room | null) => {
   return {
     messages,
     sendMessage: send,
+    sendImages,
     editMessage: edit,
     deleteMessage: remove,
     loadOlder,
