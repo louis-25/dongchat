@@ -29,8 +29,7 @@ self.addEventListener('push', (event) => {
   let notificationData = {
     title: '새 메시지',
     body: '알 수 없는 메시지',
-    icon: '/icon.png',
-    badge: '/badge.png',
+    icon: '/icons/icon-192.png',
     data: {},
   };
 
@@ -41,7 +40,7 @@ self.addEventListener('push', (event) => {
         title: data.title || notificationData.title,
         body: data.body || notificationData.body,
         icon: data.icon || notificationData.icon,
-        badge: data.badge || notificationData.badge,
+        badge: data.badge,
         data: data.data || notificationData.data,
       };
     } catch (e) {
