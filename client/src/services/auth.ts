@@ -85,7 +85,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   if (!session) return null;
   const { data, error } = await supabase.rpc("get_me");
   if (error) throw toDomainError(error);
-  // get_me jsonb 계약: { id, username, nickname, avatarUrl, isAdmin }
+  // get_me jsonb 계약: { id, username, nickname, avatarUrl, statusMessage, isAdmin }
   return data as unknown as AuthUser;
 }
 

@@ -8,6 +8,7 @@ const p = (id: string, username: string, nickname: string | null = null): Profil
   username,
   nickname,
   avatarUrl: null,
+  statusMessage: null,
 });
 const member = (user: Profile) => ({ user, joinedAt: "2026-10-14T00:00:00Z", lastReadMessageId: null });
 

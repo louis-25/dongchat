@@ -181,6 +181,7 @@ export type Database = {
           created_at: string;
           id: string;
           nickname: string | null;
+          status_message: string | null;
           updated_at: string;
           username: string;
         };
@@ -190,6 +191,7 @@ export type Database = {
           created_at?: string;
           id: string;
           nickname?: string | null;
+          status_message?: string | null;
           updated_at?: string;
           username: string;
         };
@@ -198,6 +200,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           nickname?: string | null;
+          status_message?: string | null;
           updated_at?: string;
           username?: string;
         };

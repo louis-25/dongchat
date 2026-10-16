@@ -1,13 +1,20 @@
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentUserId } from "./auth";
 import { toDomainError } from "./errors";
-import { normalizeNickname } from "./profile-rules";
+import { normalizeNickname, normalizeStatusMessage } from "./profile-rules";
 
 // 내 프로필 경계. profiles 본인 update(nickname) 권한은 DB에 이미 있다(선행 스펙 §3).
 export async function updateNickname(input: string): Promise<void> {
   const nickname = normalizeNickname(input);
   const me = await getCurrentUserId();
   const { error } = await createClient().from("profiles").update({ nickname }).eq("id", me);
+  if (error) throw toDomainError(error);
+}
+
+export async function updateStatusMessage(input: string): Promise<void> {
+  const status_message = normalizeStatusMessage(input);
+  const me = await getCurrentUserId();
+  const { error } = await createClient().from("profiles").update({ status_message }).eq("id", me);
   if (error) throw toDomainError(error);
 }
 

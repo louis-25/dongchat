@@ -30,6 +30,7 @@ const profile = (id: string, username: string, nickname: string | null = null): 
   username,
   nickname,
   avatarUrl: null,
+  statusMessage: null,
 });
 const part = (p: Profile, lastRead: number | null): Participant => ({
   user: p,

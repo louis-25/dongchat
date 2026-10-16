@@ -15,11 +15,12 @@ import useAuth, { AUTH_QUERY_KEY } from "@/hooks/useAuth";
 import { usePalette } from "@/hooks/usePalette";
 import { usePushNotification } from "@/hooks/usePushNotification";
 import { getErrorMessage } from "@/lib/error-handler";
+import { STATUS_MESSAGE_MAX } from "@/services/profile-rules";
 import { PALETTES, PALETTE_LABELS, THEME_TOKENS } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/services/auth";
 import { resetMyInviteCode } from "@/services/invites";
-import { updateAvatar, updateNickname } from "@/services/profile";
+import { updateAvatar, updateNickname, updateStatusMessage } from "@/services/profile";
 import { displayName, type DomainError } from "@/types/domain";
 
 const MODES = [
@@ -38,6 +39,7 @@ export default function SettingsPage() {
   const mounted = useSyncExternalStore(noSubscribe, () => true, () => false); // next-themes 값은 브라우저에서만
   const push = usePushNotification();
   const [nickname, setNickname] = useState<string | null>(null); // null = 편집 전(현재 값 표시)
+  const [status, setStatus] = useState<string | null>(null);
 
   const saveNickname = useMutation({
     mutationFn: updateNickname,
@@ -45,6 +47,16 @@ export default function SettingsPage() {
       await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
       setNickname(null);
       toast.success("닉네임을 바꿨어요.");
+    },
+    onError: (e) => toast.error(getErrorMessage(e as unknown as DomainError)),
+  });
+
+  const saveStatus = useMutation({
+    mutationFn: updateStatusMessage,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
+      setStatus(null);
+      toast.success("상태 메시지를 바꿨어요.");
     },
     onError: (e) => toast.error(getErrorMessage(e as unknown as DomainError)),
   });
@@ -181,6 +193,24 @@ export default function SettingsPage() {
           </form>
         )}
         <p className="px-4 pt-1 text-xs text-muted-foreground">비워 두면 아이디(@{user?.username})가 보여요.</p>
+        {user && (
+          <form
+            className="flex items-center gap-2 px-4 pt-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (status !== null) saveStatus.mutate(status);
+            }}
+          >
+            <Input
+              value={status ?? user.statusMessage ?? ""}
+              onChange={(e) => setStatus(e.target.value)}
+              placeholder="상태 메시지"
+              maxLength={STATUS_MESSAGE_MAX}
+              aria-label="상태 메시지"
+            />
+            <Button type="submit" disabled={status === null} loading={saveStatus.isPending}>저장</Button>
+          </form>
+        )}
 
         <h2 className={section}>친구 초대</h2>
         <button

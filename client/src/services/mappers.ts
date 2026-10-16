@@ -10,7 +10,7 @@ import type {
   RoomSummary,
 } from "../types/domain";
 
-const PROFILE_COLUMNS = "id, username, nickname, avatar_url";
+const PROFILE_COLUMNS = "id, username, nickname, avatar_url, status_message";
 
 export const FRIEND_SELECT = `id, created_at, requester:profiles!friends_requester_id_fkey(${PROFILE_COLUMNS}), receiver:profiles!friends_receiver_id_fkey(${PROFILE_COLUMNS})`;
 
@@ -25,7 +25,13 @@ export const MESSAGE_COLUMNS = "id, room_id, sender_id, content, reply_to_id, ed
 export const MESSAGE_SELECT = `${MESSAGE_COLUMNS}, sender:profiles!messages_sender_id_fkey(${PROFILE_COLUMNS}), reply:reply_to_id(${MESSAGE_COLUMNS})`;
 
 // PostgREST 응답 row → 도메인 타입. 이 파일은 상대 경로·type-only import만 쓴다(Node 단위 테스트·통합 스크립트가 직접 import).
-export type ProfileRow = { id: string; username: string; nickname: string | null; avatar_url: string | null };
+export type ProfileRow = {
+  id: string;
+  username: string;
+  nickname: string | null;
+  avatar_url: string | null;
+  status_message: string | null;
+};
 export type FriendRow = { id: number; created_at: string; requester: ProfileRow; receiver: ProfileRow };
 export type ParticipantRow = {
   user_id: string;
@@ -66,6 +72,7 @@ export const toProfile = (r: ProfileRow): Profile => ({
   username: r.username,
   nickname: r.nickname,
   avatarUrl: r.avatar_url,
+  statusMessage: r.status_message,
 });
 
 export const toFriend = (r: FriendRow, me: string): Friend => ({

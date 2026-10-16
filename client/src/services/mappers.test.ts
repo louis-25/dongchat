@@ -11,14 +11,14 @@ import {
   toRoomSummary,
 } from "./mappers.ts";
 
-const alice = { id: "a", username: "alice_dev", nickname: null, avatar_url: null };
-const kakao = { id: "k", username: "kakao_ab12cd34", nickname: "정동현", avatar_url: "https://img/k.png" };
+const alice = { id: "a", username: "alice_dev", nickname: null, avatar_url: null, status_message: null };
+const kakao = { id: "k", username: "kakao_ab12cd34", nickname: "정동현", avatar_url: "https://img/k.png", status_message: "바쁨" };
 const row = { id: 7, created_at: "2026-10-14T01:00:00Z", requester: alice, receiver: kakao };
 
 test("친구 행은 요청 방향과 무관하게 상대방을 돌려준다", () => {
   assert.deepEqual(toFriend(row, "a"), {
     id: 7,
-    user: { id: "k", username: "kakao_ab12cd34", nickname: "정동현", avatarUrl: "https://img/k.png" },
+    user: { id: "k", username: "kakao_ab12cd34", nickname: "정동현", avatarUrl: "https://img/k.png", statusMessage: "바쁨" },
   });
   assert.equal(toFriend(row, "k").user.username, "alice_dev");
 });
@@ -26,7 +26,7 @@ test("친구 행은 요청 방향과 무관하게 상대방을 돌려준다", ()
 test("받은 요청은 요청자 프로필과 요청 시각", () => {
   assert.deepEqual(toFriendRequest(row), {
     id: 7,
-    requester: { id: "a", username: "alice_dev", nickname: null, avatarUrl: null },
+    requester: { id: "a", username: "alice_dev", nickname: null, avatarUrl: null, statusMessage: null },
     createdAt: "2026-10-14T01:00:00Z",
   });
 });

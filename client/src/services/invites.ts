@@ -20,7 +20,7 @@ export async function previewInvite(code: string): Promise<Profile | null> {
   const { data, error } = await createClient().rpc("preview_invite", { p_code: code });
   if (error) throw toDomainError(error);
   const row = data[0];
-  return row ? { id: "", username: row.username, nickname: row.nickname, avatarUrl: row.avatar_url } : null;
+  return row ? { id: "", username: row.username, nickname: row.nickname, avatarUrl: row.avatar_url, statusMessage: null } : null;
 }
 
 export async function acceptInvite(code: string): Promise<{ username: string; already: boolean }> {

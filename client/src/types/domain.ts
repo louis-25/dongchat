@@ -6,6 +6,7 @@ export type AuthUser = {
   username: string;
   nickname: string | null;
   avatarUrl: string | null;
+  statusMessage: string | null;
   isAdmin: boolean;
 };
 
@@ -14,6 +15,7 @@ export type Profile = {
   username: string;
   nickname: string | null;
   avatarUrl: string | null;
+  statusMessage: string | null;
 };
 
 // id = friends 행 id, user = 상대방

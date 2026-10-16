@@ -3,8 +3,20 @@ import { createTopicGate } from "@/lib/topic-gate";
 import type { RoomEvent, UserEvent } from "@/types/domain";
 import { fromMessagePayload, type MessagePayload } from "./mappers";
 
-type ProfilePayload = { userId: string; username: string; nickname: string | null; avatarUrl: string | null };
-const toProfile = (p: ProfilePayload) => ({ id: p.userId, username: p.username, nickname: p.nickname, avatarUrl: p.avatarUrl });
+type ProfilePayload = {
+  userId: string;
+  username: string;
+  nickname: string | null;
+  avatarUrl: string | null;
+  statusMessage: string | null;
+};
+const toProfile = (p: ProfilePayload) => ({
+  id: p.userId,
+  username: p.username,
+  nickname: p.nickname,
+  avatarUrl: p.avatarUrl,
+  statusMessage: p.statusMessage,
+});
 
 // Realtime 경계. 이벤트 이름·payload는 스펙 §8.1 계약(NestJS 복귀 시 socket.io에서 동일하게 유지).
 // 참여 방 수만큼 채널을 연다. 수백 개 규모면 user 채널 단일 구독으로 전환(§8.4).

@@ -53,7 +53,7 @@ export default function FriendsPage() {
             <UserAvatar name={displayName(user)} src={user.avatarUrl} className="size-12" />
             <div className="min-w-0">
               <div className="truncate font-semibold">{displayName(user)}</div>
-              <div className="truncate text-sm text-muted-foreground">@{user.username}</div>
+              {user.statusMessage && <div className="truncate text-sm text-muted-foreground">{user.statusMessage}</div>}
             </div>
           </div>
         )}
@@ -70,7 +70,6 @@ export default function FriendsPage() {
                   <UserAvatar name={displayName(p.requester)} src={p.requester.avatarUrl} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium">{displayName(p.requester)}</div>
-                    <div className="truncate text-xs text-muted-foreground">@{p.requester.username}</div>
                   </div>
                   <Button
                     size="sm"
@@ -116,7 +115,7 @@ export default function FriendsPage() {
                 <UserAvatar name={displayName(f.user)} src={f.user.avatarUrl} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{displayName(f.user)}</div>
-                  <div className="truncate text-xs text-muted-foreground">@{f.user.username}</div>
+                  {f.user.statusMessage && <div className="truncate text-xs text-muted-foreground">{f.user.statusMessage}</div>}
                 </div>
                 {opening && lastOpened === f.user.username && (
                   <Loader2 className="size-5 animate-spin text-muted-foreground" aria-label="대화 여는 중" />
