@@ -13,9 +13,10 @@ type Props = {
   readOnly: boolean;
   onOpenActions: (view: MessageView) => void;
   onJumpTo: (id: number) => void;
+  onOpenProfile?: (userId: string) => void;
 };
 
-export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJumpTo }: Props) {
+export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJumpTo, onOpenProfile }: Props) {
   const deleted = view.deletedAt !== null;
   const press = useLongPress(() => onOpenActions(view));
   const interactive = !readOnly && !deleted;
@@ -35,7 +36,14 @@ export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJu
     <div id={`msg-${view.id}`} className={cn("flex gap-2", mine ? "justify-end" : "justify-start", first ? "mt-2" : "mt-0.5")}>
       {!mine && (
         <div className="w-9 shrink-0">
-          {showSender && <UserAvatar name={view.senderName} src={view.senderAvatar} className="size-9 rounded-[10px]" />}
+          {showSender &&
+            (onOpenProfile && view.senderId ? (
+              <button type="button" className="pressable" onClick={() => onOpenProfile(view.senderId!)} aria-label={`${view.senderName} 프로필`}>
+                <UserAvatar name={view.senderName} src={view.senderAvatar} className="size-9 rounded-[10px]" />
+              </button>
+            ) : (
+              <UserAvatar name={view.senderName} src={view.senderAvatar} className="size-9 rounded-[10px]" />
+            ))}
         </div>
       )}
       <div className={cn("flex min-w-0 max-w-[78%] flex-col", mine ? "items-end" : "items-start")}>

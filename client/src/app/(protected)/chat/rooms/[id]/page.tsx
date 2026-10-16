@@ -8,6 +8,8 @@ import { ScreenHeader } from "@/components/chat/ScreenHeader";
 import { MessageList } from "@/components/chat/MessageList";
 import { Composer } from "@/components/chat/Composer";
 import { MessageActionsSheet } from "@/components/chat/MessageActionsSheet";
+import { ProfileSheet } from "@/components/chat/ProfileSheet";
+import { Button } from "@/components/ui/button";
 import { RoomMenuSheet } from "@/components/chat/RoomMenuSheet";
 import { useChat } from "@/components/chat-provider";
 import useAuth from "@/hooks/useAuth";
@@ -26,13 +28,14 @@ export default function RoomPage() {
   const { data: rooms, isLoading } = useRooms();
   const room = rooms?.find((r) => r.id === roomId) ?? null;
   const { setViewingRoom } = useChat();
-  const { leave, kick, isPending } = useRoomActions();
+  const { leave, kick, openDirect, isPending } = useRoomActions();
   const { messages, sendMessage, editMessage, deleteMessage, loadOlder, hasMore, loadingOlder, participants } = useChatMessages(room);
 
   const [replyTarget, setReplyTarget] = useState<MessageView | null>(null);
   const [editTarget, setEditTarget] = useState<MessageView | null>(null);
   const [actionTarget, setActionTarget] = useState<MessageView | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileId, setProfileId] = useState<string | null>(null);
   const cameFromApp = useRef<boolean | null>(null);
   const leaving = useRef(false);
 
@@ -55,6 +58,8 @@ export default function RoomPage() {
 
   if (!room || !user) return <ScreenHeader title="" onBack={() => router.replace("/chat/rooms")} />;
 
+  // 나간 사람은 참여자 목록에 없어 열리지 않는다
+  const profile = participants.find((p) => p.user.id === profileId)?.user ?? null;
   const back = () => (cameFromApp.current ? router.back() : router.replace("/chat/rooms"));
   const clearTargets = () => {
     setReplyTarget(null);
@@ -77,6 +82,7 @@ export default function RoomPage() {
         key={room.id}
         messages={messages}
         onOpenActions={setActionTarget}
+        onOpenProfile={setProfileId}
         onLoadOlder={loadOlder}
         hasMore={hasMore}
         loadingOlder={loadingOlder}
@@ -114,6 +120,16 @@ export default function RoomPage() {
         }}
         onDelete={(v) => confirm("메시지를 삭제할까요?") && void deleteMessage(v.id)}
       />
+      <ProfileSheet profile={profile} onClose={() => setProfileId(null)}>
+        {profile && room.isGroup && (
+          <Button className="h-12 w-full text-base" loading={isPending} onClick={() => {
+              setProfileId(null); // 같은 화면이 새 방으로 바뀌어도 시트가 남지 않게
+              openDirect(profile.username);
+            }}>
+            1:1 채팅
+          </Button>
+        )}
+      </ProfileSheet>
       <RoomMenuSheet
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
