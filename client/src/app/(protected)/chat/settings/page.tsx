@@ -38,6 +38,7 @@ export default function SettingsPage() {
   const { palette, setPalette } = usePalette();
   const { theme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(noSubscribe, () => true, () => false); // next-themes 값은 브라우저에서만
+  const android = useSyncExternalStore(noSubscribe, () => /Android/i.test(navigator.userAgent), () => false);
   const push = usePushNotification();
   const [chiikawa, setChiikawa] = useLabFlag("chiikawa");
   const [nickname, setNickname] = useState<string | null>(null); // null = 편집 전(현재 값 표시)
@@ -156,6 +157,13 @@ export default function SettingsPage() {
           </button>
         ) : (
           <p className="px-4 text-sm text-muted-foreground">이 브라우저는 알림을 지원하지 않아요. 홈 화면에 추가하면 쓸 수 있어요.</p>
+        )}
+        {/* 안드로이드는 설치한 웹앱의 알림 카테고리를 '보통'으로 만들어 팝업이 안 뜬다. 웹에서 바꿀 방법이 없어 안내만 */}
+        {android && push.isSubscribed && (
+          <p className="px-4 pt-1 text-xs text-muted-foreground">
+            알림이 화면 위에 팝업으로 안 뜨면: 휴대폰 설정 → 애플리케이션 → dongchat → 알림 → 알림 카테고리 → 일반 →
+            &lsquo;팝업으로 표시&rsquo;를 켜 주세요.
+          </p>
         )}
 
         <h2 className={section}>내 프로필</h2>

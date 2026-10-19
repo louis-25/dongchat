@@ -30,6 +30,7 @@ app/, components/   UI — Supabase를 모른다
 ## 웹 푸시
 - 켜는 흐름: 브라우저는 사용자 동작 없이 허락 창을 띄울 수 없다. 채팅 목록의 `PushPrompt`가 [켜기]로 묻고(닫으면 7일 숨김), 이미 허용한 브라우저는 채팅 레이아웃의 `usePushNotification({ autoRegister: true })`가 로그인마다 자동 등록한다. 설정에서 직접 끄면 `dongchat.pushOptOut`이 남아 자동 등록·안내를 하지 않는다. 판단은 `lib/push-prompt.ts`(단위 테스트).
 - 구독 저장은 `services/push.ts`(`register_push_subscription` RPC — 같은 브라우저 endpoint는 등록한 사용자에게 이전). 로그아웃 시 이 브라우저 구독을 지운다.
+- 안드로이드: 설치한 웹앱(WebAPK)의 알림 카테고리 "일반"은 중요도 보통(3)으로 만들어져 팝업(헤드업)이 안 뜬다. 웹에서 바꿀 API가 없어 설정 화면에 "팝업으로 표시" 안내만 둔다(2026-10-19 실기기 adb로 확인). iOS는 기본이 배너라 안내 불필요.
 - 발송은 서버(메시지 트리거 → Edge Function `send-push`). 알림 URL은 `/chat/rooms/<id>`(예전 `?room=<id>`는 목록 화면이 새 주소로 넘긴다).
 
 ## 화면 구조(모바일 우선)
