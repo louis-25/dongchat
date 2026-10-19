@@ -11,6 +11,7 @@ type Target = {
   body: string;
   room_id: number;
   sticker: string | null;
+  image_path: string | null;
 };
 
 const env = (name: string) => Deno.env.get(name) ?? "";
@@ -27,13 +28,13 @@ const MISSING = ["PUSH_WEBHOOK_SECRET", "VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY",
 const admin = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
 
 // 대상 하나의 실패(잘못된 키·네트워크)가 나머지 발송을 막지 않도록 전부 이 안에서 처리하고 상태 코드만 돌려준다(0 = 미발송).
-async function send(t: Target): Promise<number> {
+async function send(t: Target, image: string | null): Promise<number> {
   if (!isAllowedEndpoint(t.endpoint, ALLOW_HTTP)) return 0; // SSRF 방지(알려진 푸시 서비스만)
   try {
     const payload = JSON.stringify({
       title: t.title,
       body: t.body,
-      data: { roomId: t.room_id, url: `/chat/rooms/${t.room_id}`, sticker: t.sticker }, // 서비스 워커가 이모티콘 그림을 붙인다
+      data: { roomId: t.room_id, url: `/chat/rooms/${t.room_id}`, sticker: t.sticker, image }, // 서비스 워커가 이모티콘·사진을 붙인다
     });
     // sendNotification은 Node https를 써서 Deno에서 불안정 → 요청만 만들고 fetch로 보낸다(스파이크로 확인).
     const req = webpush.generateRequestDetails({ endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth } }, payload, {
@@ -71,7 +72,12 @@ Deno.serve(async (req) => {
   const { data, error } = await admin.rpc("push_targets", { p_message_id: messageId });
   if (error) return new Response(error.message, { status: 500 });
   const targets = Array.isArray(data) ? (data as Target[]) : [];
+  // 사진은 비공개 버킷 → 메시지당 서명 URL 하나(푸시 보관 TTL과 같은 하루). 실패해도 글자 알림은 보낸다.
+  const path = targets[0]?.image_path;
+  const image = path
+    ? ((await admin.storage.from("chat-images").createSignedUrl(path, 60 * 60 * 24)).data?.signedUrl ?? null)
+    : null;
   // ponytail: 동시 발송 수 제한 없음 — 한 방 구독이 수백 개가 되면 배치로 나눌 것.
-  const statuses = await Promise.all(targets.map(send));
+  const statuses = await Promise.all(targets.map((t) => send(t, image)));
   return Response.json({ attempted: statuses.length, delivered: statuses.filter((s) => s >= 200 && s < 300).length });
 });

@@ -52,10 +52,15 @@ self.addEventListener('push', (event) => {
   const sticker = notificationData.data.sticker;
   const stickerPng = sticker && /^[a-z0-9_]{1,32}$/.test(sticker) ? `/stickers/${sticker}.png` : null;
 
+  // 사진 메시지는 서버가 준 서명 URL(https만)을 큰 이미지로
+  const photo = typeof notificationData.data.image === 'string' && notificationData.data.image.startsWith('https://')
+    ? notificationData.data.image
+    : null;
+
   const notificationOptions = {
     body: notificationData.body,
     icon: stickerPng || notificationData.icon,
-    image: stickerPng || undefined,
+    image: stickerPng || photo || undefined,
     badge: notificationData.badge,
     data: notificationData.data,
     requireInteraction: false,
