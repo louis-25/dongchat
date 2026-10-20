@@ -18,11 +18,18 @@ type RawError = { code?: unknown; message?: unknown; hint?: unknown };
 
 const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
 
+// 브라우저 fetch의 네트워크 실패 문구(Chrome·Safari·Firefox). supabase-js는 "TypeError: <문구>"로 돌려준다.
+const NETWORK_FAILURE = /^(TypeError: )?(Failed to fetch|Load failed|NetworkError when attempting to fetch resource)/;
+
 export function toDomainError(error: unknown): DomainError {
   const raw: RawError = typeof error === "object" && error !== null ? (error as RawError) : {};
   const code = str(raw.code);
   const message = str(raw.message);
   const hint = str(raw.hint);
+
+  if (!code && message && NETWORK_FAILURE.test(message)) {
+    return { code: "NETWORK_ERROR", message: "연결이 불안정해요. 다시 시도해 주세요." };
+  }
 
   // RPC: raise exception '<CODE>' using hint = '<사용자 메시지>' (SQLSTATE P0001)
   if (code === "P0001" && message) return { code: message, message: hint ?? message };

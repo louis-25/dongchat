@@ -40,3 +40,16 @@ test("Auth 오류의 영어 원문은 버린다(화면 문구는 코드로 정�
     message: "",
   });
 });
+
+test("네트워크 실패(supabase-js가 돌려준 TypeError 문구·던져진 TypeError)는 NETWORK_ERROR", () => {
+  for (const e of [
+    { code: "", message: "TypeError: Failed to fetch" },
+    { code: "", message: "TypeError: Load failed" },
+    { code: "", message: "TypeError: NetworkError when attempting to fetch resource." },
+    new TypeError("Failed to fetch"),
+  ]) {
+    assert.equal(toDomainError(e).code, "NETWORK_ERROR", JSON.stringify(e));
+  }
+  // 코드 버그 TypeError는 숨기지 않는다
+  assert.equal(toDomainError(new TypeError("Cannot read properties of undefined")).code, "UNKNOWN");
+});

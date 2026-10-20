@@ -9,3 +9,7 @@ test("검증 실패는 구체적인 사유(RPC hint·클라 검증 문구)를 �
   );
   assert.equal(getErrorMessage({ code: "VALIDATION_FAILED", message: "" }), "입력값이 올바르지 않습니다.");
 });
+
+test("네트워크 실패는 다시 시도 안내", () => {
+  assert.equal(getErrorMessage({ code: "NETWORK_ERROR", message: "TypeError: Failed to fetch" }), "연결이 불안정해요. 다시 시도해 주세요.");
+});

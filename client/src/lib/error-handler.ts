@@ -30,6 +30,8 @@ export const getErrorMessage = (error: { code?: string; message?: string } | nul
         return '해당 채팅에 접근할 권한이 없습니다.';
       case 'MESSAGE_NOT_FOUND':
         return '메시지를 찾을 수 없습니다.';
+      case 'NETWORK_ERROR':
+        return '연결이 불안정해요. 다시 시도해 주세요.';
       case 'CHAT_ROOM_NOT_FOUND':
         return '채팅방을 찾을 수 없습니다.';
       default:

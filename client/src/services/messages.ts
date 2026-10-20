@@ -82,8 +82,14 @@ export async function getImageUrl(path: string): Promise<string> {
 }
 
 // null이면 내 반응 취소. 화면 반영은 reaction_updated 이벤트로.
+// 같은 값을 다시 보내도 결과가 같아서, 네트워크 실패(앱 복귀 직후 등)는 1초 뒤 한 번 더 보낸다.
 export async function setReaction(messageId: number, reaction: string | null): Promise<void> {
-  const { error } = await createClient().rpc("set_reaction", { p_message_id: messageId, p_reaction: reaction as string });
+  const call = () => createClient().rpc("set_reaction", { p_message_id: messageId, p_reaction: reaction as string });
+  let { error } = await call();
+  if (error && toDomainError(error).code === "NETWORK_ERROR") {
+    await new Promise((r) => setTimeout(r, 1000));
+    ({ error } = await call());
+  }
   if (error) throw toDomainError(error);
 }
 
