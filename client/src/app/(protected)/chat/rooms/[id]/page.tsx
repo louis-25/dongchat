@@ -17,6 +17,8 @@ import { InviteMembersSheet } from "@/components/chat/InviteMembersSheet";
 import { useChat } from "@/components/chat-provider";
 import useAuth from "@/hooks/useAuth";
 import { useChatMessages } from "@/hooks/useChatMessages";
+import { useRecentReactions } from "@/hooks/useRecentReactions";
+import { quickReactions } from "@/lib/reactions";
 import { useRooms } from "@/hooks/useRooms";
 import { useRoomActions } from "@/hooks/useRoomActions";
 import { ROOM_SUMMARIES_QUERY_KEY, useRoomSummaries } from "@/hooks/useRoomSummaries";
@@ -40,6 +42,12 @@ export default function RoomPage() {
   const { leave, kick, openDirect, invite, isInviting, isPending } = useRoomActions();
   const { messages, sendMessage, sendImages, react, editMessage, deleteMessage, loadOlder, hasMore, loadingOlder, participants } =
     useChatMessages(room);
+  const [recentReactions, rememberReaction] = useRecentReactions();
+  // 반응을 달 때(취소 제외) 최근 이모지로 기억한다
+  const reactTo = (id: number, reaction: string | null) => {
+    if (reaction) rememberReaction(reaction);
+    void react(id, reaction);
+  };
 
   const [replyTarget, setReplyTarget] = useState<MessageView | null>(null);
   const [editTarget, setEditTarget] = useState<MessageView | null>(null);
@@ -107,7 +115,7 @@ export default function RoomPage() {
         onOpenActions={setActionTarget}
         onOpenProfile={setProfileId}
         me={user.id}
-        onReact={(id, reaction) => void react(id, reaction)}
+        onReact={reactTo}
         onLoadOlder={loadOlder}
         hasMore={hasMore}
         loadingOlder={loadingOlder}
@@ -152,7 +160,8 @@ export default function RoomPage() {
           setEditTarget(v);
         }}
         me={user.id}
-        onReact={(v, reaction) => void react(v.id, reaction)}
+        onReact={(v, reaction) => reactTo(v.id, reaction)}
+        quickReactions={quickReactions(recentReactions)}
         onMoreReactions={setPickerTarget}
         onDelete={(v) => confirm("메시지를 삭제할까요?") && void deleteMessage(v.id, v.imagePath)}
       />
@@ -170,7 +179,7 @@ export default function RoomPage() {
         <EmojiPickerSheet
           open
           onClose={() => setPickerTarget(null)}
-          onSelect={(emoji) => void react(pickerTarget.id, emoji)}
+          onSelect={(emoji) => reactTo(pickerTarget.id, emoji)}
         />
       )}
       <InviteMembersSheet

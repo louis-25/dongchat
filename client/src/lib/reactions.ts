@@ -1,6 +1,15 @@
 // 메시지 반응. 이모지 문자를 그대로 저장한다(DB check: 짧고 공백·글자·숫자 없음).
 // 길게 누른 메뉴에 바로 보이는 것. 나머지는 ➕(frimousse 선택기)로.
 export const QUICK_REACTIONS = ["❤️", "👍", "😂", "😮", "😢"] as const;
+const QUICK_COUNT = QUICK_REACTIONS.length;
+
+// 최근 단 반응(이 기기): 맨 앞에, 중복 없이, 반응 줄 길이만큼
+export const rememberReaction = (recent: readonly string[], emoji: string): string[] =>
+  [emoji, ...recent.filter((e) => e !== emoji)].slice(0, QUICK_COUNT);
+
+// 길게 누른 메뉴의 반응 줄: 최근 것 먼저, 남는 자리는 기본
+export const quickReactions = (recent: readonly string[]): string[] =>
+  [...new Set([...recent, ...QUICK_REACTIONS])].slice(0, QUICK_COUNT);
 
 export type Reaction = { userId: string; reaction: string };
 

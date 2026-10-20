@@ -2,7 +2,6 @@
 
 import { Sheet } from "@/components/ui/sheet";
 import type { MessageView } from "@/lib/chat-state";
-import { QUICK_REACTIONS } from "@/lib/reactions";
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 
@@ -16,10 +15,11 @@ type Props = {
   me: string;
   onReact: (v: MessageView, reaction: string | null) => void;
   onMoreReactions: (v: MessageView) => void;
+  quickReactions: string[]; // 최근 쓴 것 먼저
 };
 
 // 길게 누른 메시지의 메뉴. 남의 메시지는 답장·복사만.
-export function MessageActionsSheet({ target, onClose, onReply, onCopy, onEdit, onDelete, me, onReact, onMoreReactions }: Props) {
+export function MessageActionsSheet({ target, onClose, onReply, onCopy, onEdit, onDelete, me, onReact, onMoreReactions, quickReactions }: Props) {
   const run = (fn: (v: MessageView) => void) => () => {
     if (target) fn(target);
     onClose();
@@ -30,7 +30,7 @@ export function MessageActionsSheet({ target, onClose, onReply, onCopy, onEdit, 
       {target && (
         <>
           <div className="mb-3 flex justify-between" role="group" aria-label="반응">
-            {QUICK_REACTIONS.map((emoji) => {
+            {quickReactions.map((emoji) => {
               const mine = target.reactions.some((x) => x.userId === me && x.reaction === emoji);
               return (
                 <button
