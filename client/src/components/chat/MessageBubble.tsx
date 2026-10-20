@@ -78,7 +78,7 @@ export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJu
             {deleted ? (
               "삭제된 메시지입니다"
             ) : image ? (
-              <ChatImage path={view.imagePath!} />
+              <ChatImage paths={view.imagePaths} />
             ) : sticker ? (
               // eslint-disable-next-line @next/next/no-img-element -- 작은 정적 SVG
               <img src={stickerSrc(view.sticker!)} alt={stickerLabel(view.sticker!)} className="size-32" draggable={false} />

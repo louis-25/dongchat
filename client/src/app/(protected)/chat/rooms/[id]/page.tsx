@@ -192,7 +192,7 @@ export default function RoomPage() {
         quickReactions={quickReactions(recentReactions)}
         onMoreReactions={setPickerTarget}
         onPinNotice={(v) => setNotice(v.id)}
-        onDelete={(v) => confirm("메시지를 삭제할까요?") && void deleteMessage(v.id, v.imagePath)}
+        onDelete={(v) => confirm("메시지를 삭제할까요?") && void deleteMessage(v.id, v.imagePaths)}
       />
       <ProfileSheet profile={profile} onClose={() => setProfileId(null)}>
         {profile && room.isGroup && (

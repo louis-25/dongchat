@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { MESSAGE_PAGE_SIZE, type ChatMessage, type MessagePage, type MessageSearchHit } from "@/types/domain";
+import { imageLabel } from "@/lib/album";
 import { toJpeg } from "@/lib/image";
 import { STICKER_FALLBACK } from "@/lib/stickers";
 import { toDomainError } from "./errors";
@@ -52,23 +53,33 @@ export async function sendSticker(roomId: number, sticker: string, replyToId?: n
   return toChatMessage(data as unknown as MessageCoreRow);
 }
 
-const IMAGE_FALLBACK = "(사진)";
 const IMAGE_BUCKET = "chat-images";
 
 // 긴 변 1600px JPEG로 줄여 `<room>/<uuid>.jpg`에 올리고 메시지를 만든다. 메시지가 실패하면 올린 파일을 지운다.
-export async function sendImage(roomId: number, file: File, replyToId?: number): Promise<ChatMessage> {
+// 사진 1~10장을 메시지 하나로. 전부 올린 뒤 한 번에 넣고, 하나라도 실패하면 올린 파일을 지운다.
+export async function sendImages(roomId: number, files: File[], replyToId?: number): Promise<ChatMessage> {
   const supabase = createClient();
-  const path = `${roomId}/${crypto.randomUUID()}.jpg`;
-  const blob = await toJpeg(file, { maxSide: 1600, quality: 0.8 });
-  const up = await supabase.storage.from(IMAGE_BUCKET).upload(path, blob, { contentType: "image/jpeg" });
-  if (up.error) throw toDomainError(up.error);
+  const paths = files.map(() => `${roomId}/${crypto.randomUUID()}.jpg`);
+  const uploads = await Promise.allSettled(
+    files.map(async (file, i) => {
+      const blob = await toJpeg(file, { maxSide: 1600, quality: 0.8 });
+      const up = await supabase.storage.from(IMAGE_BUCKET).upload(paths[i], blob, { contentType: "image/jpeg" });
+      if (up.error) throw toDomainError(up.error);
+    }),
+  );
+  const uploaded = paths.filter((_, i) => uploads[i].status === "fulfilled");
+  const failed = uploads.find((u) => u.status === "rejected");
+  if (failed) {
+    if (uploaded.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(uploaded);
+    throw (failed as PromiseRejectedResult).reason;
+  }
   const { data, error } = await supabase
     .from("messages")
-    .insert({ room_id: roomId, content: IMAGE_FALLBACK, image_path: path, reply_to_id: replyToId ?? null })
+    .insert({ room_id: roomId, content: imageLabel(paths.length), image_path: paths[0], image_paths: paths, reply_to_id: replyToId ?? null })
     .select(MESSAGE_COLUMNS)
     .single();
   if (error) {
-    await supabase.storage.from(IMAGE_BUCKET).remove([path]);
+    await supabase.storage.from(IMAGE_BUCKET).remove(paths);
     throw toDomainError(error);
   }
   return toChatMessage(data as unknown as MessageCoreRow);
@@ -106,11 +117,11 @@ export async function editMessage(id: number, content: string): Promise<void> {
 }
 
 // 사진 메시지면 파일도 지운다(실패해도 메시지 삭제는 유지 — 파일만 남는다).
-export async function deleteMessage(id: number, imagePath?: string | null): Promise<void> {
+export async function deleteMessage(id: number, imagePaths: string[] = []): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.rpc("delete_message", { p_id: id });
   if (error) throw toDomainError(error);
-  if (imagePath) await supabase.storage.from(IMAGE_BUCKET).remove([imagePath]);
+  if (imagePaths.length > 0) await supabase.storage.from(IMAGE_BUCKET).remove(imagePaths);
 }
 
 // 방의 최신 메시지까지 읽음(단조 증가, 변화 없으면 DB가 UPDATE 생략).

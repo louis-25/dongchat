@@ -87,6 +87,7 @@ test("메시지 페이지: 최신순 행 → 오름차순, 발신자 프로필·
     content: "m3",
     sticker: null,
     imagePath: null,
+    imagePaths: [],
     reactions: [],
     replyToId: 1,
     editedAt: null,
@@ -149,4 +150,16 @@ test("입장·퇴장 안내: 조회 행·payload의 kind, 예전 payload는 user
   const payload = { id: 7, roomId: 9, senderId: null, content: "a님이 나갔어요", replyToId: null, createdAt: "t" };
   assert.equal(fromMessagePayload({ ...payload, kind: "system" }).kind, "system");
   assert.equal(fromMessagePayload(payload).kind, "user");
+});
+
+test("사진 묶음: image_paths 우선, 없으면 image_path 한 장, 사진 아니면 빈 배열", () => {
+  const page = toMessagePage([
+    { ...core(1, { image_path: "9/a.jpg", image_paths: ["9/a.jpg", "9/b.jpg"] }), sender: null, reply: null },
+    { ...core(2, { image_path: "9/c.jpg" }), sender: null, reply: null },
+    { ...core(3), sender: null, reply: null },
+  ] as never);
+  assert.deepEqual(page.messages.map((m) => m.imagePaths), [["9/a.jpg", "9/b.jpg"], ["9/c.jpg"], []]);
+  const payload = { id: 7, roomId: 9, senderId: "a", content: "(사진 2장)", imagePath: "9/a.jpg", imagePaths: ["9/a.jpg", "9/b.jpg"], replyToId: null, createdAt: "t" };
+  assert.deepEqual(fromMessagePayload(payload).imagePaths, ["9/a.jpg", "9/b.jpg"]);
+  assert.deepEqual(fromMessagePayload({ ...payload, imagePaths: null }).imagePaths, ["9/a.jpg"]);
 });

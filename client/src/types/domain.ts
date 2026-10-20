@@ -66,7 +66,8 @@ export type ChatMessage = {
   kind: "user" | "system"; // system = 단체방 입장·퇴장 안내(content가 안내 문장)
   content: string; // 삭제되면 "", 이모티콘이면 "(이모티콘)"
   sticker: string | null; // 이모티콘 id(lib/stickers.ts)
-  imagePath: string | null; // 사진(chat-images 버킷 경로, 화면은 서명 URL)
+  imagePath: string | null; // 사진 첫 장(chat-images 버킷 경로, 화면은 서명 URL)
+  imagePaths: string[]; // 사진 전부(1~10장), 사진이 아니면 []
   reactions: Reaction[];
   replyToId: number | null;
   editedAt: string | null;

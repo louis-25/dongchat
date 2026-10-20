@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useChat } from "@/components/chat-provider";
+import { chunkFiles } from "@/lib/album";
 import useAuth from "@/hooks/useAuth";
 import useToast from "@/hooks/useToast";
 import { getErrorMessage } from "@/lib/error-handler";
@@ -17,7 +18,7 @@ import {
   toViews,
   type ReadState,
 } from "@/lib/chat-state";
-import { deleteMessage, editMessage, fetchMessages, markRead, sendImage, sendMessage, sendSticker, setReaction } from "@/services/messages";
+import { deleteMessage, editMessage, fetchMessages, markRead, sendImages as uploadImages, sendMessage, sendSticker, setReaction } from "@/services/messages";
 import { listParticipants } from "@/services/rooms";
 import {
   MESSAGE_PAGE_SIZE,
@@ -191,9 +192,9 @@ export const useChatMessages = (room: Room | null) => {
   const sendImages = useCallback(
     async (files: File[], replyToId?: number) => {
       if (roomId === null) return;
-      for (const file of files) {
+      for (const group of chunkFiles(files)) {
         try {
-          const sent = await sendImage(roomId, file, replyToId);
+          const sent = await uploadImages(roomId, group, replyToId);
           update(roomId, (s) => ({ ...s, messages: mergeMessages(s.messages, [sent]) }));
         } catch (e) {
           error(`사진 전송 실패: ${message(e)}`);
@@ -226,9 +227,9 @@ export const useChatMessages = (room: Room | null) => {
   );
 
   const remove = useCallback(
-    async (id: number, imagePath?: string | null) => {
+    async (id: number, imagePaths: string[] = []) => {
       try {
-        await deleteMessage(id, imagePath); // 반영은 message_deleted 이벤트로
+        await deleteMessage(id, imagePaths); // 반영은 message_deleted 이벤트로
       } catch (e) {
         error(`삭제 실패: ${message(e)}`);
       }

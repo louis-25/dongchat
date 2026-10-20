@@ -127,6 +127,7 @@ export type Database = {
           edited_at: string | null;
           id: number;
           image_path: string | null;
+          image_paths: string[] | null;
           reply_to_id: number | null;
           room_id: number;
           sender_id: string | null;
@@ -140,6 +141,7 @@ export type Database = {
           edited_at?: string | null;
           id?: never;
           image_path?: string | null;
+          image_paths?: string[] | null;
           reply_to_id?: number | null;
           room_id: number;
           sender_id?: string | null;
@@ -152,6 +154,7 @@ export type Database = {
           edited_at?: string | null;
           id?: never;
           image_path?: string | null;
+          image_paths?: string[] | null;
           reply_to_id?: number | null;
           room_id?: number;
           sender_id?: string | null;
