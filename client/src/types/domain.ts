@@ -80,6 +80,10 @@ export type MessagePage = { messages: ChatMessage[]; profiles: Profile[]; replyT
 // 방 공지(방마다 글 메시지 하나)
 export type RoomNotice = { messageId: number; content: string; senderId: string | null };
 
+// 방 안 검색 결과(최신순 20개씩)
+export type MessageSearchHit = { id: number; senderName: string; content: string; createdAt: string };
+export const SEARCH_PAGE_SIZE = 20;
+
 // Realtime 이벤트(스펙 §8.1). subscribed는 채널 구독 완료(최초·재연결) — 스냅샷 재조회 신호.
 export type RoomEvent =
   | { type: "message"; roomId: number; message: ChatMessage }

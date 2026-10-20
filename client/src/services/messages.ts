@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import { MESSAGE_PAGE_SIZE, type ChatMessage, type MessagePage } from "@/types/domain";
+import { MESSAGE_PAGE_SIZE, type ChatMessage, type MessagePage, type MessageSearchHit } from "@/types/domain";
 import { toJpeg } from "@/lib/image";
 import { STICKER_FALLBACK } from "@/lib/stickers";
 import { toDomainError } from "./errors";
@@ -79,6 +79,13 @@ export async function getImageUrl(path: string): Promise<string> {
   const { data, error } = await createClient().storage.from(IMAGE_BUCKET).createSignedUrl(path, 60 * 60);
   if (error) throw toDomainError(error);
   return data.signedUrl;
+}
+
+// 방 안 검색(글 메시지만). before를 주면 그보다 오래된 결과.
+export async function searchMessages(roomId: number, query: string, before?: number): Promise<MessageSearchHit[]> {
+  const { data, error } = await createClient().rpc("search_messages", { p_room_id: roomId, p_query: query, p_before_id: before ?? null });
+  if (error) throw toDomainError(error);
+  return (data ?? []).map((r) => ({ id: r.id, senderName: r.sender_name ?? "(알 수 없음)", content: r.content, createdAt: r.created_at }));
 }
 
 // null이면 내 반응 취소. 화면 반영은 reaction_updated 이벤트로.

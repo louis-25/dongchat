@@ -23,6 +23,7 @@ import {
   MESSAGE_PAGE_SIZE,
   type ChatMessage,
   type DomainError,
+  type MessagePage,
   type Participant,
   type Profile,
   type Room,
@@ -257,6 +258,38 @@ export const useChatMessages = (room: Room | null) => {
     }
   }, [roomId, loadingOlder, current, update, error]);
 
+  // 검색 결과로 이동: 그 메시지가 목록에 올 때까지 이전 페이지를 받는다(최대 20페이지 = 600개). 찾으면 true.
+  const loadUntil = useCallback(
+    async (targetId: number): Promise<boolean> => {
+      if (roomId === null) return false;
+      let oldest = current.messages[0]?.id;
+      if (oldest !== undefined && oldest <= targetId) return true;
+      let more = current.hasMore;
+      const pages: MessagePage[] = [];
+      try {
+        for (let i = 0; i < 20 && more && oldest !== undefined && oldest > targetId; i++) {
+          const page = await fetchMessages(roomId, oldest);
+          pages.push(page);
+          oldest = page.messages[0]?.id;
+          more = page.messages.length === MESSAGE_PAGE_SIZE;
+        }
+      } catch (e) {
+        error(`이전 메시지를 불러오지 못했습니다: ${message(e)}`);
+      }
+      if (pages.length > 0) {
+        update(roomId, (s) => ({
+          ...s,
+          messages: mergeMessages(s.messages, pages.flatMap((p) => p.messages)),
+          replyTargets: mergeMessages(s.replyTargets, pages.flatMap((p) => p.replyTargets)),
+          profiles: withProfiles(s.profiles, pages.flatMap((p) => p.profiles)),
+          hasMore: more,
+        }));
+      }
+      return oldest !== undefined && oldest <= targetId;
+    },
+    [roomId, current, update, error],
+  );
+
   const messages = useMemo(
     () =>
       user && room
@@ -279,6 +312,7 @@ export const useChatMessages = (room: Room | null) => {
     editMessage: edit,
     deleteMessage: remove,
     loadOlder,
+    loadUntil,
     hasMore: current.hasMore,
     loadingOlder,
     // 화면의 멤버 목록용(스냅샷 이후엔 실시간 퇴장 반영)

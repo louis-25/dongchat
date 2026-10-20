@@ -20,6 +20,7 @@ import { useChatMessages } from "@/hooks/useChatMessages";
 import { useRecentReactions } from "@/hooks/useRecentReactions";
 import { useRoomNotice } from "@/hooks/useRoomNotice";
 import { RoomNotice } from "@/components/chat/RoomNotice";
+import { MessageSearchSheet } from "@/components/chat/MessageSearchSheet";
 import { quickReactions } from "@/lib/reactions";
 import { useRooms } from "@/hooks/useRooms";
 import { useRoomActions } from "@/hooks/useRoomActions";
@@ -42,7 +43,7 @@ export default function RoomPage() {
   const room = rooms?.find((r) => r.id === roomId) ?? null;
   const { setViewingRoom } = useChat();
   const { leave, kick, openDirect, invite, isInviting, isPending } = useRoomActions();
-  const { messages, sendMessage, sendImages, react, editMessage, deleteMessage, loadOlder, hasMore, loadingOlder, participants } =
+  const { messages, sendMessage, sendImages, react, editMessage, deleteMessage, loadOlder, loadUntil, hasMore, loadingOlder, participants } =
     useChatMessages(room);
   const [recentReactions, rememberReaction] = useRecentReactions();
   const { notice, setNotice } = useRoomNotice(roomId);
@@ -57,6 +58,7 @@ export default function RoomPage() {
   const [actionTarget, setActionTarget] = useState<MessageView | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<MessageView | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -95,6 +97,24 @@ export default function RoomPage() {
   // 나간 사람은 참여자 목록에 없어 열리지 않는다
   const profile = participants.find((p) => p.user.id === profileId)?.user ?? null;
   const back = () => (cameFromApp.current ? router.back() : router.replace("/chat/rooms"));
+  // 공지·검색 결과의 메시지로 이동(아직 안 불러온 옛 메시지면 이전 대화를 받아 온 뒤)
+  const jumpToMessage = async (id: number) => {
+    if (!(await loadUntil(id))) {
+      toast("너무 오래된 메시지예요.");
+      return;
+    }
+    // 방금 받은 이전 대화가 그려질 때까지 몇 프레임 기다린다
+    const show = (tries: number) => {
+      const el = document.getElementById(`msg-${id}`);
+      if (!el) {
+        if (tries > 0) requestAnimationFrame(() => show(tries - 1));
+        return;
+      }
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      el.animate([{ opacity: 0.25 }, { opacity: 1 }], { duration: 450, iterations: 3 });
+    };
+    show(30);
+  };
   const clearTargets = () => {
     setReplyTarget(null);
     setEditTarget(null);
@@ -115,11 +135,7 @@ export default function RoomPage() {
       <RoomNotice
         roomId={room.id}
         notice={notice}
-        onJump={(id) => {
-          const el = document.getElementById(`msg-${id}`);
-          if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
-          else toast("이전 메시지예요. 위로 올려서 찾아 주세요.");
-        }}
+        onJump={(id) => void jumpToMessage(id)}
       />
       <MessageList
         key={room.id}
@@ -195,6 +211,7 @@ export default function RoomPage() {
           onSelect={(emoji) => reactTo(pickerTarget.id, emoji)}
         />
       )}
+      <MessageSearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} roomId={room.id} onPick={(id) => void jumpToMessage(id)} />
       <InviteMembersSheet
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
@@ -221,6 +238,10 @@ export default function RoomPage() {
         onInvite={() => {
           setMenuOpen(false);
           setInviteOpen(true);
+        }}
+        onSearch={() => {
+          setMenuOpen(false);
+          setSearchOpen(true);
         }}
         hasNotice={notice !== null}
         onClearNotice={() => {
