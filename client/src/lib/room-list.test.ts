@@ -7,8 +7,8 @@ const s = (id: number, at: string | null, unread = 0, createdAt = "2026-10-01T00
   id, name: null, isGroup: false, createdAt, memberCount: 2, unreadCount: unread, muted: false,
   lastMessage: at === null ? null : { id: id * 10, content: "x", sticker: null, deleted: false, senderId: "u", at },
 });
-const msg = (roomId: number, id: number, senderId: string): ChatMessage => ({
-  id, roomId, senderId, content: "새", sticker: null, imagePath: null, reactions: [], replyToId: null, editedAt: null, deletedAt: null, createdAt: "2026-10-15T10:00:00Z",
+const msg = (roomId: number, id: number, senderId: string | null, kind: ChatMessage["kind"] = "user"): ChatMessage => ({
+  id, roomId, senderId, kind, content: "새", sticker: null, imagePath: null, reactions: [], replyToId: null, editedAt: null, deletedAt: null, createdAt: "2026-10-15T10:00:00Z",
 });
 const ctx = { me: "me", isViewing: () => false };
 
@@ -52,4 +52,10 @@ test("수정은 마지막 메시지일 때만 미리보기 갱신, 내 읽음은
 
 test("전체 안 읽은 수", () => {
   assert.equal(totalUnread([s(1, null, 2), s(2, null, 5)]), 7);
+});
+
+test("입장·퇴장 안내는 미리보기만 바꾸고 안 읽은 수는 그대로", () => {
+  const a = applyRoomEvent([s(2, "2026-10-14T00:00:00Z", 3)], { type: "message", roomId: 2, message: msg(2, 100, null, "system") }, ctx);
+  assert.equal(a.list[0].unreadCount, 3);
+  assert.equal(a.list[0].lastMessage?.id, 100);
 });

@@ -20,7 +20,7 @@ export const PARTICIPANT_SELECT = `user_id, joined_at, last_read_message_id, pro
 // participants: 방의 전체 참여자.
 export const ROOM_SELECT = `id, name, is_group, created_by, me:chat_room_participants!inner(user_id), participants:chat_room_participants(${PARTICIPANT_SELECT})`;
 
-export const MESSAGE_COLUMNS = "id, room_id, sender_id, content, sticker, image_path, reply_to_id, edited_at, deleted_at, created_at";
+export const MESSAGE_COLUMNS = "id, room_id, sender_id, kind, content, sticker, image_path, reply_to_id, edited_at, deleted_at, created_at";
 // reply:reply_to_id(...) = 답장 대상(다대일). messages!fk 힌트는 자기참조에서 일대다로 해석되므로 쓰지 않는다.
 export const MESSAGE_SELECT = `${MESSAGE_COLUMNS}, sender:profiles!messages_sender_id_fkey(${PROFILE_COLUMNS}), reply:reply_to_id(${MESSAGE_COLUMNS}), reactions:message_reactions(user_id, reaction)`;
 
@@ -50,6 +50,7 @@ export type MessageCoreRow = {
   id: number;
   room_id: number;
   sender_id: string | null;
+  kind: string;
   content: string;
   sticker: string | null;
   image_path: string | null;
@@ -65,6 +66,7 @@ export type MessagePayload = {
   id: number;
   roomId: number;
   senderId: string | null;
+  kind?: string; // 배포 전 DB는 없음
   content: string;
   sticker?: string | null; // 배포 전 DB는 없음
   imagePath?: string | null;
@@ -107,10 +109,13 @@ export const toRoom = (r: RoomRow): Room => ({
     .sort((a, b) => a.joinedAt.localeCompare(b.joinedAt) || a.user.id.localeCompare(b.user.id)),
 });
 
+const toKind = (k: string | undefined): ChatMessage["kind"] => (k === "system" ? "system" : "user");
+
 export const toChatMessage = (r: MessageCoreRow): ChatMessage => ({
   id: r.id,
   roomId: r.room_id,
   senderId: r.sender_id,
+  kind: toKind(r.kind),
   content: r.content,
   sticker: r.sticker,
   imagePath: r.image_path,
@@ -137,6 +142,7 @@ export const fromMessagePayload = (p: MessagePayload): ChatMessage => ({
   id: p.id,
   roomId: p.roomId,
   senderId: p.senderId,
+  kind: toKind(p.kind),
   content: p.content,
   sticker: p.sticker ?? null,
   imagePath: p.imagePath ?? null,

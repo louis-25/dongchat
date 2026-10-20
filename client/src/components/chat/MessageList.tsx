@@ -70,6 +70,10 @@ export function MessageList({ messages, readOnly = false, onOpenActions = noop, 
             <div key={item.key} className="my-3 flex justify-center">
               <span className="rounded-full bg-muted px-3 py-0.5 text-xs text-muted-foreground">{item.label}</span>
             </div>
+          ) : item.kind === "notice" ? (
+            <p key={item.key} className="my-2 px-6 text-center text-xs text-muted-foreground">
+              {item.text}
+            </p>
           ) : (
             <MessageBubble
               key={item.key}

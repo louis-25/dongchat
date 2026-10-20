@@ -28,7 +28,7 @@ export function useInAppNotification() {
   useEffect(() => {
     if (!user) return;
     return onRoomEvent((e) => {
-      if (e.type !== "message" || e.message.senderId === user.id) return;
+      if (e.type !== "message" || e.message.kind === "system" || e.message.senderId === user.id) return;
       if (isViewing(e.roomId) && document.visibilityState === "visible") return;
       const muted = queryClient.getQueryData<RoomSummary[]>(ROOM_SUMMARIES_QUERY_KEY)?.find((s) => s.id === e.roomId)?.muted;
       if (muted) return; // 알림 끈 방

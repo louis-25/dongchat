@@ -57,6 +57,7 @@ const core = (id: number, extra: Partial<Record<string, unknown>> = {}) => ({
   id,
   room_id: 9,
   sender_id: "a",
+  kind: "user",
   content: `m${id}`,
   sticker: null,
   image_path: null,
@@ -82,6 +83,7 @@ test("메시지 페이지: 최신순 행 → 오름차순, 발신자 프로필·
     id: 3,
     roomId: 9,
     senderId: "k",
+    kind: "user",
     content: "m3",
     sticker: null,
     imagePath: null,
@@ -140,4 +142,11 @@ test("사진: payload·조회 행 모두 imagePath 유지, 예전 payload는 nul
   assert.equal(fromMessagePayload(payload).imagePath, "9/x.jpg");
   assert.equal(toChatMessage(core(7, { image_path: "9/x.jpg" }) as never).imagePath, "9/x.jpg");
   assert.equal(fromMessagePayload({ ...payload, imagePath: undefined }).imagePath, null);
+});
+
+test("입장·퇴장 안내: 조회 행·payload의 kind, 예전 payload는 user", () => {
+  assert.equal(toMessagePage([{ ...core(6, { kind: "system", sender_id: null }), sender: null, reply: null }] as never).messages[0].kind, "system");
+  const payload = { id: 7, roomId: 9, senderId: null, content: "a님이 나갔어요", replyToId: null, createdAt: "t" };
+  assert.equal(fromMessagePayload({ ...payload, kind: "system" }).kind, "system");
+  assert.equal(fromMessagePayload(payload).kind, "user");
 });

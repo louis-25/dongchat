@@ -22,7 +22,7 @@ export const applyRoomEvent = (
       const r = list[i];
       const m = e.message;
       if (r.lastMessage && r.lastMessage.id >= m.id) return { list, refetch: false }; // 중복·늦게 온 이벤트
-      const counts = m.senderId !== ctx.me && !ctx.isViewing(r.id);
+      const counts = m.kind === "user" && m.senderId !== ctx.me && !ctx.isViewing(r.id); // 입장·퇴장 안내는 안 셈
       return {
         list: sortSummaries(
           replace(list, i, {

@@ -62,7 +62,8 @@ export const MESSAGE_PAGE_SIZE = 30;
 export type ChatMessage = {
   id: number;
   roomId: number;
-  senderId: string | null; // 탈퇴 사용자는 null
+  senderId: string | null; // 탈퇴 사용자·입장퇴장 안내는 null
+  kind: "user" | "system"; // system = 단체방 입장·퇴장 안내(content가 안내 문장)
   content: string; // 삭제되면 "", 이모티콘이면 "(이모티콘)"
   sticker: string | null; // 이모티콘 id(lib/stickers.ts)
   imagePath: string | null; // 사진(chat-images 버킷 경로, 화면은 서명 URL)
