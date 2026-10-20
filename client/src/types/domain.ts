@@ -77,6 +77,9 @@ export type ChatMessage = {
 // messages: id 오름차순. profiles: 발신자(방을 나간 사람 이름 표시용). replyTargets: 페이지 밖 답장 대상.
 export type MessagePage = { messages: ChatMessage[]; profiles: Profile[]; replyTargets: ChatMessage[] };
 
+// 방 공지(방마다 글 메시지 하나)
+export type RoomNotice = { messageId: number; content: string; senderId: string | null };
+
 // Realtime 이벤트(스펙 §8.1). subscribed는 채널 구독 완료(최초·재연결) — 스냅샷 재조회 신호.
 export type RoomEvent =
   | { type: "message"; roomId: number; message: ChatMessage }
@@ -87,6 +90,7 @@ export type RoomEvent =
   | { type: "profile_updated"; roomId: number; profile: Profile }
   | { type: "member_added"; roomId: number; userId: string }
   | { type: "reaction_updated"; roomId: number; messageId: number; userId: string; reaction: string | null }
+  | { type: "notice_updated"; roomId: number; messageId: number | null }
   | { type: "subscribed"; roomId: number };
 
 export type UserEvent =

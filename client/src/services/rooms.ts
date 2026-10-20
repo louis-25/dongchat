@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import type { Participant, Room, RoomSummary } from "@/types/domain";
+import type { Participant, Room, RoomNotice, RoomSummary } from "@/types/domain";
 import { getCurrentUserId } from "./auth";
 import { toDomainError } from "./errors";
 import {
@@ -24,6 +24,25 @@ export async function listRooms(): Promise<Room[]> {
   if (error) throw toDomainError(error);
   // ponytail: 동적 SELECT 문자열이라 행 타입 추론이 안 된다. 계약은 verify-social.mjs가 검증.
   return (data as unknown as RoomRow[]).map(toRoom);
+}
+
+// 방 공지(없거나 지워졌으면 null)
+export async function getRoomNotice(roomId: number): Promise<RoomNotice | null> {
+  const { data, error } = await createClient()
+    .from("chat_rooms")
+    .select("notice:messages!chat_rooms_notice_message_id_fkey(id, content, sender_id, deleted_at)")
+    .eq("id", roomId)
+    .maybeSingle();
+  if (error) throw toDomainError(error);
+  const m = (data as unknown as { notice: { id: number; content: string; sender_id: string | null; deleted_at: string | null } | null } | null)
+    ?.notice;
+  return m && !m.deleted_at ? { messageId: m.id, content: m.content, senderId: m.sender_id } : null;
+}
+
+// null이면 공지 내리기. 다른 사람 화면은 notice_updated 이벤트로.
+export async function setRoomNotice(roomId: number, messageId: number | null): Promise<void> {
+  const { error } = await createClient().rpc("set_room_notice", { p_room_id: roomId, p_message_id: messageId });
+  if (error) throw toDomainError(error);
 }
 
 // 채팅 스냅샷용 최신 참여자(읽음 위치 포함). 정렬은 화면이 room.participants를 쓰므로 하지 않는다.

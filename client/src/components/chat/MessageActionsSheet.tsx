@@ -16,10 +16,11 @@ type Props = {
   onReact: (v: MessageView, reaction: string | null) => void;
   onMoreReactions: (v: MessageView) => void;
   quickReactions: string[]; // 최근 쓴 것 먼저
+  onPinNotice: (v: MessageView) => void;
 };
 
 // 길게 누른 메시지의 메뉴. 남의 메시지는 답장·복사만.
-export function MessageActionsSheet({ target, onClose, onReply, onCopy, onEdit, onDelete, me, onReact, onMoreReactions, quickReactions }: Props) {
+export function MessageActionsSheet({ target, onClose, onReply, onCopy, onEdit, onDelete, me, onReact, onMoreReactions, quickReactions, onPinNotice }: Props) {
   const run = (fn: (v: MessageView) => void) => () => {
     if (target) fn(target);
     onClose();
@@ -63,6 +64,7 @@ export function MessageActionsSheet({ target, onClose, onReply, onCopy, onEdit, 
           <div className="divide-y">
             <button type="button" className={item} onClick={run(onReply)}>답장</button>
             {!target.sticker && !target.imagePath && <button type="button" className={item} onClick={run(onCopy)}>복사</button>}
+            {!target.sticker && !target.imagePath && <button type="button" className={item} onClick={run(onPinNotice)}>공지로 등록</button>}
             {target.isMine && !target.sticker && !target.imagePath && <button type="button" className={item} onClick={run(onEdit)}>수정</button>}
             {target.isMine && <button type="button" className={`${item} text-destructive`} onClick={run(onDelete)}>삭제</button>}
           </div>

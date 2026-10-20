@@ -52,6 +52,7 @@ export const applyRoomEvent = (
       return { list, refetch: true };
     case "profile_updated":
     case "reaction_updated":
+    case "notice_updated":
       return { list, refetch: false };
   }
 };

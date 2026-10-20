@@ -18,6 +18,8 @@ import { useChat } from "@/components/chat-provider";
 import useAuth from "@/hooks/useAuth";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useRecentReactions } from "@/hooks/useRecentReactions";
+import { useRoomNotice } from "@/hooks/useRoomNotice";
+import { RoomNotice } from "@/components/chat/RoomNotice";
 import { quickReactions } from "@/lib/reactions";
 import { useRooms } from "@/hooks/useRooms";
 import { useRoomActions } from "@/hooks/useRoomActions";
@@ -43,6 +45,7 @@ export default function RoomPage() {
   const { messages, sendMessage, sendImages, react, editMessage, deleteMessage, loadOlder, hasMore, loadingOlder, participants } =
     useChatMessages(room);
   const [recentReactions, rememberReaction] = useRecentReactions();
+  const { notice, setNotice } = useRoomNotice(roomId);
   // 반응을 달 때(취소 제외) 최근 이모지로 기억한다
   const reactTo = (id: number, reaction: string | null) => {
     if (reaction) rememberReaction(reaction);
@@ -109,6 +112,15 @@ export default function RoomPage() {
           </button>
         }
       />
+      <RoomNotice
+        roomId={room.id}
+        notice={notice}
+        onJump={(id) => {
+          const el = document.getElementById(`msg-${id}`);
+          if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+          else toast("이전 메시지예요. 위로 올려서 찾아 주세요.");
+        }}
+      />
       <MessageList
         key={room.id}
         messages={messages}
@@ -163,6 +175,7 @@ export default function RoomPage() {
         onReact={(v, reaction) => reactTo(v.id, reaction)}
         quickReactions={quickReactions(recentReactions)}
         onMoreReactions={setPickerTarget}
+        onPinNotice={(v) => setNotice(v.id)}
         onDelete={(v) => confirm("메시지를 삭제할까요?") && void deleteMessage(v.id, v.imagePath)}
       />
       <ProfileSheet profile={profile} onClose={() => setProfileId(null)}>
@@ -208,6 +221,11 @@ export default function RoomPage() {
         onInvite={() => {
           setMenuOpen(false);
           setInviteOpen(true);
+        }}
+        hasNotice={notice !== null}
+        onClearNotice={() => {
+          setMenuOpen(false);
+          setNotice(null);
         }}
       />
     </>

@@ -321,6 +321,7 @@ export type Database = {
       mark_read: { Args: { p_room_id: number }; Returns: number };
       set_reaction: { Args: { p_message_id: number; p_reaction: string }; Returns: undefined };
       set_room_muted: { Args: { p_room_id: number; p_muted: boolean }; Returns: undefined };
+      set_room_notice: { Args: { p_room_id: number; p_message_id: number | null }; Returns: undefined };
       open_direct_room: { Args: { p_username: string }; Returns: number };
       preview_invite: {
         Args: { p_code: string };
