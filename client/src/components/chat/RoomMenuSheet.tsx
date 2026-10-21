@@ -1,7 +1,7 @@
 "use client";
 
 import { Sheet } from "@/components/ui/sheet";
-import { Bell, BellOff, MegaphoneOff, Search, UserPlus } from "lucide-react";
+import { BarChart3, Bell, BellOff, MegaphoneOff, Search, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/chat/UserAvatar";
 import { displayName, type Participant, type Room } from "@/types/domain";
@@ -20,12 +20,13 @@ type Props = {
   onToggleMute: () => void;
   onInvite: () => void;
   onSearch: () => void;
+  onCreatePoll: () => void;
   hasNotice: boolean;
   onClearNotice: () => void;
 };
 
 // 멤버 목록·내보내기(그룹방 방장만, DB도 같은 규칙)·나가기
-export function RoomMenuSheet({ open, onClose, room, participants, me, disabled, onLeave, onKick, muted, muting, onToggleMute, onInvite, onSearch, hasNotice, onClearNotice }: Props) {
+export function RoomMenuSheet({ open, onClose, room, participants, me, disabled, onLeave, onKick, muted, muting, onToggleMute, onInvite, onSearch, onCreatePoll, hasNotice, onClearNotice }: Props) {
   const canKick = room.isGroup && room.ownerId === me;
   return (
     <Sheet open={open} onClose={onClose} title={`대화 상대 ${participants.length}`}>
@@ -65,6 +66,10 @@ export function RoomMenuSheet({ open, onClose, room, participants, me, disabled,
       <Button variant="outline" className="mt-2 h-12 w-full text-base" onClick={onSearch}>
         <Search className="size-5" />
         대화 검색
+      </Button>
+      <Button variant="outline" className="mt-2 h-12 w-full text-base" onClick={onCreatePoll}>
+        <BarChart3 className="size-5" />
+        투표 만들기
       </Button>
       {hasNotice && (
         <Button variant="outline" className="mt-2 h-12 w-full text-base" disabled={disabled} onClick={() => confirm("공지를 내릴까요?") && onClearNotice()}>

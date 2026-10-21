@@ -21,6 +21,7 @@ import { useRecentReactions } from "@/hooks/useRecentReactions";
 import { useRoomNotice } from "@/hooks/useRoomNotice";
 import { RoomNotice } from "@/components/chat/RoomNotice";
 import { MessageSearchSheet } from "@/components/chat/MessageSearchSheet";
+import { CreatePollSheet } from "@/components/chat/CreatePollSheet";
 import { quickReactions } from "@/lib/reactions";
 import { useRooms } from "@/hooks/useRooms";
 import { useRoomActions } from "@/hooks/useRoomActions";
@@ -59,6 +60,7 @@ export default function RoomPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [pollOpen, setPollOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<MessageView | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -212,6 +214,7 @@ export default function RoomPage() {
         />
       )}
       <MessageSearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} roomId={room.id} onPick={(id) => void jumpToMessage(id)} />
+      <CreatePollSheet open={pollOpen} onClose={() => setPollOpen(false)} roomId={room.id} />
       <InviteMembersSheet
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
@@ -242,6 +245,10 @@ export default function RoomPage() {
         onSearch={() => {
           setMenuOpen(false);
           setSearchOpen(true);
+        }}
+        onCreatePoll={() => {
+          setMenuOpen(false);
+          setPollOpen(true);
         }}
         hasNotice={notice !== null}
         onClearNotice={() => {
