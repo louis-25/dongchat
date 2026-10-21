@@ -25,6 +25,7 @@ const msg = (id: number, senderId: string | null = "a", extra: Partial<ChatMessa
   sticker: null,
   imagePath: null,
   imagePaths: [],
+  pollId: null,
   reactions: [],
   replyToId: null,
   editedAt: null,

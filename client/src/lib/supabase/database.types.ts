@@ -128,6 +128,7 @@ export type Database = {
           id: number;
           image_path: string | null;
           image_paths: string[] | null;
+          poll_id: number | null;
           reply_to_id: number | null;
           room_id: number;
           sender_id: string | null;
@@ -324,6 +325,22 @@ export type Database = {
       mark_read: { Args: { p_room_id: number }; Returns: number };
       set_reaction: { Args: { p_message_id: number; p_reaction: string }; Returns: undefined };
       set_room_muted: { Args: { p_room_id: number; p_muted: boolean }; Returns: undefined };
+      create_poll: {
+        Args: {
+          p_room_id: number;
+          p_question: string;
+          p_options: string[];
+          p_multiple: boolean;
+          p_anonymous: boolean;
+          p_allow_add: boolean;
+          p_closes_at: string | null;
+        };
+        Returns: number;
+      };
+      get_poll: { Args: { p_poll_id: number }; Returns: Json };
+      vote_poll: { Args: { p_poll_id: number; p_option_ids: number[] }; Returns: undefined };
+      add_poll_option: { Args: { p_poll_id: number; p_label: string }; Returns: number };
+      close_poll: { Args: { p_poll_id: number }; Returns: undefined };
       set_room_notice: { Args: { p_room_id: number; p_message_id: number | null }; Returns: undefined };
       search_messages: {
         Args: { p_room_id: number; p_query: string; p_before_id: number | null };

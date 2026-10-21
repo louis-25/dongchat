@@ -20,7 +20,7 @@ export const PARTICIPANT_SELECT = `user_id, joined_at, last_read_message_id, pro
 // participants: 방의 전체 참여자.
 export const ROOM_SELECT = `id, name, is_group, created_by, me:chat_room_participants!inner(user_id), participants:chat_room_participants(${PARTICIPANT_SELECT})`;
 
-export const MESSAGE_COLUMNS = "id, room_id, sender_id, kind, content, sticker, image_path, image_paths, reply_to_id, edited_at, deleted_at, created_at";
+export const MESSAGE_COLUMNS = "id, room_id, sender_id, kind, content, sticker, image_path, image_paths, poll_id, reply_to_id, edited_at, deleted_at, created_at";
 // reply:reply_to_id(...) = 답장 대상(다대일). messages!fk 힌트는 자기참조에서 일대다로 해석되므로 쓰지 않는다.
 export const MESSAGE_SELECT = `${MESSAGE_COLUMNS}, sender:profiles!messages_sender_id_fkey(${PROFILE_COLUMNS}), reply:reply_to_id(${MESSAGE_COLUMNS}), reactions:message_reactions(user_id, reaction)`;
 
@@ -55,6 +55,7 @@ export type MessageCoreRow = {
   sticker: string | null;
   image_path: string | null;
   image_paths?: string[] | null; // 예전 앱이 보낸 사진은 없음
+  poll_id?: number | null; // 배포 전 DB는 없음
   reply_to_id: number | null;
   reactions?: { user_id: string; reaction: string }[]; // 목록 조회에만
   edited_at: string | null;
@@ -72,6 +73,7 @@ export type MessagePayload = {
   sticker?: string | null; // 배포 전 DB는 없음
   imagePath?: string | null;
   imagePaths?: string[] | null;
+  pollId?: number | null; // 배포 전 DB는 없음
   replyToId: number | null;
   createdAt: string;
 };
@@ -122,6 +124,7 @@ export const toChatMessage = (r: MessageCoreRow): ChatMessage => ({
   sticker: r.sticker,
   imagePath: r.image_path,
   imagePaths: r.image_paths ?? (r.image_path ? [r.image_path] : []),
+  pollId: r.poll_id ?? null,
   reactions: (r.reactions ?? []).map((x) => ({ userId: x.user_id, reaction: x.reaction })),
   replyToId: r.reply_to_id,
   editedAt: r.edited_at,
@@ -150,6 +153,7 @@ export const fromMessagePayload = (p: MessagePayload): ChatMessage => ({
   sticker: p.sticker ?? null,
   imagePath: p.imagePath ?? null,
   imagePaths: p.imagePaths ?? (p.imagePath ? [p.imagePath] : []),
+  pollId: p.pollId ?? null,
   reactions: [],
   replyToId: p.replyToId,
   editedAt: null,

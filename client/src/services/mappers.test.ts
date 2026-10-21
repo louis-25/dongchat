@@ -88,6 +88,7 @@ test("메시지 페이지: 최신순 행 → 오름차순, 발신자 프로필·
     sticker: null,
     imagePath: null,
     imagePaths: [],
+    pollId: null,
     reactions: [],
     replyToId: 1,
     editedAt: null,
@@ -162,4 +163,15 @@ test("사진 묶음: image_paths 우선, 없으면 image_path 한 장, 사진 �
   const payload = { id: 7, roomId: 9, senderId: "a", content: "(사진 2장)", imagePath: "9/a.jpg", imagePaths: ["9/a.jpg", "9/b.jpg"], replyToId: null, createdAt: "t" };
   assert.deepEqual(fromMessagePayload(payload).imagePaths, ["9/a.jpg", "9/b.jpg"]);
   assert.deepEqual(fromMessagePayload({ ...payload, imagePaths: null }).imagePaths, ["9/a.jpg"]);
+});
+
+test("투표: poll_id·pollId를 그대로, 없으면 null", () => {
+  const page = toMessagePage([
+    { ...core(1, { poll_id: 5, content: "(투표) 점심" }), sender: null, reply: null },
+    { ...core(2), sender: null, reply: null },
+  ]);
+  assert.deepEqual(page.messages.map((m) => m.pollId), [5, null]);
+  const payload = { id: 7, roomId: 9, senderId: "a", content: "(투표) 점심", replyToId: null, createdAt: "t" };
+  assert.equal(fromMessagePayload({ ...payload, pollId: 5 }).pollId, 5);
+  assert.equal(fromMessagePayload(payload).pollId, null);
 });

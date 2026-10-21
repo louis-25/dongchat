@@ -8,7 +8,7 @@ const s = (id: number, at: string | null, unread = 0, createdAt = "2026-10-01T00
   lastMessage: at === null ? null : { id: id * 10, content: "x", sticker: null, deleted: false, senderId: "u", at },
 });
 const msg = (roomId: number, id: number, senderId: string | null, kind: ChatMessage["kind"] = "user"): ChatMessage => ({
-  id, roomId, senderId, kind, content: "새", sticker: null, imagePath: null, imagePaths: [], reactions: [], replyToId: null, editedAt: null, deletedAt: null, createdAt: "2026-10-15T10:00:00Z",
+  id, roomId, senderId, kind, content: "새", sticker: null, imagePath: null, imagePaths: [], pollId: null, reactions: [], replyToId: null, editedAt: null, deletedAt: null, createdAt: "2026-10-15T10:00:00Z",
 });
 const ctx = { me: "me", isViewing: () => false };
 
@@ -40,6 +40,13 @@ test("모르는 방·삭제·멤버 변동·재구독은 다시 불러오기", (
   assert.equal(applyRoomEvent(list, { type: "message_deleted", roomId: 1, id: 10 }, ctx).refetch, true);
   assert.equal(applyRoomEvent(list, { type: "member_removed", roomId: 1, userId: "u2" }, ctx).refetch, true);
   assert.equal(applyRoomEvent(list, { type: "subscribed", roomId: 1 }, ctx).refetch, true);
+});
+
+test("투표 변경은 목록에 영향 없음", () => {
+  const list = [s(1, "2026-10-15T09:00:00Z", 2)];
+  const r = applyRoomEvent(list, { type: "poll_updated", roomId: 1, pollId: 3 }, ctx);
+  assert.equal(r.refetch, false);
+  assert.equal(r.list, list);
 });
 
 test("수정은 마지막 메시지일 때만 미리보기 갱신, 내 읽음은 0", () => {
