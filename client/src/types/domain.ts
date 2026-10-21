@@ -68,6 +68,7 @@ export type ChatMessage = {
   sticker: string | null; // 이모티콘 id(lib/stickers.ts)
   imagePath: string | null; // 사진 첫 장(chat-images 버킷 경로, 화면은 서명 URL)
   imagePaths: string[]; // 사진 전부(1~10장), 사진이 아니면 []
+  pollId: number | null; // 투표 메시지면 polls.id(content는 "(투표) 질문")
   reactions: Reaction[];
   replyToId: number | null;
   editedAt: string | null;
@@ -77,6 +78,15 @@ export type ChatMessage = {
 
 // messages: id 오름차순. profiles: 발신자(방을 나간 사람 이름 표시용). replyTargets: 페이지 밖 답장 대상.
 export type MessagePage = { messages: ChatMessage[]; profiles: Profile[]; replyTargets: ChatMessage[] };
+
+// 투표(get_poll). voters: 고른 사람 표시 이름, 익명이면 []
+export type PollOption = { id: number; label: string; count: number; voters: string[] }; // voters: 표시 이름, 익명이면 []
+export type Poll = {
+  id: number; roomId: number; messageId: number; creatorId: string | null; question: string;
+  multiple: boolean; anonymous: boolean; allowAdd: boolean; closesAt: string | null; closed: boolean;
+  voterCount: number; options: PollOption[]; myOptionIds: number[];
+};
+export type NewPoll = { question: string; options: string[]; multiple: boolean; anonymous: boolean; allowAdd: boolean; closesAt: string | null };
 
 // 방 공지(방마다 글 메시지 하나)
 export type RoomNotice = { messageId: number; content: string; senderId: string | null };
@@ -96,6 +106,7 @@ export type RoomEvent =
   | { type: "member_added"; roomId: number; userId: string }
   | { type: "reaction_updated"; roomId: number; messageId: number; userId: string; reaction: string | null }
   | { type: "notice_updated"; roomId: number; messageId: number | null }
+  | { type: "poll_updated"; roomId: number; pollId: number }
   | { type: "subscribed"; roomId: number };
 
 export type UserEvent =
