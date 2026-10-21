@@ -1,6 +1,7 @@
 "use client";
 
 import { ChatImage } from "@/components/chat/ChatImage";
+import { PollCard } from "@/components/chat/PollCard";
 import { UserAvatar } from "@/components/chat/UserAvatar";
 import { useLongPress } from "@/hooks/useLongPress";
 import type { MessageView } from "@/lib/chat-state";
@@ -28,6 +29,8 @@ export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJu
   const mine = view.isMine;
   const sticker = !deleted && view.sticker !== null;
   const image = !deleted && view.imagePath !== null;
+  // 관리자 열람(readOnly)은 투표 조회 권한이 없어 content("(투표) 질문")를 글로 보여 준다
+  const poll = !deleted && !readOnly && view.pollId !== null;
   const showSender = !mine && first;
 
   const meta = last && (
@@ -62,7 +65,7 @@ export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJu
               "min-w-0 select-none whitespace-pre-wrap break-words px-3 py-2 text-[15px] leading-snug [-webkit-touch-callout:none]",
               mine ? "rounded-[18px_6px_18px_18px] bg-bubble-me text-bubble-me-foreground" : "rounded-[6px_18px_18px_18px] bg-bubble-them text-foreground",
               deleted && "bg-transparent italic text-muted-foreground ring-1 ring-border",
-              (sticker || image) && "bg-transparent p-0",
+              (sticker || image || poll) && "bg-transparent p-0",
             )}
           >
             {view.replyTo && !deleted && (
@@ -77,6 +80,8 @@ export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJu
             )}
             {deleted ? (
               "삭제된 메시지입니다"
+            ) : poll ? (
+              <PollCard roomId={view.roomId} pollId={view.pollId!} me={me} />
             ) : image ? (
               <ChatImage paths={view.imagePaths} />
             ) : sticker ? (

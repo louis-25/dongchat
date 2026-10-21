@@ -64,8 +64,8 @@ export function MessageActionsSheet({ target, onClose, onReply, onCopy, onEdit, 
           <div className="divide-y">
             <button type="button" className={item} onClick={run(onReply)}>답장</button>
             {!target.sticker && !target.imagePath && <button type="button" className={item} onClick={run(onCopy)}>복사</button>}
-            {!target.sticker && !target.imagePath && <button type="button" className={item} onClick={run(onPinNotice)}>공지로 등록</button>}
-            {target.isMine && !target.sticker && !target.imagePath && <button type="button" className={item} onClick={run(onEdit)}>수정</button>}
+            {!target.sticker && !target.imagePath && target.pollId === null && <button type="button" className={item} onClick={run(onPinNotice)}>공지로 등록</button>}
+            {target.isMine && !target.sticker && !target.imagePath && target.pollId === null && <button type="button" className={item} onClick={run(onEdit)}>수정</button>}
             {target.isMine && <button type="button" className={`${item} text-destructive`} onClick={run(onDelete)}>삭제</button>}
           </div>
         </>
