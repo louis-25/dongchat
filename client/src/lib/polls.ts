@@ -53,3 +53,7 @@ export const pollMeta = (poll: Poll, now: Date): string => {
 // <input type="datetime-local"> 값(기기 시간대, 시간대 표기 없음). 보낼 때는 new Date(value).toISOString().
 export const toLocalInput = (d: Date): string =>
   `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+// 같은 투표의 투표 요청은 하나씩 차례로(TanStack mutation scope). 겹치면 서버가 먼저 잠근 요청 순으로 처리해
+// 마지막에 누른 선택이 지는 일이 생긴다.
+export const voteScope = (pollId: number): { id: string } => ({ id: `poll-vote-${pollId}` });

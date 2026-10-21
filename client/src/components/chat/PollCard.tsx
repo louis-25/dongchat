@@ -90,7 +90,7 @@ export function PollCard({ roomId, pollId, me }: Props) {
             if (label) addOption(label).then(() => setDraft(null), () => {}); // 실패 토스트는 usePoll
           }}
         >
-          <Input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={POLL_LABEL_MAX} placeholder="새 항목" aria-label="새 항목" className="h-9" />
+          <Input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={POLL_LABEL_MAX} placeholder="새 항목" aria-label="새 항목" className="h-9 select-text" />
           <Button type="submit" size="sm" className="h-9" loading={adding} disabled={!draft.trim()}>
             추가
           </Button>

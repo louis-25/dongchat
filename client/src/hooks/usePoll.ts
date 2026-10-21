@@ -5,11 +5,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useChat } from "@/components/chat-provider";
 import { getErrorMessage } from "@/lib/error-handler";
-import { withMyVote } from "@/lib/polls";
+import { voteScope, withMyVote } from "@/lib/polls";
 import { addPollOption, closePoll, getPoll, votePoll } from "@/services/polls";
 import type { DomainError, Poll } from "@/types/domain";
 
 const pollKey = (pollId: number) => ["poll", pollId] as const;
+const voteKey = (pollId: number) => ["poll-vote", pollId] as const;
 const fail = (e: unknown) => toast.error(getErrorMessage(e as unknown as DomainError));
 
 // 투표 카드 하나. 이 투표의 poll_updated와 재구독(놓친 이벤트) 때 다시 받는다.
@@ -31,8 +32,10 @@ export const usePoll = (roomId: number, pollId: number) => {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: pollKey(pollId) });
 
-  // 누르자마자 표시하고, 실패하면 되돌린다
+  // 누르자마자 표시하고, 실패하면 되돌린다. 연달아 누르면 차례로 보내고, 마지막 요청이 끝난 뒤에만 다시 받는다(중간 결과로 깜빡이지 않게).
   const vote = useMutation({
+    mutationKey: voteKey(pollId),
+    scope: voteScope(pollId),
     mutationFn: (next: number[]) => votePoll(pollId, next),
     onMutate: async (next) => {
       await queryClient.cancelQueries({ queryKey: pollKey(pollId) });
@@ -44,7 +47,9 @@ export const usePoll = (roomId: number, pollId: number) => {
       if (ctx?.prev) queryClient.setQueryData(pollKey(pollId), ctx.prev);
       fail(e);
     },
-    onSettled: refresh,
+    onSettled: () => {
+      if (queryClient.isMutating({ mutationKey: voteKey(pollId) }) <= 1) void refresh();
+    },
   });
   const add = useMutation({ mutationFn: (label: string) => addPollOption(pollId, label), onSuccess: refresh, onError: fail });
   const close = useMutation({ mutationFn: () => closePoll(pollId), onSuccess: refresh, onError: fail });

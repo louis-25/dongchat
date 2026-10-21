@@ -4,6 +4,10 @@ import { useRef } from "react";
 
 const MOVE_TOLERANCE_PX = 10;
 
+// 말풍선 안 입력칸·시트(투표 카드)에서는 길게 누르기를 쓰지 않는다 — 붙여넣기 메뉴를 막거나 시트 위에서 메뉴가 뜨지 않게
+export const ignoresLongPress = (target: EventTarget | null): boolean =>
+  !!(target as Element | null)?.closest?.("input, textarea, dialog");
+
 // 길게 누르기(터치·마우스) 또는 우클릭으로 onLongPress. 스크롤하려고 움직이면 취소한다.
 // 길게 누른 뒤 손을 떼면 오는 click은 막는다(안쪽 버튼·사진이 함께 열리지 않게).
 export const useLongPress = (onLongPress: () => void, ms = 500) => {
@@ -16,7 +20,7 @@ export const useLongPress = (onLongPress: () => void, ms = 500) => {
   };
   return {
     onPointerDown: (e: React.PointerEvent) => {
-      if (e.pointerType === "mouse" && e.button !== 0) return;
+      if ((e.pointerType === "mouse" && e.button !== 0) || ignoresLongPress(e.target)) return;
       clear();
       fired.current = false;
       start.current = { x: e.clientX, y: e.clientY };
@@ -33,6 +37,7 @@ export const useLongPress = (onLongPress: () => void, ms = 500) => {
     onPointerLeave: clear,
     onPointerCancel: clear,
     onContextMenu: (e: React.MouseEvent) => {
+      if (ignoresLongPress(e.target)) return;
       e.preventDefault();
       clear();
       fired.current = true;

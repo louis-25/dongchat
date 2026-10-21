@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown } from "lucide-react";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { scrollAction, type MessageView } from "@/lib/chat-state";
@@ -25,6 +25,7 @@ const noop = () => {};
 // 방이 바뀌면 부모가 key로 다시 마운트한다(스크롤 기준 초기화).
 export function MessageList({ messages, readOnly = false, onOpenActions = noop, onOpenProfile, me, onReact, onLoadOlder, hasMore, loadingOlder }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const last = useRef({ firstId: null as number | null, lastId: null as number | null, height: 0, nearBottom: true });
   const [atBottom, setAtBottom] = useState(true);
   const [seenId, setSeenId] = useState<number | null>(null);
@@ -56,12 +57,26 @@ export function MessageList({ messages, readOnly = false, onOpenActions = noop, 
     last.current = { ...next, height: el.scrollHeight, nearBottom: isNearBottom(el) };
   }, [messages]);
 
+  // 투표 카드처럼 불러온 뒤 커지는 내용: 맨 아래를 보고 있었다면 계속 맨 아래에 붙인다
+  useEffect(() => {
+    const el = scrollRef.current;
+    const content = contentRef.current;
+    if (!el || !content) return;
+    const observer = new ResizeObserver(() => {
+      if (last.current.nearBottom) el.scrollTop = el.scrollHeight;
+      last.current.height = el.scrollHeight;
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
+
   const unseen = atBottom || seenId === null ? 0 : messages.filter((m) => m.id > seenId && !m.isMine).length;
   const jumpTo = (id: number) => document.getElementById(`msg-${id}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
 
   return (
     <div className="relative min-h-0 flex-1">
       <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto overscroll-contain px-3 py-2">
+        <div ref={contentRef}>
         {loadingOlder && <p className="py-2 text-center text-xs text-muted-foreground">불러오는 중…</p>}
         {!hasMore && messages.length > 0 && <p className="py-2 text-center text-xs text-muted-foreground">대화의 시작이에요</p>}
         {messages.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">첫 메시지를 보내 보세요</p>}
@@ -89,6 +104,7 @@ export function MessageList({ messages, readOnly = false, onOpenActions = noop, 
             />
           ),
         )}
+        </div>
       </div>
       {unseen > 0 && (
         <button

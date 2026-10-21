@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cleanOptions, isClosed, nextChoice, normalizeLabel, pollMeta, toLocalInput, withMyVote } from "./polls.ts";
+import { cleanOptions, isClosed, nextChoice, normalizeLabel, pollMeta, toLocalInput, voteScope, withMyVote } from "./polls.ts";
 import type { Poll } from "../types/domain.ts";
 
 const poll = (over: Partial<Poll> = {}): Poll => ({
@@ -66,4 +66,28 @@ test("datetime-local 값은 기기 시각 그대로, 다시 Date로 읽으면 �
   const d = new Date(2026, 0, 5, 7, 3);
   assert.equal(toLocalInput(d), "2026-01-05T07:03");
   assert.equal(new Date(toLocalInput(d)).getTime(), d.getTime());
+});
+
+test("같은 투표의 표는 하나씩 차례로 보낸다(빠르게 연달아 눌러도 마지막 선택이 남게)", async () => {
+  const { QueryClient } = await import("@tanstack/react-query");
+  const qc = new QueryClient();
+  const order: string[] = [];
+  let release!: () => void;
+  const hold = new Promise<void>((r) => (release = r));
+  const run = (name: string, wait?: Promise<void>) =>
+    qc.getMutationCache().build(qc, {
+      scope: voteScope(1),
+      mutationFn: async () => {
+        order.push(`start ${name}`);
+        await wait;
+        order.push(`end ${name}`);
+      },
+    }).execute(undefined);
+  const a = run("A", hold);
+  const b = run("B");
+  await new Promise((r) => setTimeout(r, 20));
+  assert.deepEqual(order, ["start A"]);
+  release();
+  await Promise.all([a, b]);
+  assert.deepEqual(order, ["start A", "end A", "start B", "end B"]);
 });
