@@ -111,13 +111,13 @@
 - 반환:
   - `id, roomId, messageId, creatorId, question, multiple, anonymous, allowAdd, closesAt, closed`(서버 시각 기준 판정)
   - `voterCount`(서로 다른 투표자 수)
-  - `options: [{ id, label, count, voterIds }]` — 추가 순서(id 오름차순). 익명이면 `voterIds`는 항상 `[]`(만든 사람 포함)
+  - `options: [{ id, label, count, voters }]` — 추가 순서(id 오름차순). `voters`는 고른 사람의 표시 이름(투표한 순). 익명이면 항상 `[]`(만든 사람 포함)
   - `myOptionIds`
 
 ### 3.6 기존 RPC 변경
 - `edit_message`: 투표 메시지 수정 불가 → `VALIDATION_FAILED`.
 - `set_room_notice`: 투표 메시지 공지 등록 불가 → `VALIDATION_FAILED`.
-- `delete_message`: 변경 없음(보낸 사람이 삭제). 삭제 후 투표 쓰기 RPC는 `POLL_CLOSED`.
+- `delete_message`: 변경 없음(보낸 사람이 삭제). 삭제 후 `vote_poll`·`add_poll_option`은 `POLL_CLOSED`, `close_poll`은 아무 일도 하지 않는다.
 
 ## 4. 실시간
 
@@ -131,10 +131,10 @@
 - `services/polls.ts`: `createPoll`·`votePoll`·`addPollOption`·`closePoll`·`getPoll`.
 - `RoomEvent`에 `{ type: 'poll_updated'; roomId; pollId }`, `services/realtime.ts`의 `ROOM_EVENTS`에 `poll_updated` 추가.
 - 카드마다 `useQuery(['poll', pollId])` → `get_poll(pollId)`.
-- `useChatMessages`의 이벤트 처리에서 `poll_updated` 수신 → `['poll', pollId]` 무효화.
+- `usePoll` 훅이 `onRoomEvent`로 `poll_updated`(같은 pollId)·`subscribed`를 받아 `['poll', pollId]` 무효화(`useRoomNotice`와 같은 방식).
 - `MessageBubble`은 `pollId`가 있으면 `PollCard`로 분기.
 - `room-list` 리듀서에서 `poll_updated`는 no-op.
-- 재연결 시 `['poll']` 전체 무효화.
+- 재연결(`subscribed`) 시 화면의 각 카드가 다시 받는다(위 `usePoll`).
 - 마감 표시: `closesAt`까지 `setTimeout` 하나로 다시 그려 "마감됨". 최종 판정은 서버.
 
 ## 5. 화면
@@ -150,7 +150,7 @@
 - 선택지 줄: 문구 + 표 수 + 줄 배경을 채우는 비율 막대. 내 선택은 체크와 강조색.
 - 열려 있으면 줄 탭으로 즉시 반영: 한 개 선택은 옮기기, 같은 줄 다시 탭은 취소. 낙관적 업데이트 후 실패 시 되돌리고 토스트.
 - 아래: "N명 참여", 허용 시 "+ 항목 추가"(그 자리 입력 한 줄), 만든 사람에게만 "투표 마감".
-- 익명이 아니면 표 수 탭 → 고른 사람 목록 시트(기존 참여자 정보 사용).
+- 익명이 아니면 표 수 탭 → 고른 사람 이름 목록 시트(`get_poll`의 `voters`).
 - 삭제된 투표는 기존 "삭제된 메시지".
 
 ### 5.3 메시지 메뉴
@@ -163,7 +163,7 @@ pgTAP `supabase/tests/database/300_polls.test.sql`:
 - 한 개 선택 / 여러 개 선택 규칙, 표 변경·취소, 다른 투표의 선택지 거부
 - 마감 시각 경과·일찍 마감·삭제 후 쓰기 거부(`POLL_CLOSED`)
 - 선택지 추가 권한·중복·20개 상한
-- 익명: 만든 사람에게도 `voterIds = []`
+- 익명: 만든 사람에게도 `voters = []`
 - 다른 방·삭제된 투표는 `get_poll`이 `POLL_NOT_FOUND`, 비참여자 쓰기 거부
 - 중복 option id 입력은 한 개로 처리
 - `close_poll` 두 번째 호출은 broadcast 없음
