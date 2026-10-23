@@ -32,6 +32,7 @@ app/, components/   UI — Supabase를 모른다
 - 구독 저장은 `services/push.ts`(`register_push_subscription` RPC — 같은 브라우저 endpoint는 등록한 사용자에게 이전). 로그아웃 시 이 브라우저 구독을 지운다.
 - 안드로이드: 설치한 웹앱(WebAPK)의 알림 카테고리 "일반"은 중요도 보통(3)으로 만들어져 팝업(헤드업)이 안 뜬다. 웹에서 바꿀 API가 없어 설정 화면에 "팝업으로 표시" 안내만 둔다(2026-10-19 실기기 adb로 확인). iOS는 기본이 배너라 안내 불필요.
 - 발송은 서버(메시지 트리거 → Edge Function `send-push`). 알림 URL은 `/chat/rooms/<id>`(예전 `?room=<id>`는 목록 화면이 새 주소로 넘긴다).
+- 수신 웹훅: 외부 스크립트 → Edge Function `webhook` → 봇(`profiles.is_bot`) 이름의 메시지. 봇은 친구·1:1·방 만들기·초대 대상이 아니다(DB가 거절). 운영 방법은 DEPLOYMENT.md.
 
 ## 화면 구조(모바일 우선)
 - 라우트: `/chat/friends`, `/chat/rooms`, `/chat/rooms/[id]`(하단 탭 숨김), `/chat/settings`, `/invite/[code]`(친구 초대 수락), `/login`, `/join`, `/admin/*`(PC용).

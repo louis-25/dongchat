@@ -32,6 +32,32 @@ select vault.create_secret('<PUSH_WEBHOOK_SECRET 값>', 'push_webhook_secret');
 
 `PUSH_ALLOW_HTTP`는 운영에 절대 설정하지 않는다 — 설정하지 않으면 알려진 브라우저 푸시 서비스(FCM·Mozilla·Windows·Apple)의 https 주소로만 발송한다(SSRF 방지).
 
+## 2-1. 수신 웹훅(외부 스크립트 → 채팅방)
+```bash
+npx -y supabase@2.120.0 functions deploy webhook --no-verify-jwt
+```
+새 비밀 없음(`SUPABASE_URL`, service role 키는 런타임이 넣는다). 발급·관리는 Studio SQL Editor에서만 한다(앱·API로는 호출 불가).
+```sql
+-- 기존 그룹 방에 봇 넣기(방 id = 앱 주소 /chat/rooms/<id>). 1:1 방은 거절된다.
+select public.create_webhook('채용봇', 123);
+-- 새 그룹 방(이름 = 웹훅 이름, 방장 = 첫 사용자)을 만들어 넣기
+select public.create_webhook('채용봇', array['<username>', '<username>']);
+-- 목록·재발급·삭제(삭제해도 이전 메시지와 봇 이름은 남는다)
+select id, room_id, name, last_used_at from private.webhooks;
+select public.rotate_webhook(<id>);
+select public.delete_webhook(<id>);
+```
+- 반환된 `dch_…` 토큰은 **이때 한 번만** 보인다(DB에는 해시만 저장). 잃어버리면 `rotate_webhook`.
+- 보내는 쪽 — 토큰은 헤더로만 받는다(주소에 넣지 않는다):
+```bash
+curl -X POST "https://<ref>.supabase.co/functions/v1/webhook" \
+  -H "Authorization: Bearer dch_..." -H "Content-Type: text/plain; charset=utf-8" --data-binary @jobs.txt
+# 또는 -H "Content-Type: application/json" -d '{"text":"..."}'
+```
+- 응답: 200 `{"posted": n}`, 401 토큰 틀림·봇이 방에서 강퇴됨, 400 빈 본문, 413 20,000자 초과, 405 POST 아님.
+- 2,000자가 넘으면 줄 단위로 나눠 여러 메시지(최대 10개)로 올린다. `http(s)://` 주소는 앱에서 누를 수 있다.
+- Windows 명령줄의 `-d '한글'`은 시스템 코드페이지로 넘어가 글자가 깨진다. 한글은 UTF-8 파일(`--data-binary @파일`)로 보낸다.
+
 ## 3. Vercel
 - Root Directory: `client`, Framework: Next.js, Install: `pnpm install`
 - 환경 변수: `NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable key>`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY=<공개키>`
