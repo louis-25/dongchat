@@ -17,7 +17,7 @@ reset role;
 
 -- 4~8: 목록
 select tests.login_as(tests.uid('dave@test.com'));
-select is((public.admin_list_users(1, 2, 'username', 'asc') ->> 'total')::int, (select count(*)::int from public.profiles), 'total = 전체 프로필 수');
+select is((public.admin_list_users(1, 2, 'username', 'asc') ->> 'total')::int, (select count(*)::int from public.profiles where not is_bot), 'total = 봇을 뺀 전체 프로필 수');
 select is(jsonb_array_length(public.admin_list_users(1, 2, 'username', 'asc') -> 'items'), 2, 'limit 적용');
 select ok((public.admin_list_users(1, 2, 'username', 'asc') -> 'items' -> 0 ->> 'username') < (public.admin_list_users(1, 2, 'username', 'asc') -> 'items' -> 1 ->> 'username'), '정렬 asc');
 select is((public.admin_list_users(1, 1000) ->> 'limit')::int, 100, 'limit 상한 100');
