@@ -9,6 +9,7 @@ import useAuth from "@/hooks/useAuth";
 const TABS = [
   { href: "/admin/users", label: "사용자" },
   { href: "/admin/rooms", label: "채팅방" },
+  { href: "/admin/webhooks", label: "웹훅" },
 ];
 
 // 화면 노출 가드. 실제 권한 판정은 DB(관리자 RPC·RLS)가 한다.

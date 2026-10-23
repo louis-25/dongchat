@@ -141,6 +141,17 @@ export type AdminRoom = {
   createdAt: string;
 };
 
+// 수신 웹훅(관리자 화면). 토큰은 만들기·재발급 때만 받는다.
+export type AdminWebhook = {
+  id: number;
+  name: string;
+  roomId: number;
+  roomName: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+};
+export type AdminWebhookRoom = { id: number; name: string | null; memberCount: number };
+
 export type UserSort = "created_at" | "username";
 export type SortOrder = "asc" | "desc";
 export type BanDuration = "1d" | "7d" | "30d" | "permanent";

@@ -36,7 +36,7 @@ select vault.create_secret('<PUSH_WEBHOOK_SECRET 값>', 'push_webhook_secret');
 ```bash
 npx -y supabase@2.120.0 functions deploy webhook --no-verify-jwt
 ```
-새 비밀 없음(`SUPABASE_URL`, service role 키는 런타임이 넣는다). 발급·관리는 Studio SQL Editor에서만 한다(앱·API로는 호출 불가).
+새 비밀 없음(`SUPABASE_URL`, service role 키는 런타임이 넣는다). 발급·재발급·삭제는 앱 관리자 화면 **`/admin/webhooks`**(그룹 방을 골라 만들기, 토큰·curl 예시 복사)에서 한다. 같은 일을 Studio SQL Editor로도 할 수 있다:
 ```sql
 -- 기존 그룹 방에 봇 넣기(방 id = 앱 주소 /chat/rooms/<id>). 1:1 방은 거절된다.
 select public.create_webhook('채용봇', 123);

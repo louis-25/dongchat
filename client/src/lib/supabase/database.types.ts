@@ -289,6 +289,10 @@ export type Database = {
         Returns: Json;
       };
       admin_unban: { Args: { p_user_id: string }; Returns: undefined };
+      admin_list_webhooks: { Args: Record<PropertyKey, never>; Returns: Json };
+      admin_create_webhook: { Args: { p_name: string; p_room_id: number }; Returns: string };
+      admin_rotate_webhook: { Args: { p_id: number }; Returns: string };
+      admin_delete_webhook: { Args: { p_id: number }; Returns: undefined };
       create_room: {
         Args: { p_is_group: boolean; p_name: string; p_usernames: string[] };
         Returns: number;
