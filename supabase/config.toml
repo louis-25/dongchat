@@ -394,6 +394,10 @@ PUSH_ALLOW_HTTP = "env(PUSH_ALLOW_HTTP)"
 [functions.send-push]
 verify_jwt = false
 
+# 외부 스크립트가 JWT 없이 웹훅 토큰(Bearer dch_…)으로 호출한다 → 함수·DB가 직접 검증.
+[functions.webhook]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
