@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isTokenShape, splitMessage } from "./split.ts";
+import { isTokenShape, prepareParts, splitMessage } from "./split.ts";
 
 const len = (s: string) => [...s].length;
 
@@ -40,4 +40,12 @@ test("토큰 형식: dch_ + 소문자 hex 64자", () => {
   assert.equal(isTokenShape(`dch_${"A".repeat(64)}`), false);
   assert.equal(isTokenShape(`dch_${"a".repeat(63)}`), false);
   assert.equal(isTokenShape("a".repeat(68)), false);
+});
+
+test("보낼 조각 준비: 빈 본문 400, 2만 자 초과 413, 나눈 뒤 10개 초과도 413", () => {
+  assert.equal(prepareParts("  \n "), 400);
+  assert.equal(prepareParts("x".repeat(20_001)), 413);
+  const lines = Array.from({ length: 19 }, () => "y".repeat(1001)).join("\n"); // 2만 자 미만이지만 19조각
+  assert.equal(prepareParts(lines), 413);
+  assert.deepEqual(prepareParts("a\nb"), ["a\nb"]);
 });

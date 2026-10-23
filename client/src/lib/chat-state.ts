@@ -108,7 +108,7 @@ export const toViews = (
       unreadCount:
         readState === null
           ? null
-          : ctx.participants.filter((p) => p.user.id !== m.senderId && (readState[p.user.id] ?? 0) < m.id).length,
+          : ctx.participants.filter((p) => !p.user.isBot && p.user.id !== m.senderId && (readState[p.user.id] ?? 0) < m.id).length,
       replyTo:
         m.replyToId === null
           ? null

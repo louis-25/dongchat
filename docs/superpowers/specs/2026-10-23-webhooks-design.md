@@ -103,7 +103,7 @@ SQL Editor에는 JWT가 없어 `auth.uid()`가 null이다. 그래서 `require_ac
 | POST 아님 | 405 |
 | 토큰 없음·틀림·봇이 방에 없음 | 401 (구분하지 않음) |
 | JSON 깨짐·`text` 없음·나눈 뒤 빈 결과 | 400 |
-| 전체 20,000자 초과 | 413 |
+| 전체 20,000자 초과, 또는 줄 단위로 나눈 뒤 10조각 초과 | 413 |
 | 그 밖의 DB 오류 | 500 (내용은 로그에만) |
 
 ### 5.1 `splitMessage(text, max)` — `functions/webhook/split.ts`

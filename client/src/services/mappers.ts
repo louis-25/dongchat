@@ -10,7 +10,7 @@ import type {
   RoomSummary,
 } from "../types/domain";
 
-const PROFILE_COLUMNS = "id, username, nickname, avatar_url, status_message";
+const PROFILE_COLUMNS = "id, username, nickname, avatar_url, status_message, is_bot";
 
 export const FRIEND_SELECT = `id, created_at, requester:profiles!friends_requester_id_fkey(${PROFILE_COLUMNS}), receiver:profiles!friends_receiver_id_fkey(${PROFILE_COLUMNS})`;
 
@@ -31,6 +31,7 @@ export type ProfileRow = {
   nickname: string | null;
   avatar_url: string | null;
   status_message: string | null;
+  is_bot?: boolean;
 };
 export type FriendRow = { id: number; created_at: string; requester: ProfileRow; receiver: ProfileRow };
 export type ParticipantRow = {
@@ -84,6 +85,7 @@ export const toProfile = (r: ProfileRow): Profile => ({
   nickname: r.nickname,
   avatarUrl: r.avatar_url,
   statusMessage: r.status_message,
+  ...(r.is_bot ? { isBot: true } : {}),
 });
 
 export const toFriend = (r: FriendRow, me: string): Friend => ({

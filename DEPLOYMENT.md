@@ -54,7 +54,7 @@ curl -X POST "https://<ref>.supabase.co/functions/v1/webhook" \
   -H "Authorization: Bearer dch_..." -H "Content-Type: text/plain; charset=utf-8" --data-binary @jobs.txt
 # 또는 -H "Content-Type: application/json" -d '{"text":"..."}'
 ```
-- 응답: 200 `{"posted": n}`, 401 토큰 틀림·봇이 방에서 강퇴됨, 400 빈 본문, 413 20,000자 초과, 405 POST 아님.
+- 응답: 200 `{"posted": n}`, 401 토큰 틀림·봇이 방에서 강퇴됨, 400 빈 본문, 413 20,000자 초과 또는 나눈 뒤 10조각 초과, 405 POST 아님.
 - 2,000자가 넘으면 줄 단위로 나눠 여러 메시지(최대 10개)로 올린다. `http(s)://` 주소는 앱에서 누를 수 있다.
 - Windows 명령줄의 `-d '한글'`은 시스템 코드페이지로 넘어가 글자가 깨진다. 한글은 UTF-8 파일(`--data-binary @파일`)로 보낸다.
 

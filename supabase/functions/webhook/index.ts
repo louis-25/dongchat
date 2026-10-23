@@ -1,10 +1,7 @@
 // 수신 웹훅(스펙 2026-10-23-webhooks-design.md §5). 외부 스크립트가 Authorization: Bearer dch_… 로 글을 보낸다.
 // JWT 검사를 끄고(verify_jwt = false) 토큰은 DB가 해시로 확인한다. 헤더·본문은 로그에 남기지 않는다.
 import { createClient } from "npm:@supabase/supabase-js@2.117.2";
-import { isTokenShape, splitMessage } from "./split.ts";
-
-const MAX_TOTAL = 20_000;
-const MAX_PART = 2_000;
+import { isTokenShape, prepareParts } from "./split.ts";
 
 const env = (name: string) => Deno.env.get(name) ?? "";
 const admin = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
@@ -29,9 +26,8 @@ Deno.serve(async (req) => {
 
   const text = await readText(req);
   if (text === null) return reply(400);
-  if ([...text].length > MAX_TOTAL) return reply(413);
-  const parts = splitMessage(text, MAX_PART);
-  if (parts.length === 0) return reply(400);
+  const parts = prepareParts(text);
+  if (typeof parts === "number") return reply(parts);
 
   const { data, error } = await admin.rpc("webhook_post", { p_token: token, p_parts: parts });
   if (error) {

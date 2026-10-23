@@ -190,6 +190,7 @@ export type Database = {
           avatar_url: string | null;
           created_at: string;
           id: string;
+          is_bot: boolean;
           nickname: string | null;
           status_message: string | null;
           updated_at: string;
@@ -200,6 +201,7 @@ export type Database = {
           avatar_url?: string | null;
           created_at?: string;
           id: string;
+          is_bot?: boolean;
           nickname?: string | null;
           status_message?: string | null;
           updated_at?: string;
@@ -209,6 +211,7 @@ export type Database = {
           avatar_url?: string | null;
           created_at?: string;
           id?: string;
+          is_bot?: boolean;
           nickname?: string | null;
           status_message?: string | null;
           updated_at?: string;

@@ -187,3 +187,9 @@ test("늦게 도착한 스냅샷 참여자도 이미 나간 사람은 다시 넣
     ["a", "c"],
   );
 });
+
+test("안 읽은 인원 수에서 봇은 빼고 센다(봇은 읽음 표시를 하지 않는다)", () => {
+  const participants = [part(A, null), part(B, null), part({ ...C, isBot: true }, null)];
+  const base = { me: "a", participants, profiles: {}, replyTargets: [] };
+  assert.equal(toViews([msg(10)], { ...base, readState: { b: 10 } })[0].unreadCount, 0);
+});

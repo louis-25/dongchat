@@ -1,5 +1,5 @@
 begin;
-select plan(35);
+select plan(36);
 
 select tests.create_user('wh_me@test.com', '{"username":"wh_me"}');
 select tests.create_user('wh_mate@test.com', '{"username":"wh_mate"}');
@@ -26,6 +26,9 @@ select ok(not exists (select 1 from private.webhooks w where to_jsonb(w)::text l
 select is((select content from public.messages where room_id = current_setting('tests.room')::bigint and kind = 'system' order by id desc limit 1),
   '채용봇님이 들어왔어요', '들어옴 안내');
 select is((select count(*)::int from auth.sessions where user_id = current_setting('tests.bot')::uuid), 0, '봇 세션 없음(로그인 불가)');
+-- GoTrue는 이 문자열 칼럼이 NULL이면 사용자 목록 전체가 500(대시보드 Users 화면)
+select is((select array[confirmation_token, recovery_token, email_change_token_new, email_change]
+  from auth.users where id = current_setting('tests.bot')::uuid), array['', '', '', '']::varchar[], 'GoTrue 토큰 칼럼은 빈 문자열');
 
 -- 발급 검증
 select throws_ok(format('select public.create_webhook(%L, %s)', 'x', current_setting('tests.dm')), 'P0001', 'VALIDATION_FAILED', '1:1 방 거절');

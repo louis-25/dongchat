@@ -23,4 +23,16 @@ export function splitMessage(text: string, max: number): string[] {
   return parts.map((p) => p.trim()).filter((p) => p !== "");
 }
 
+const MAX_TOTAL = 20_000;
+const MAX_PART = 2_000;
+const MAX_PARTS = 10;
+
+// 보낼 조각 또는 응답 상태. 줄 단위로 묶으면 2만 자 이하여도 10조각을 넘을 수 있어 그것도 413.
+export function prepareParts(text: string): string[] | 400 | 413 {
+  if (len(text) > MAX_TOTAL) return 413;
+  const parts = splitMessage(text, MAX_PART);
+  if (parts.length === 0) return 400;
+  return parts.length > MAX_PARTS ? 413 : parts;
+}
+
 export const isTokenShape = (token: string) => /^dch_[0-9a-f]{64}$/.test(token);

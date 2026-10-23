@@ -17,6 +17,7 @@ export type Profile = {
   nickname: string | null;
   avatarUrl: string | null;
   statusMessage: string | null;
+  isBot?: boolean; // 웹훅 봇: 읽음 표시를 하지 않으므로 안 읽은 인원 수에서 뺀다
 };
 
 // id = friends 행 id, user = 상대방

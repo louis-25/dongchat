@@ -35,14 +35,16 @@ end;
 $$;
 
 -- 로그인할 수 없는 봇 계정(이메일·비밀번호·세션 없음). 프로필은 handle_new_user 트리거가 만든다.
+-- 토큰 칼럼들은 ''로 채운다: GoTrue는 이 칼럼이 NULL이면 사용자 목록 전체를 500으로 실패한다(대시보드 Users 화면).
 create or replace function private.create_bot(p_name text) returns uuid
 language plpgsql security definer set search_path = ''
 as $$
 declare
   v_id uuid := gen_random_uuid();
 begin
-  insert into auth.users (instance_id, id, aud, role, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-  values ('00000000-0000-0000-0000-000000000000', v_id, 'authenticated', 'authenticated',
+  insert into auth.users (instance_id, id, aud, role, confirmation_token, recovery_token, email_change_token_new, email_change,
+                          raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values ('00000000-0000-0000-0000-000000000000', v_id, 'authenticated', 'authenticated', '', '', '', '',
           jsonb_build_object('provider', 'webhook', 'providers', jsonb_build_array('webhook')),
           jsonb_build_object('username', 'bot_' || substr(replace(v_id::text, '-', ''), 1, 16), 'nickname', p_name),
           now(), now());
