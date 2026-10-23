@@ -1,6 +1,6 @@
 # 수신 웹훅(Incoming Webhooks) 설계
 
-상태: 초안 (2026-10-23) · 기준 문서: `2026-10-13-supabase-migration-design.md`
+상태: 초안 (2026-10-23, Codex 교차 검토 반영 — `2026-10-23-webhooks-review-codex.md`) · 기준 문서: `2026-10-13-supabase-migration-design.md`
 
 ## 1. 목적과 범위
 
@@ -15,7 +15,8 @@
 제외(YAGNI):
 - 앱 안의 웹훅 관리 화면, 방 멤버의 직접 발급
 - 서비스별 페이로드 변환(GitHub 등) — 나중에 `?source=` 분기로 추가
-- 요청 횟수 제한, `profiles.is_bot` 표시, 봇 프로필의 "1:1 채팅" 숨김
+- 요청 횟수 제한, 봇 프로필의 "1:1 채팅" 버튼 숨김(서버가 거절하고 토스트로 안내)
+- URL `?token=` — 토큰이 로그·기록에 남으므로 헤더만 받는다
 - `www.`·이메일 링크 인식, 링크 미리보기 카드
 
 ## 2. 데이터 모델
@@ -23,9 +24,16 @@
 ### 2.1 봇 계정
 - `auth.users`에 행을 직접 넣는다: 이메일·비밀번호·identity 없음 → 로그인 불가(`is_active_session()`이 항상 false).
   - `aud = 'authenticated'`, `role = 'authenticated'`, `raw_app_meta_data = {"provider": "webhook"}`
-  - `raw_user_meta_data = {"username": "bot_<id 앞 8자리>", "nickname": <웹훅 이름>}`
+  - `raw_user_meta_data = {"username": "bot_<id 앞 16자리>", "nickname": <웹훅 이름>}` — 16자리라 충돌 걱정 없이 20자 규칙 안에 든다
 - 기존 트리거 `private.handle_new_user`가 프로필을 만든다(`bot_xxxxxxxx`는 username 규칙 `^[a-z0-9_]{3,20}$`을 통과).
-- 봇은 `chat_room_participants`에 멤버로 들어간다. 별도 구분 칼럼은 두지 않고, "웹훅 봇인가"는 `private.webhooks.bot_id`로 판단한다.
+- 봇은 `chat_room_participants`에 멤버로 들어간다.
+- `profiles.is_bot boolean not null default false`를 추가한다(사용자 update grant 없음). 웹훅을 지워도 봇 프로필은 남으므로 `private.webhooks`가 아닌 이 칼럼으로 판단한다.
+- 봇은 사람 전용 경로에서 **없는 사용자처럼** 취급한다(조회에 `and not p.is_bot` 추가, 기존 에러 그대로):
+  - `send_friend_request` → `FRIEND_USER_NOT_FOUND`
+  - `open_direct_room`, `create_room`, `invite_to_room` → `ROOM_INVALID_PARTICIPANTS`
+  - `admin_list_users`(목록·총계)에서 제외
+- 봇 강퇴(`kick_member`)는 허용한다 — 그 뒤 `webhook_post`가 거절한다.
+- 생성은 한 트랜잭션: `auth.users` insert → 트리거가 만든 프로필에 `is_bot = true` → 참여자·웹훅 insert. 어느 단계든 실패하면 전부 롤백.
 
 ### 2.2 `private.webhooks`
 private 스키마(Data API 비노출), `revoke all ... from public, anon, authenticated`.
@@ -47,17 +55,19 @@ private 스키마(Data API 비노출), `revoke all ... from public, anon, authen
 - 웹훅은 **그룹 방**에만 붙는다. 1:1 방에 봇이 들어가면 1:1 화면 규칙(상대 한 명)이 깨지므로 거절(`VALIDATION_FAILED`).
 - 혼자 받는 방이 필요하면 `create_webhook`의 새 방 만들기 형태를 쓴다(§3).
 - 참여자 삭제 트리거(방장 넘기기·마지막 사람이 나가면 방 삭제)를 고친다:
-  - 다음 방장 후보에서 웹훅 봇을 뺀다.
-  - 남은 참여자가 웹훅 봇뿐이면 방을 지운다(웹훅도 cascade로 지워짐).
+  - 다음 방장 후보에서 봇(`is_bot`)을 뺀다.
+  - 남은 사람이 0명이면(봇만 남아도) 방을 지운다(웹훅도 cascade). 기존 방 행 잠금은 유지.
 
 ## 3. 관리 함수 (SQL Editor 전용)
 
-모두 `security definer`, `set search_path = ''`, `revoke execute ... from public, anon, authenticated`. 대시보드 접근 권한 = 관리자로 본다(`is_admin()` 검사 없음, `auth.uid()`가 null).
+모두 `security definer`, `set search_path = ''`, `revoke execute ... from public, anon, authenticated`(service_role에도 부여하지 않음). 대시보드 접근 권한 = 관리자로 본다(`is_admin()` 검사 없음).
+
+SQL Editor에는 JWT가 없어 `auth.uid()`가 null이다. 그래서 `require_active_session()`을 부르는 기존 RPC(`create_room`, `invite_to_room` 등)는 쓰지 않고 테이블에 직접 넣는다. auth 문맥이 필요 없는 `private.add_system_message`, `private.display_name`만 재사용한다.
 
 | 함수 | 반환 | 동작 |
 |---|---|---|
 | `public.create_webhook(p_name text, p_room_id bigint)` | text(토큰) | 기존 그룹 방에 봇을 만들어 넣는다 |
-| `public.create_webhook(p_name text, p_usernames text[])` | text(토큰) | 이름이 `p_name`인 새 그룹 방을 만들고 사용자들 + 봇을 넣는다. 방장 = 첫 사용자 |
+| `public.create_webhook(p_name text, p_usernames text[])` | text(토큰) | 사람 프로필(봇 아님)을 확인한 뒤 이름이 `p_name`인 그룹 방(`created_by` = 첫 사용자)과 참여자들 + 봇을 직접 넣는다 |
 | `public.rotate_webhook(p_id bigint)` | text(토큰) | `token_hash`만 바꾼다. 봇·이전 메시지 유지 |
 | `public.delete_webhook(p_id bigint)` | void | 봇을 방에서 빼고 웹훅 행을 지운다. 봇 프로필·`auth.users` 행은 남긴다(이전 메시지의 보낸 사람 이름 유지) |
 
@@ -79,7 +89,8 @@ private 스키마(Data API 비노출), `revoke all ... from public, anon, authen
 ## 5. Edge Function `webhook`
 
 - 경로: `POST /functions/v1/webhook`. `config.toml`에 `[functions.webhook] verify_jwt = false`, 배포는 `--no-verify-jwt`.
-- 토큰: `Authorization: Bearer <토큰>` 우선, 없으면 `?token=`.
+- 토큰: `Authorization: Bearer <토큰>`만. 형식(`dch_` + 64 hex)이 아니면 DB를 부르지 않고 401.
+- 로그에 Authorization 헤더와 본문을 남기지 않는다.
 - 본문:
   - `Content-Type: application/json` → `{"text": string}`
   - `text/plain` → 본문 전체
@@ -111,14 +122,16 @@ private 스키마(Data API 비노출), `revoke all ... from public, anon, authen
 ### 6.2 표시
 - `MessageBubble.tsx`의 본문(`view.content`) 자리만 바꾼다. 답장 인용·방 목록 미리보기·푸시·검색 결과는 그대로 글자.
 - `<a href target="_blank" rel="noopener noreferrer" className="underline break-all">` — 색은 말풍선 글자색을 그대로(테마 대비 유지).
-- 길게 누르기: 링크 위에서 길게 누르면 메시지 메뉴가 뜨고 링크는 열리지 않아야 한다. `useLongPress`가 발동 뒤의 click을 막는지 구현 때 확인하고, 막지 않으면 고친다.
+- 길게 누르기: 링크 위에서도 메시지 메뉴가 우선이다. 현재 `useLongPress`는 `<a>`를 제외하지 않고 발동 뒤의 click을 막으므로(`useLongPress.ts`) 고칠 것 없음 — 링크 주소 복사는 메뉴의 "복사"로 한다. `ignoresLongPress`에 `a`가 없음을 단위 테스트로 고정한다.
 
 ## 7. 에러 코드
 - `WEBHOOK_INVALID` (새로 추가): 토큰이 틀렸거나 봇이 방에 없음.
 - `VALIDATION_FAILED`: 기존 코드 재사용.
 
 ## 8. 테스트
-- pgTAP `330_webhooks.test.sql`: 발급(봇 프로필·멤버·해시만 저장·1:1 방 거절·새 방 형태), 저장(조각 수·보낸 사람·`last_used_at`·틀린 토큰·강퇴된 봇), 재발급(옛 토큰 거절), 삭제(멤버 아님·토큰 거절·메시지 보낸 사람 유지), 권한(anon·authenticated 실행 불가), 봇 로그인 불가, 방장 넘기기·봇만 남은 방 삭제.
+- pgTAP `330_webhooks.test.sql`: 발급(봇 프로필·`is_bot`·멤버·해시만 저장·1:1 방 거절·새 방 형태·봇 username 거절), 저장(조각 수·보낸 사람·`last_used_at`·틀린 토큰·강퇴된 봇), 재발급(옛 토큰 거절), 삭제(멤버 아님·토큰 거절·메시지 보낸 사람 유지), 권한(anon·authenticated·service_role의 관리 함수 실행 불가, webhook_post는 service_role만), 봇 로그인 불가.
+- pgTAP `340_bot_guards.test.sql`: 봇에게 친구 요청·1:1 방·방 만들기·초대 거절, 관리자 목록 제외, 방장 넘기기(사람 우선·방장이 먼저 나감), 봇만 남은 방 삭제.
+- `useLongPress.test.ts`: `ignoresLongPress(<a>)`가 false.
 - Deno `split.test.ts`: 줄 단위, 긴 한 줄, 공백·빈 조각, 2,000자 경계, 이모지(코드 포인트).
 - node `linkify.test.ts`: 끝 문장부호, 괄호 짝, 다른 스킴 무시, 여러 링크, 링크 없음.
 - 로컬 통합: `functions serve` + `curl` → 방에 실시간 표시, 401/400/413 확인.
