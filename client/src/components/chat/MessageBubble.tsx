@@ -6,6 +6,7 @@ import { UserAvatar } from "@/components/chat/UserAvatar";
 import { useLongPress } from "@/hooks/useLongPress";
 import type { MessageView } from "@/lib/chat-state";
 import { formatClock } from "@/lib/format";
+import { splitLinks } from "@/lib/linkify";
 import { summarizeReactions } from "@/lib/reactions";
 import { stickerLabel, stickerSrc } from "@/lib/stickers";
 import { cn } from "@/lib/utils";
@@ -88,7 +89,16 @@ export function MessageBubble({ view, first, last, readOnly, onOpenActions, onJu
               // eslint-disable-next-line @next/next/no-img-element -- 작은 정적 SVG
               <img src={stickerSrc(view.sticker!)} alt={stickerLabel(view.sticker!)} className="size-32" draggable={false} />
             ) : (
-              view.content
+              // 링크를 길게 누르면 말풍선 메뉴가 뜨고 링크는 열리지 않는다(useLongPress가 뒤따르는 click을 막음)
+              splitLinks(view.content).map((part, i) =>
+                part.href ? (
+                  <a key={i} href={part.href} target="_blank" rel="noopener noreferrer" className="underline break-all">
+                    {part.text}
+                  </a>
+                ) : (
+                  part.text
+                ),
+              )
             )}
             {view.editedAt && !deleted && <span className="ml-1 text-[11px] opacity-60">수정됨</span>}
           </div>

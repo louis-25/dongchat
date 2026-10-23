@@ -10,3 +10,9 @@ test("입력칸·시트 안에서는 말풍선 길게 누르기를 쓰지 않는
   assert.equal(ignoresLongPress(inside(false)), false);
   assert.equal(ignoresLongPress(null), false);
 });
+
+test("링크 위에서도 말풍선 길게 누르기(메뉴)가 우선한다", () => {
+  let selector = "";
+  ignoresLongPress({ closest: (sel: string) => ((selector = sel), null) } as unknown as EventTarget);
+  assert.ok(!selector.split(",").map((s) => s.trim()).includes("a"));
+});
